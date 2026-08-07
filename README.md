@@ -1,6 +1,6 @@
-# @adasa/map-widgets
+# @vsadtajo/adasa-map-widgets
 
-Librería de componentes **Vue 3 + TypeScript** con widgets para aplicaciones de web mapping, **agnóstica del motor de mapas** subyacente. Todos los componentes públicos llevan el prefijo **`ASMap*`**.
+Librería **ADASA** de componentes **Vue 3 + TypeScript** con widgets para aplicaciones de web mapping, **agnóstica del motor de mapas** subyacente. Todos los componentes públicos llevan el prefijo **`ASMap*`**. Estándar interno de [VSADTajo](https://github.com/VSADTajo) — paquete privado, distribuido vía GitHub Packages (no publicado en el registro público de npm).
 
 ## Componentes
 
@@ -30,18 +30,20 @@ src/
 
 ## Uso
 
+Requiere autenticación contra GitHub Packages (ver [Publicación](#publicación-y-versionado) más abajo). Una vez configurado el `.npmrc` del proyecto consumidor:
+
 ```bash
-npm install @adasa/map-widgets
+npm install @vsadtajo/adasa-map-widgets
 ```
 
 ```ts
 // main.ts
-import '@adasa/map-widgets/style.css' // opcional: tokens de tema por defecto
+import '@vsadtajo/adasa-map-widgets/style.css' // opcional: tokens de tema por defecto
 ```
 
 ```vue
 <script setup lang="ts">
-import { ASMap, ASMapTimeControls } from '@adasa/map-widgets'
+import { ASMap, ASMapTimeControls } from '@vsadtajo/adasa-map-widgets'
 import { ref } from 'vue'
 
 const timeline = [/* ... Date[] ... */]
@@ -117,6 +119,40 @@ npm install maplibre-gl  # si usas mapLibrary="maplibre"
 ```
 
 Si la librería elegida no está instalada, `ASMap` muestra un mensaje de error legible en su lugar en vez de fallar en silencio.
+
+## Publicación y versionado
+
+El paquete se distribuye de forma privada vía **GitHub Packages**, bajo el scope de la organización (`@vsadtajo`). No está publicado en el registro público de npm.
+
+### Consumirlo desde otro proyecto
+
+Cada proyecto que instale este paquete necesita un `.npmrc` (en su raíz, o en `~/.npmrc`) indicando dónde resolver el scope `@vsadtajo` y con qué token autenticarse:
+
+```
+@vsadtajo:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` debe ser un [Personal Access Token](https://github.com/settings/tokens) (classic) con permiso `read:packages`, exportado como variable de entorno (nunca lo escribas literal en el `.npmrc`).
+
+### Versionado (Changesets)
+
+Este repo usa [Changesets](https://github.com/changesets/changesets) para versionado semántico y generación automática de `CHANGELOG.md`:
+
+```bash
+npx changeset          # tras un cambio: describe el impacto (patch/minor/major)
+npx changeset version  # sube la versión en package.json y actualiza CHANGELOG.md
+git push && git push --tags
+npm publish            # publica en GitHub Packages (usa publishConfig del package.json)
+```
+
+- **patch**: fix que no cambia la API pública.
+- **minor**: prop/evento/widget nuevo, compatible con lo existente.
+- **major**: cambio incompatible (renombrar/quitar un prop o evento existente).
+
+### CI
+
+Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `lint` → `type-check` → `build` → `build:playground`. Puedes exigir que ese workflow pase antes de mergear desde Settings → Branches del repo.
 
 ## Convenciones para nuevos widgets
 
