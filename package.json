@@ -1,0 +1,70 @@
+{
+  "name": "@adasa/map-widgets",
+  "version": "0.1.0",
+  "description": "Librería de widgets Vue 3 + TypeScript para aplicaciones de web mapping, agnóstica del motor de mapas subyacente (Leaflet, Mapbox, OpenLayers, etc).",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/adasa-map-widgets.cjs",
+  "module": "./dist/adasa-map-widgets.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/adasa-map-widgets.js",
+      "require": "./dist/adasa-map-widgets.cjs"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "dev": "vite --config vite.config.playground.ts",
+    "build": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts",
+    "build:playground": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.playground.ts",
+    "preview:playground": "vite preview --config vite.config.playground.ts --outDir dist-playground",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0",
+    "leaflet": "^1.9.0",
+    "maplibre-gl": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "leaflet": {
+      "optional": true
+    },
+    "maplibre-gl": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^20.14.0",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/tsconfig": "^0.5.1",
+    "eslint": "^9.9.0",
+    "eslint-plugin-vue": "^10.10.0",
+    "leaflet": "^1.9.4",
+    "maplibre-gl": "^6.2.0",
+    "prettier": "^3.3.3",
+    "typescript": "~5.5.4",
+    "vite": "^5.4.1",
+    "vite-plugin-dts": "^4.0.3",
+    "vue": "^3.4.38",
+    "vue-tsc": "^2.0.29"
+  }
+}

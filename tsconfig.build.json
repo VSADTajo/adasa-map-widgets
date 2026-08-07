@@ -1,0 +1,25 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "src/index.ts",
+    "src/vite-env.d.ts",
+    "src/components/**/*.ts",
+    "src/components/**/*.vue",
+    "src/types/**/*.ts",
+    "src/composables/**/*.ts"
+  ],
+  "exclude": ["src/playground/**/*"]
+}

@@ -1,0 +1,54 @@
+/**
+ * Tokens de diseño de @adasa/map-widgets.
+ *
+ * Se exponen como variables CSS para que cualquier proyecto consumidor pueda
+ * personalizar el aspecto de los widgets sin tocar JavaScript: basta con
+ * sobreescribir estas variables en un selector con mayor especificidad.
+ *
+ * Import opcional. Cada componente define un valor de respaldo (fallback) en
+ * su propio `var(--amw-x, fallback)`, así que la librería funciona igual sin
+ * importar este archivo — importarlo solo permite tematizar de forma centralizada.
+ */
+
+:root {
+  --amw-color-primary: #2563eb;
+  --amw-color-primary-contrast: #ffffff;
+  --amw-color-surface: #ffffff;
+  --amw-color-surface-muted: #f1f5f9;
+  --amw-color-text: #0f172a;
+  --amw-color-text-muted: #64748b;
+  --amw-color-border: #cbd5e1;
+  --amw-color-danger: #dc2626;
+
+  --amw-radius: 8px;
+  --amw-spacing-unit: 4px;
+  --amw-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --amw-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+  --amw-focus-ring: 0 0 0 2px var(--amw-color-primary);
+}
+
+.amw-dark {
+  --amw-color-primary: #60a5fa;
+  --amw-color-primary-contrast: #0f172a;
+  --amw-color-surface: #1e293b;
+  --amw-color-surface-muted: #334155;
+  --amw-color-text: #f1f5f9;
+  --amw-color-text-muted: #94a3b8;
+  --amw-color-border: #475569;
+  --amw-color-danger: #f87171;
+  --amw-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  .amw-theme-auto {
+    --amw-color-primary: #60a5fa;
+    --amw-color-primary-contrast: #0f172a;
+    --amw-color-surface: #1e293b;
+    --amw-color-surface-muted: #334155;
+    --amw-color-text: #f1f5f9;
+    --amw-color-text-muted: #94a3b8;
+    --amw-color-border: #475569;
+    --amw-color-danger: #f87171;
+    --amw-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  }
+}

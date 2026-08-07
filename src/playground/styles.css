@@ -1,0 +1,59 @@
+/* Tokens visuales del "chrome" del playground (distintos de los tokens de los
+   propios widgets, definidos en src/styles/tokens.css, aunque comparten la
+   misma clase `.amw-dark` para conmutar ambos a la vez). */
+:root {
+  --pg-primary: #2563eb;
+  --pg-primary-contrast: #ffffff;
+  --pg-surface: #ffffff;
+  --pg-surface-muted: #f1f5f9;
+  --pg-text: #0f172a;
+  --pg-text-muted: #64748b;
+  --pg-border: #e2e8f0;
+  --pg-code-bg: #0f172a;
+  --pg-code-text: #e2e8f0;
+}
+
+.amw-dark {
+  --pg-primary: #60a5fa;
+  --pg-primary-contrast: #0f172a;
+  --pg-surface: #1e293b;
+  --pg-surface-muted: #0f172a;
+  --pg-text: #f1f5f9;
+  --pg-text-muted: #94a3b8;
+  --pg-border: #334155;
+  --pg-code-bg: #0b1220;
+  --pg-code-text: #cbd5e1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  background-color: var(--pg-surface-muted);
+  color: var(--pg-text);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--pg-text);
+}
