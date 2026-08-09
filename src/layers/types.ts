@@ -17,11 +17,13 @@ export interface LayerRenderHooks {
   onFeatureSelected?: (event: FeatureSelectedEvent) => void
 }
 
-/** Resultado de renderizar una capa: el evento de carga y cómo deshacerla. */
+/** Resultado de renderizar una capa: el evento de carga y cómo controlarla después. */
 export interface RenderedLayer {
   event: LayerLoadedEvent
   /** Quita la capa del mapa y libera sus recursos (listeners, fuentes, paneles...). */
   remove: () => void
+  /** Muestra u oculta la capa ya renderizada, sin volver a pedirla/reconstruirla. */
+  setVisible: (visible: boolean) => void
 }
 
 /**

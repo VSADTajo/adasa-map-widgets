@@ -87,6 +87,15 @@ function addGeoJsonLayers(
   return [fillId, lineId, circleId]
 }
 
+/** Muestra u oculta una o más capas de estilo ya añadidas al mapa. */
+function setLayersVisible(map: MapLibreMap, layerIds: string[], visible: boolean): void {
+  for (const id of layerIds) {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
+    }
+  }
+}
+
 function removeGeoJsonLayers(map: MapLibreMap, sourceId: string, layerIds: string[]): void {
   for (const id of layerIds) {
     if (map.getLayer(id)) map.removeLayer(id)
@@ -142,6 +151,7 @@ async function renderGeoJSON(
         unbind.forEach((off) => off())
         removeGeoJsonLayers(map, sourceId, layerIds)
       },
+      setVisible: (visible) => setLayersVisible(map, layerIds, visible),
     }
   } catch (error) {
     return {
@@ -152,6 +162,7 @@ async function renderGeoJSON(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -207,6 +218,7 @@ async function renderWMS(
         if (map.getLayer(rasterLayerId)) map.removeLayer(rasterLayerId)
         if (map.getSource(sourceId)) map.removeSource(sourceId)
       },
+      setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
     }
   } catch (error) {
     return {
@@ -217,6 +229,7 @@ async function renderWMS(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -253,6 +266,7 @@ async function renderWFS(
         unbind.forEach((off) => off())
         removeGeoJsonLayers(map, sourceId, layerIds)
       },
+      setVisible: (visible) => setLayersVisible(map, layerIds, visible),
     }
   } catch (error) {
     return {
@@ -263,6 +277,7 @@ async function renderWFS(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -304,6 +319,7 @@ async function renderTiles(
         if (map.getLayer(rasterLayerId)) map.removeLayer(rasterLayerId)
         if (map.getSource(sourceId)) map.removeSource(sourceId)
       },
+      setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
     }
   } catch (error) {
     return {
@@ -314,6 +330,7 @@ async function renderTiles(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }

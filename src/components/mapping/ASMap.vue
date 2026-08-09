@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import type * as L from 'leaflet'
+import type { MapLibreMap, MapOptions as MapLibreMapOptions } from 'maplibre-gl'
 import { resolveNamespace } from '@/utils/resolveNamespace'
 
 /**
@@ -48,28 +50,6 @@ export interface ASMapProps {
   tileLayer?: string
 }
 
-/** Subconjunto mínimo de la API de Leaflet que este componente necesita. */
-interface LeafletLike {
-  map(el: HTMLElement, options: { center: [number, number]; zoom: number }): LeafletMapLike
-  tileLayer(url: string, options?: Record<string, unknown>): { addTo(map: LeafletMapLike): void }
-}
-interface LeafletMapLike {
-  remove(): void
-}
-
-/** Subconjunto mínimo de la API de MapLibre GL JS que este componente necesita. */
-interface MapLibreLike {
-  Map: new (options: {
-    container: HTMLElement
-    center: [number, number]
-    zoom: number
-    style: string | Record<string, unknown>
-  }) => MapLibreMapLike
-}
-interface MapLibreMapLike {
-  remove(): void
-}
-
 /** Atribución obligatoria de OpenStreetMap. */
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -97,30 +77,32 @@ const props = withDefaults(defineProps<ASMapProps>(), {
 })
 
 const containerEl = ref<HTMLDivElement | null>(null)
-const mapInstance = shallowRef<LeafletMapLike | MapLibreMapLike | null>(null)
+const mapInstance = shallowRef<L.Map | MapLibreMap | null>(null)
 /** Mensaje de error legible cuando la librería de mapas elegida no está instalada. */
 const loadError = ref<string | null>(null)
 
-async function createLeafletMap(el: HTMLDivElement): Promise<LeafletMapLike> {
+async function createLeafletMap(el: HTMLDivElement): Promise<L.Map> {
   const [leafletModule] = await Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')])
-  const L = resolveNamespace<LeafletLike>(leafletModule)
-  const map = L.map(el, { center: props.center, zoom: props.zoom })
-  L.tileLayer(props.tileLayer, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map)
+  const Leaflet = resolveNamespace<typeof L>(leafletModule)
+  const map = Leaflet.map(el, { center: props.center, zoom: props.zoom })
+  Leaflet.tileLayer(props.tileLayer, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map)
   return map
 }
 
-async function createMaplibreMap(el: HTMLDivElement): Promise<MapLibreMapLike> {
+async function createMaplibreMap(el: HTMLDivElement): Promise<MapLibreMap> {
   const [maplibreModule] = await Promise.all([
     import('maplibre-gl'),
     import('maplibre-gl/dist/maplibre-gl.css'),
   ])
-  const maplibregl = resolveNamespace<MapLibreLike>(maplibreModule)
+  const maplibregl = resolveNamespace<{ Map: new (options: MapLibreMapOptions) => MapLibreMap }>(
+    maplibreModule,
+  )
   return new maplibregl.Map({
     container: el,
     center: [props.center[1], props.center[0]], // maplibre usa [lng, lat]
     zoom: props.zoom,
     style: props.style ?? buildRasterStyle(props.tileLayer),
-  })
+  } as MapLibreMapOptions)
 }
 
 function destroyMap(): void {
@@ -154,12 +136,15 @@ watch(() => props.mapLibrary, createMap)
 /**
  * Devuelve la instancia real del mapa (`L.Map` o `maplibregl.Map`), o `null`
  * si aún no se inicializó (o si la librería correspondiente no está instalada).
+ * Para reaccionar cuando el mapa pasa a estar disponible (p. ej. desde
+ * `useLayerManager`), usa el propio `mapInstanceRef` expuesto en vez de
+ * sondear este método.
  */
-function getMapInstance(): LeafletMapLike | MapLibreMapLike | null {
+function getMapInstance(): L.Map | MapLibreMap | null {
   return mapInstance.value
 }
 
-defineExpose({ getMapInstance })
+defineExpose({ getMapInstance, mapInstanceRef: mapInstance })
 </script>
 
 <template>

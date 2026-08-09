@@ -54,6 +54,17 @@ function withOpacity(
   })
 }
 
+/**
+ * Muestra u oculta una capa alternando la visibilidad de su pane. Todos los
+ * renderers de este archivo asignan `pane: layer.id` a la capa que crean,
+ * así que Leaflet crea (perezosamente) un pane dedicado por capa y este
+ * helper sirve para cualquiera de los cinco tipos.
+ */
+function setPaneVisible(map: L.Map, paneId: string, visible: boolean): void {
+  const pane = map.getPane(paneId)
+  if (pane) pane.style.display = visible ? '' : 'none'
+}
+
 /** Reenvía el click sobre un feature de una capa GeoJSON/WFS vía `hooks.onFeatureSelected`. */
 function bindFeatureClick(geoJsonLayer: L.GeoJSON, layerId: string, hooks: LayerRenderHooks): void {
   if (!hooks.onFeatureSelected) return
@@ -98,6 +109,7 @@ async function renderGeoJSON(
         instance: geoJsonLayer,
       },
       remove: () => geoJsonLayer.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
     }
   } catch (error) {
     return {
@@ -108,6 +120,7 @@ async function renderGeoJSON(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -140,6 +153,7 @@ async function renderWMS(
         instance: wmsLayer,
       },
       remove: () => wmsLayer.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
     }
   } catch (error) {
     return {
@@ -150,6 +164,7 @@ async function renderWMS(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -181,6 +196,7 @@ async function renderWFS(
         instance: geoJsonLayer,
       },
       remove: () => geoJsonLayer.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
     }
   } catch (error) {
     return {
@@ -191,6 +207,7 @@ async function renderWFS(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
@@ -208,6 +225,7 @@ async function renderTiles(
       maxZoom: options.maxZoom ?? 19,
       minZoom: options.minZoom ?? 0,
       opacity: layer.opacity ?? 1,
+      pane: layer.id,
     })
     tiles.addTo(map)
 
@@ -219,6 +237,7 @@ async function renderTiles(
         instance: tiles,
       },
       remove: () => tiles.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
     }
   } catch (error) {
     return {
@@ -229,6 +248,7 @@ async function renderTiles(
         error: toErrorInstance(error),
       },
       remove: () => {},
+      setVisible: () => {},
     }
   }
 }
