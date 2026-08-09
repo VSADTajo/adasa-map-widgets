@@ -19,6 +19,8 @@ export default defineConfig({
         'src/components/**/*.ts',
         'src/types/**/*.ts',
         'src/composables/**/*.ts',
+        'src/layers/**/*.ts',
+        'src/utils/**/*.ts',
       ],
       exclude: ['src/playground/**/*'],
       rollupTypes: true,

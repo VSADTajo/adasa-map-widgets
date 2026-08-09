@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { resolveNamespace } from '@/utils/resolveNamespace'
 
 /**
  * Contenedor de mapa agnóstico de la librería de mapas subyacente.
@@ -67,10 +68,6 @@ interface MapLibreLike {
 }
 interface MapLibreMapLike {
   remove(): void
-}
-
-function resolveNamespace<T>(mod: object): T {
-  return ((mod as { default?: T }).default ?? mod) as T
 }
 
 /** Atribución obligatoria de OpenStreetMap. */

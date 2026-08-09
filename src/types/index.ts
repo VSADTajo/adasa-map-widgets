@@ -28,3 +28,19 @@ export type {
   WidgetRegistryEntry,
   WidgetPlacement,
 } from './playground'
+export type {
+  LayerType,
+  GeoJsonGeometry,
+  GeoJsonFeature,
+  GeoJsonFeatureCollection,
+  LayerCapabilities,
+  GeoJSONOptions,
+  WMSOptions,
+  WFSOptions,
+  TilesOptions,
+  GeoServerOptions,
+  LayerTypeOptions,
+  LayerConfig,
+  LayerLoadedEvent,
+  FeatureSelectedEvent,
+} from './layers'

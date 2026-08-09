@@ -15,4 +15,5 @@ import './styles/tokens.css'
 
 export * from './components'
 export * from './composables'
+export * from './layers'
 export type * from './types'
