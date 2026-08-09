@@ -153,11 +153,28 @@ export function useLayerManager(
     }
   }
 
-  /** Quita todas las capas cargadas (p. ej. al desmontar el componente que usa este composable). */
+  /** Quita todas las capas cargadas, dejando el mapa intacto (llama a `remove()` de cada una). */
   function unloadAll(): void {
     for (const layerId of Array.from(layers.value.keys())) {
       unloadLayer(layerId)
     }
+  }
+
+  /**
+   * Limpia el estado interno del manager (capas, cargas en curso, errores)
+   * **sin** invocar `remove()` de cada capa. Pensado únicamente para cuando
+   * el propio mapa va a destruirse de todas formas (p. ej. `ASMap` recreando
+   * el mapa al cambiar `mapLibrary`, o al desmontarse): `map.remove()` ya
+   * desmonta paneles/capas/renderers de forma atómica, y desmontar cada capa
+   * a mano justo antes deja renderers SVG/Canvas de Leaflet en un estado
+   * inconsistente que el propio `map.remove()` no espera (lanza al intentar
+   * limpiarlos por segunda vez). Si el mapa sigue vivo, usa `unloadAll()`.
+   */
+  function reset(): void {
+    rendered.clear()
+    layers.value.clear()
+    loadingLayers.value.clear()
+    errors.value.clear()
   }
 
   /** Alterna la visibilidad de una capa ya cargada (sin volver a pedirla/reconstruirla). */
@@ -184,6 +201,7 @@ export function useLayerManager(
     loadLayer,
     unloadLayer,
     unloadAll,
+    reset,
     toggleLayerVisibility,
     getLayersWithCapability,
     on,

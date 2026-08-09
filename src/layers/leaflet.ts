@@ -55,14 +55,31 @@ function withOpacity(
 }
 
 /**
- * Muestra u oculta una capa alternando la visibilidad de su pane. Todos los
- * renderers de este archivo asignan `pane: layer.id` a la capa que crean,
- * así que Leaflet crea (perezosamente) un pane dedicado por capa y este
- * helper sirve para cualquiera de los cinco tipos.
+ * Muestra u oculta una capa de teselas (WMS/Tiles) alternando la visibilidad
+ * de su pane dedicado (`pane: layer.id`). Solo se usa para esos dos tipos:
+ * las capas vectoriales (GeoJSON/WFS) usan {@link setLayerAttached} en su
+ * lugar (ver ahí el porqué).
  */
 function setPaneVisible(map: L.Map, paneId: string, visible: boolean): void {
   const pane = map.getPane(paneId)
   if (pane) pane.style.display = visible ? '' : 'none'
+}
+
+/**
+ * Muestra u oculta una capa vectorial (GeoJSON/WFS) añadiéndola o quitándola
+ * del mapa. A diferencia de las capas de teselas, estas NO usan un pane
+ * dedicado: cuando una capa `Path` (Polygon/CircleMarker/...) apunta a un
+ * pane que no es el por defecto, Leaflet crea ahí un renderer SVG/Canvas
+ * propio que queda registrado como otra capa más del mapa — y al destruir
+ * el mapa (`map.remove()`), el orden de limpieza en cascada de Leaflet choca
+ * con ese renderer y lanza `Cannot read properties of undefined (reading
+ * '_removePath')`. Usar el pane por defecto (`overlayPane`, compartido y
+ * probado por el propio Leaflet) evita el problema por completo.
+ */
+function setLayerAttached(map: L.Map, layer: L.Layer, attached: boolean): void {
+  const isAttached = map.hasLayer(layer)
+  if (attached && !isAttached) layer.addTo(map)
+  else if (!attached && isAttached) map.removeLayer(layer)
 }
 
 /** Reenvía el click sobre un feature de una capa GeoJSON/WFS vía `hooks.onFeatureSelected`. */
@@ -96,7 +113,6 @@ async function renderGeoJSON(
       style: withOpacity(options.style, layer.opacity),
       pointToLayer: options.pointToLayer as L.GeoJSONOptions['pointToLayer'],
       onEachFeature: options.onEachFeature as L.GeoJSONOptions['onEachFeature'],
-      pane: layer.id,
     })
     geoJsonLayer.addTo(map)
     bindFeatureClick(geoJsonLayer, layer.id, hooks)
@@ -109,7 +125,7 @@ async function renderGeoJSON(
         instance: geoJsonLayer,
       },
       remove: () => geoJsonLayer.remove(),
-      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
+      setVisible: (visible) => setLayerAttached(map, geoJsonLayer, visible),
     }
   } catch (error) {
     return {
@@ -180,7 +196,6 @@ async function renderWFS(
     const data = await fetchWfsFeatures(options)
     const geoJsonLayer = Leaflet.geoJSON(data as unknown as GeoJSON.GeoJsonObject, {
       style: withOpacity(undefined, layer.opacity),
-      pane: layer.id,
     })
     geoJsonLayer.addTo(map)
 
@@ -196,7 +211,7 @@ async function renderWFS(
         instance: geoJsonLayer,
       },
       remove: () => geoJsonLayer.remove(),
-      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
+      setVisible: (visible) => setLayerAttached(map, geoJsonLayer, visible),
     }
   } catch (error) {
     return {

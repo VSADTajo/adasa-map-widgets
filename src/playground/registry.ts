@@ -5,6 +5,7 @@ import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
 import type { ComponentDoc } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import { layerExamples } from './utils/layerExamples'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -45,7 +46,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMap',
     category: 'mapping',
     description:
-      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un mapa base de OpenStreetMap por defecto. Su slot por defecto aloja los widgets posicionados sobre el mapa.',
+      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un mapa base de OpenStreetMap por defecto. Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, WMS, WFS, Tiles, GeoServer).',
     propsSchema: [
       {
         key: 'mapLibrary',
@@ -56,11 +57,41 @@ export const registry: RegistryEntry[] = [
         description: 'Leaflet y MapLibre GL JS son peerDependencies opcionales.',
       },
       { key: 'zoom', label: 'Zoom', type: 'number', default: 6, min: 0, max: 18, step: 1 },
+      {
+        key: 'tileLayer',
+        label: 'URL de teselas',
+        type: 'string',
+        default: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        description:
+          'Plantilla {z}/{x}/{y}. Capa base en Leaflet; fuente ráster del estilo por defecto en MapLibre.',
+      },
     ],
-    events: [],
-    staticProps: { center: [40.4168, -3.7038] },
+    events: [
+      {
+        name: 'map-ready',
+        payload: 'L.Map | MapLibreMap',
+        description: 'El mapa terminó de inicializarse.',
+      },
+      {
+        name: 'layer-loaded',
+        payload: 'LayerLoadedEvent',
+        description: 'Una capa de `layers` terminó de cargar (con éxito o con error).',
+      },
+      {
+        name: 'capability-detected',
+        payload: "{ layerId, capability: 'temporal' | 'editable' | 'filterable' | 'searchable' }",
+        description:
+          'Una capa cargada tiene una capacidad relevante para mostrar un widget específico.',
+      },
+      {
+        name: 'feature-selected',
+        payload: 'FeatureSelectedEvent',
+        description: 'El usuario hizo click en un feature de una capa.',
+      },
+    ],
+    staticProps: { center: [40.4168, -3.7038], layers: [layerExamples[0]!.config] },
     notes:
-      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio.',
+      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/GeoServer/Tiles usa el modo "Compositor sobre mapa". ASMap también admite `center` (`[lat, lng]`) y `style` (estilo de MapLibre, string u objeto): no son editables desde este formulario simple por no ser tipos primitivos, pero se fijan aquí como props estáticas (`center`) o se pueden probar aparte.',
     component: ASMap,
   },
   {

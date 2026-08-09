@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import ASMap from '@/components/mapping/ASMap.vue'
+import ASMap, { type LayerCapabilityName } from '@/components/mapping/ASMap.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
 import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
+import type { LayerConfig, LayerLoadedEvent } from '@/types/layers'
 
 /**
  * Envuelve `ASMap` y renderiza sobre él los widgets colocados por el usuario
@@ -12,11 +13,16 @@ import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
  * neutraliza a propósito (ver estilos) para que la esquina elegida en el
  * panel de widgets sea siempre la que gane, de forma uniforme para
  * cualquier widget del registro.
+ *
+ * También reenvía los eventos de capas dinámicas de `ASMap` (ver `layers`),
+ * para que `WidgetPlayground` pueda mostrar su estado en el panel.
  */
 const props = defineProps<{
   mapLibrary: MapLibraryOption
   placements: WidgetPlacement[]
   selectedId: string | null
+  /** Capas dinámicas a cargar sobre el mapa (ver `layerExamples.ts`). */
+  layers: LayerConfig[]
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +30,10 @@ const emit = defineEmits<{
   select: [instanceId: string]
   /** Un widget colocado emitió un evento (reenviado al monitor de eventos del compositor). */
   'log-event': [widgetLabel: string, name: string, payload: unknown]
+  'layer-loaded': [event: LayerLoadedEvent]
+  'layer-error': [event: { layerId: string; error: Error }]
+  'layer-unloaded': [event: { layerId: string }]
+  'capability-detected': [event: { layerId: string; capability: LayerCapabilityName }]
 }>()
 
 function resolveListeners(
@@ -38,7 +48,17 @@ function resolveListeners(
 </script>
 
 <template>
-  <ASMap class="map-canvas" :map-library="props.mapLibrary" :center="[40.4168, -3.7038]" :zoom="6">
+  <ASMap
+    class="map-canvas"
+    :map-library="props.mapLibrary"
+    :center="[40.4168, -3.7038]"
+    :zoom="6"
+    :layers="props.layers"
+    @layer-loaded="(event) => emit('layer-loaded', event)"
+    @layer-error="(event) => emit('layer-error', event)"
+    @layer-unloaded="(event) => emit('layer-unloaded', event)"
+    @capability-detected="(event) => emit('capability-detected', event)"
+  >
     <div
       v-for="placement in props.placements"
       :key="placement.instanceId"
