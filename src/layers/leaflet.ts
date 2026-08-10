@@ -82,13 +82,25 @@ function setLayerAttached(map: L.Map, layer: L.Layer, attached: boolean): void {
   else if (!attached && isAttached) map.removeLayer(layer)
 }
 
-/** Reenvía el click sobre un feature de una capa GeoJSON/WFS vía `hooks.onFeatureSelected`. */
-function bindFeatureClick(geoJsonLayer: L.GeoJSON, layerId: string, hooks: LayerRenderHooks): void {
+/**
+ * Reenvía el click sobre un feature de una capa GeoJSON/WFS vía
+ * `hooks.onFeatureSelected`. Corta la propagación del click hacia el mapa
+ * (`Leaflet.DomEvent.stopPropagation`) para que ASMap no emita también
+ * `map-click` con las mismas coordenadas: ese evento es solo para clicks que
+ * NO han encontrado ningún feature.
+ */
+function bindFeatureClick(
+  Leaflet: typeof L,
+  geoJsonLayer: L.GeoJSON,
+  layerId: string,
+  hooks: LayerRenderHooks,
+): void {
   if (!hooks.onFeatureSelected) return
   geoJsonLayer.on('click', (event: L.LeafletMouseEvent) => {
     const source = event.propagatedFrom as (L.Layer & { feature?: GeoJsonFeature }) | undefined
     const feature = source?.feature
     if (!feature) return
+    Leaflet.DomEvent.stopPropagation(event)
     hooks.onFeatureSelected?.({
       layerId,
       feature,
@@ -115,7 +127,7 @@ async function renderGeoJSON(
       onEachFeature: options.onEachFeature as L.GeoJSONOptions['onEachFeature'],
     })
     geoJsonLayer.addTo(map)
-    bindFeatureClick(geoJsonLayer, layer.id, hooks)
+    bindFeatureClick(Leaflet, geoJsonLayer, layer.id, hooks)
 
     return {
       event: {
@@ -200,7 +212,7 @@ async function renderWFS(
     geoJsonLayer.addTo(map)
 
     if (options.editable) {
-      bindFeatureClick(geoJsonLayer, layer.id, hooks)
+      bindFeatureClick(Leaflet, geoJsonLayer, layer.id, hooks)
     }
 
     return {

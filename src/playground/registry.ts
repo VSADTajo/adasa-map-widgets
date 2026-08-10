@@ -46,7 +46,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMap',
     category: 'mapping',
     description:
-      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un mapa base de OpenStreetMap por defecto. Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, WMS, WFS, Tiles, GeoServer).',
+      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, WMS, WFS, Tiles, GeoServer).',
     propsSchema: [
       {
         key: 'mapLibrary',
@@ -58,12 +58,60 @@ export const registry: RegistryEntry[] = [
       },
       { key: 'zoom', label: 'Zoom', type: 'number', default: 6, min: 0, max: 18, step: 1 },
       {
-        key: 'tileLayer',
-        label: 'URL de teselas',
-        type: 'string',
-        default: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        key: 'minZoom',
+        label: 'Zoom mínimo',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 18,
+        step: 1,
+      },
+      {
+        key: 'maxZoom',
+        label: 'Zoom máximo',
+        type: 'number',
+        default: 19,
+        min: 1,
+        max: 22,
+        step: 1,
+      },
+      {
+        key: 'interactive',
+        label: 'Interactivo',
+        type: 'boolean',
+        default: true,
         description:
-          'Plantilla {z}/{x}/{y}. Capa base en Leaflet; fuente ráster del estilo por defecto en MapLibre.',
+          'Si se desactiva, el usuario no puede hacer pan/zoom/click (mapa de solo lectura).',
+      },
+      { key: 'zoomControl', label: 'Control de zoom', type: 'boolean', default: true },
+      { key: 'attributionControl', label: 'Control de atribución', type: 'boolean', default: true },
+      {
+        key: 'pitch',
+        label: 'Inclinación 3D (pitch)',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 60,
+        step: 5,
+        description: 'Solo con motor MapLibre; Leaflet es 2D y la ignora.',
+      },
+      {
+        key: 'bearing',
+        label: 'Rotación (bearing)',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 360,
+        step: 15,
+        description: 'Solo con motor MapLibre.',
+      },
+      {
+        key: 'basemap',
+        label: 'Basemap activo (id)',
+        type: 'string',
+        default: 'osm',
+        description:
+          'Id de `basemaps` (demo: "osm" o "topo"). Campo de texto simple; el selector visual será un widget aparte.',
       },
     ],
     events: [
@@ -73,9 +121,40 @@ export const registry: RegistryEntry[] = [
         description: 'El mapa terminó de inicializarse.',
       },
       {
+        name: 'update:center',
+        payload: '[number, number]',
+        description: 'El usuario hizo pan. Úsalo con v-model:center.',
+      },
+      {
+        name: 'update:zoom',
+        payload: 'number',
+        description: 'El usuario cambió el zoom. Úsalo con v-model:zoom.',
+      },
+      {
+        name: 'update:pitch',
+        payload: 'number',
+        description:
+          'El usuario cambió la inclinación 3D (solo MapLibre). Úsalo con v-model:pitch.',
+      },
+      {
+        name: 'update:bearing',
+        payload: 'number',
+        description: 'El usuario rotó el mapa (solo MapLibre). Úsalo con v-model:bearing.',
+      },
+      {
+        name: 'update:basemap',
+        payload: 'string',
+        description: 'El basemap activo cambió. Úsalo con v-model:basemap.',
+      },
+      {
         name: 'layer-loaded',
         payload: 'LayerLoadedEvent',
         description: 'Una capa de `layers` terminó de cargar (con éxito o con error).',
+      },
+      {
+        name: 'layer-error',
+        payload: '{ layerId, error }',
+        description: 'Fallo al cargar una capa de `layers`.',
       },
       {
         name: 'capability-detected',
@@ -88,11 +167,58 @@ export const registry: RegistryEntry[] = [
         payload: 'FeatureSelectedEvent',
         description: 'El usuario hizo click en un feature de una capa.',
       },
+      {
+        name: 'map-click',
+        payload: '{ coordinates: [number, number] }',
+        description:
+          'Click en el mapa que no encontró ningún feature (si lo encuentra, se emite feature-selected en su lugar).',
+      },
     ],
-    staticProps: { center: [40.4168, -3.7038], layers: [layerExamples[0]!.config] },
+    staticProps: {
+      center: [40.4168, -3.7038],
+      layers: [layerExamples[0]!.config],
+      basemaps: [
+        { id: 'osm', name: 'OSM', tileLayer: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' },
+        { id: 'topo', name: 'Topo', tileLayer: 'https://tile.opentopomap.org/{z}/{x}/{y}.png' },
+      ],
+    },
     notes:
-      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/GeoServer/Tiles usa el modo "Compositor sobre mapa". ASMap también admite `center` (`[lat, lng]`) y `style` (estilo de MapLibre, string u objeto): no son editables desde este formulario simple por no ser tipos primitivos, pero se fijan aquí como props estáticas (`center`) o se pueden probar aparte.',
+      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/GeoServer/Tiles usa el modo "Compositor sobre mapa". `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con dos basemaps de ejemplo (no editable por no ser un tipo primitivo); prueba a escribir "osm" o "topo" en "Basemap activo" para alternar entre ellos, sin selector visual todavía (será un widget aparte). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
     component: ASMap,
+    bindings: (values, log) => ({
+      'onUpdate:center': (center) => {
+        values.center = center
+        log('update:center', center)
+      },
+      'onUpdate:zoom': (zoom) => {
+        values.zoom = zoom
+        log('update:zoom', zoom)
+      },
+      'onUpdate:pitch': (pitch) => {
+        values.pitch = pitch
+        log('update:pitch', pitch)
+      },
+      'onUpdate:bearing': (bearing) => {
+        values.bearing = bearing
+        log('update:bearing', bearing)
+      },
+      'onUpdate:basemap': (id) => {
+        values.basemap = id
+        log('update:basemap', id)
+      },
+      onFeatureSelected: (event) => log('feature-selected', event),
+      onMapClick: (event) => log('map-click', event),
+      onLayerLoaded: (event) =>
+        log('layer-loaded', {
+          layerId: event.layerId,
+          type: event.type,
+          capabilities: event.capabilities,
+          error: event.error?.message,
+        }),
+      onLayerError: (event) =>
+        log('layer-error', { layerId: event.layerId, error: event.error.message }),
+      onCapabilityDetected: (event) => log('capability-detected', event),
+    }),
   },
   {
     id: 'time-controls',

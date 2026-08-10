@@ -130,6 +130,8 @@ const code = computed(() =>
               </div>
               <h3 class="pg-card__subheading">Eventos emitidos</h3>
               <EventLog :entries="logEntries" />
+              <h3 class="pg-card__subheading">Código</h3>
+              <CodePreview :code="code" />
             </section>
 
             <section class="pg-card" aria-label="Editor de props">
@@ -153,11 +155,6 @@ const code = computed(() =>
             <section class="pg-card" aria-label="Documentación">
               <h2 class="pg-card__heading">Documentación</h2>
               <DocsPanel :entry="entry" />
-            </section>
-
-            <section class="pg-card" aria-label="Código">
-              <h2 class="pg-card__heading">Código</h2>
-              <CodePreview :code="code" />
             </section>
           </div>
         </main>

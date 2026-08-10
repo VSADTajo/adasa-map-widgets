@@ -6,6 +6,20 @@ export interface LogEntry {
 }
 
 const props = defineProps<{ entries: LogEntry[] }>()
+
+/**
+ * Algunos payloads (p. ej. `map-ready`, `layer-loaded` con su `instance`)
+ * traen la instancia real del motor de mapas, con referencias circulares
+ * que `JSON.stringify` no puede serializar. En vez de romper el render de
+ * toda la lista, se muestra un texto de reserva para esos casos.
+ */
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return '[objeto no serializable]'
+  }
+}
 </script>
 
 <template>
@@ -18,7 +32,7 @@ const props = defineProps<{ entries: LogEntry[] }>()
         <span class="pg-event-log__time">{{ entry.time }}</span>
         <code class="pg-event-log__name">{{ entry.name }}</code>
         <span v-if="entry.payload !== undefined" class="pg-event-log__payload">
-          {{ JSON.stringify(entry.payload) }}
+          {{ safeStringify(entry.payload) }}
         </span>
       </li>
     </ul>
