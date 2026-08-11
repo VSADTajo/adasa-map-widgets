@@ -9,6 +9,7 @@ import type {
 } from 'maplibre-gl'
 import { resolveNamespace } from '@/utils/resolveNamespace'
 import { useLayerManager } from '@/composables/useLayerManager'
+import { ensureCogProtocol } from '@/layers'
 import type { FeatureSelectedEvent, LayerConfig, LayerLoadedEvent } from '@/types/layers'
 
 /**
@@ -100,6 +101,14 @@ export interface ASMapProps {
    */
   bearing?: number
   /**
+   * Terreno 3D (relieve real, vía `map.setTerrain`) a partir de un DEM. Solo
+   * tiene efecto con `mapLibrary="maplibre"`; Leaflet es estrictamente 2D y
+   * la ignora. Combínalo con `pitch` para verlo en perspectiva: sin
+   * inclinación, el relieve 3D no se aprecia (es solo una vista cenital del
+   * mismo terreno). @default undefined (sin terreno)
+   */
+  terrain?: TerrainConfig
+  /**
    * Basemaps disponibles. El caso simple (un único basemap fijo) es una
    * lista de un elemento; el caso con varios intercambiables es una lista
    * de 2+. ASMap no incluye ningún selector: es un componente controlado,
@@ -136,6 +145,31 @@ export interface BasemapOption {
    * marcador de posición con la inicial de `name`.
    */
   thumbnail?: string
+}
+
+/**
+ * Configuración de terreno 3D vía la prop `terrain` de {@link ASMapProps}.
+ * Solo tiene efecto con `mapLibrary="maplibre"`.
+ */
+export interface TerrainConfig {
+  /**
+   * URL del DEM: una plantilla de teselas terrain-RGB corriente (con
+   * `{z}/{x}/{y}`), o la URL de un GeoTIFF de elevación (idealmente un COG,
+   * en EPSG:3857) — se resuelve vía el protocolo `cog://#dem` de
+   * `@geomatico/maplibre-cog-protocol`, la misma dependencia opcional que ya
+   * usan las capas de tipo `'cog'` (ver `src/layers/maplibre.ts`).
+   */
+  url: string
+  /** Multiplicador de la exageración vertical del relieve. @default 1 */
+  exaggeration?: number
+  /**
+   * Codificación de las teselas terrain-RGB (`'mapbox'` o `'terrarium'`). No
+   * aplica si `url` es un GeoTIFF: el protocolo `cog://#dem` ya lo codifica
+   * él mismo. @default 'mapbox'
+   */
+  encoding?: 'mapbox' | 'terrarium'
+  /** Tamaño de tesela esperado por la fuente `raster-dem`. @default 256 */
+  tileSize?: number
 }
 
 /** Capacidad de una capa relevante para decidir qué widget mostrar (ver evento `capability-detected`). */
@@ -200,6 +234,50 @@ function disableLeafletInteractions(map: L.Map): void {
   ;(map as unknown as { tap?: { disable: () => void } }).tap?.disable()
 }
 
+/** Id fijo de la fuente `raster-dem` que respalda la prop `terrain`. */
+const TERRAIN_SOURCE_ID = 'as-map-terrain-dem'
+
+function waitForMaplibreStyleLoaded(map: MapLibreMap): Promise<void> {
+  if (map.isStyleLoaded()) return Promise.resolve()
+  return new Promise((resolve) => {
+    map.once('load', () => resolve())
+  })
+}
+
+/**
+ * Activa (o reemplaza) el terreno 3D sobre una fuente `raster-dem` propia.
+ * Si `terrain.url` no es una plantilla de teselas (no contiene `{z}`), se
+ * trata como un GeoTIFF de elevación y se resuelve vía `cog://...#dem`
+ * (registrando antes el protocolo `cog://` si hiciera falta — ver
+ * `ensureCogProtocol` en `src/layers/maplibre.ts`).
+ */
+async function applyTerrain(map: MapLibreMap, terrain: TerrainConfig): Promise<void> {
+  const isTileTemplate = terrain.url.includes('{z}')
+  if (!isTileTemplate) await ensureCogProtocol()
+  await waitForMaplibreStyleLoaded(map)
+
+  if (map.getSource(TERRAIN_SOURCE_ID)) {
+    map.setTerrain(null)
+    map.removeSource(TERRAIN_SOURCE_ID)
+  }
+
+  const source: Record<string, unknown> = {
+    type: 'raster-dem',
+    tileSize: terrain.tileSize ?? 256,
+    ...(isTileTemplate
+      ? { tiles: [terrain.url], encoding: terrain.encoding ?? 'mapbox' }
+      : { url: `cog://${terrain.url}#dem` }),
+  }
+  map.addSource(TERRAIN_SOURCE_ID, source as Parameters<MapLibreMap['addSource']>[1])
+  map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: terrain.exaggeration ?? 1 })
+}
+
+/** Desactiva el terreno 3D y libera su fuente. No hace nada si no había ninguno activo. */
+function clearTerrain(map: MapLibreMap): void {
+  map.setTerrain(null)
+  if (map.getSource(TERRAIN_SOURCE_ID)) map.removeSource(TERRAIN_SOURCE_ID)
+}
+
 const props = withDefaults(defineProps<ASMapProps>(), {
   mapLibrary: 'leaflet',
   layers: () => [],
@@ -212,6 +290,7 @@ const props = withDefaults(defineProps<ASMapProps>(), {
   attributionControl: true,
   pitch: 0,
   bearing: 0,
+  terrain: undefined,
   basemaps: () => [],
   basemap: undefined,
 })
@@ -378,6 +457,10 @@ async function createMaplibreMap(el: HTMLDivElement): Promise<MapLibreMap> {
     }
   })
 
+  // No se espera (fire-and-forget): igual que `syncLayers`, no debe bloquear
+  // `map-ready` a que termine de resolverse un DEM remoto.
+  if (props.terrain) void applyTerrain(map, props.terrain)
+
   return map
 }
 
@@ -483,6 +566,19 @@ watch([() => props.pitch, () => props.bearing], ([nextPitch, nextBearing]) => {
   if (maplibreMap.getPitch() === nextPitch && maplibreMap.getBearing() === nextBearing) return
   maplibreMap.jumpTo({ pitch: nextPitch, bearing: nextBearing })
 })
+
+/** Activa/reemplaza/quita el terreno 3D cuando cambia `terrain`. No tiene efecto en Leaflet (es 2D). */
+watch(
+  () => props.terrain,
+  (next) => {
+    const map = mapInstance.value
+    if (!map || props.mapLibrary !== 'maplibre') return
+    const maplibreMap = map as MapLibreMap
+    if (next) void applyTerrain(maplibreMap, next)
+    else clearTerrain(maplibreMap)
+  },
+  { deep: true },
+)
 
 /** Cambiar de basemap recrea el mapa entero (misma vía que cambiar `mapLibrary`). */
 watch(() => props.basemap, createMap)

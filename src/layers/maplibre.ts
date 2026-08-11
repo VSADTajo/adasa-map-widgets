@@ -71,10 +71,16 @@ async function loadMaplibreCogProtocol(): Promise<MaplibreCogProtocolModule> {
   return resolveNamespace<MaplibreCogProtocolModule>(mod)
 }
 
-/** Registra el protocolo `cog://` en MapLibre la primera vez que se necesita (registrarlo de nuevo es una operación segura, pero no hace falta repetirla). */
+/**
+ * Registra el protocolo `cog://` en MapLibre la primera vez que se necesita
+ * (registrarlo de nuevo es una operación segura, pero no hace falta
+ * repetirla). Exportada porque no solo la usa `renderCOG` aquí: `ASMap.vue`
+ * también la necesita para su prop `terrain` cuando el DEM es un GeoTIFF en
+ * vez de una plantilla de teselas terrain-RGB corriente.
+ */
 let cogProtocolRegistration: Promise<MaplibreCogProtocolModule> | undefined
 
-async function ensureCogProtocol(): Promise<MaplibreCogProtocolModule> {
+export async function ensureCogProtocol(): Promise<MaplibreCogProtocolModule> {
   if (!cogProtocolRegistration) {
     cogProtocolRegistration = Promise.all([loadMaplibreGl(), loadMaplibreCogProtocol()]).then(
       ([maplibregl, cogProtocolModule]) => {

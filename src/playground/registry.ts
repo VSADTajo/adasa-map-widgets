@@ -304,6 +304,82 @@ export const registry: RegistryEntry[] = [
       }) as LiveBindings,
   },
   {
+    id: 'as-map-terrain',
+    name: 'ASMap: terreno 3D',
+    category: 'mapping',
+    description:
+      'Terreno 3D (relieve real, vía `map.setTerrain`) a partir de un DEM, con la prop `terrain` de `ASMap`. Solo tiene efecto con `mapLibrary="maplibre"` (Leaflet es 2D y la ignora); combínalo con `pitch` para verlo en perspectiva.',
+    propsSchema: [
+      {
+        key: 'mapLibrary',
+        label: 'Motor de mapas',
+        type: 'select',
+        options: ['leaflet', 'maplibre'],
+        default: 'maplibre',
+        description:
+          'Con "leaflet" no se ve ningún relieve: `terrain` no tiene efecto en ese motor.',
+      },
+      { key: 'zoom', label: 'Zoom', type: 'number', default: 11, min: 8, max: 14, step: 1 },
+      {
+        key: 'pitch',
+        label: 'Inclinación 3D (pitch)',
+        type: 'number',
+        default: 60,
+        min: 0,
+        max: 60,
+        step: 5,
+        description: 'Con pitch=0 el relieve 3D no se aprecia: es solo una vista cenital.',
+      },
+      {
+        key: 'bearing',
+        label: 'Rotación (bearing)',
+        type: 'number',
+        default: 30,
+        min: 0,
+        max: 360,
+        step: 15,
+      },
+    ],
+    events: [
+      {
+        name: 'map-ready',
+        payload: 'L.Map | MapLibreMap',
+        description: 'El mapa terminó de inicializarse.',
+      },
+      {
+        name: 'update:pitch',
+        payload: 'number',
+        description: 'El usuario cambió la inclinación 3D. Úsalo con v-model:pitch.',
+      },
+      {
+        name: 'update:bearing',
+        payload: 'number',
+        description: 'El usuario rotó el mapa. Úsalo con v-model:bearing.',
+      },
+    ],
+    staticProps: {
+      center: [42.500454, 0.999756],
+      terrain: {
+        url: 'https://cdn.geomatico.es/pirineo_dem_cog_256.tif',
+        exaggeration: 1.5,
+      },
+    },
+    notes:
+      "DEM público (el mismo que usa la documentación oficial de `@geomatico/maplibre-cog-protocol` para su ejemplo de hillshading/terreno): un GeoTIFF de 333 MB, pero Cloud Optimized de verdad — el navegador solo pide, vía HTTP Range, las teselas que hacen falta para la vista actual, nunca el archivo completo. `url` no es una plantilla de teselas ({z}/{x}/{y}), así que ASMap la resuelve como GeoTIFF vía `cog://...#dem` (mismo protocolo que las capas de tipo `'cog'`). Centrado en el Pirineo (frontera España-Andorra-Francia) para que el relieve se note.",
+    component: ASMap,
+    bindings: (values, log) =>
+      ({
+        'onUpdate:pitch': (pitch) => {
+          values.pitch = pitch
+          log('update:pitch', pitch)
+        },
+        'onUpdate:bearing': (bearing) => {
+          values.bearing = bearing
+          log('update:bearing', bearing)
+        },
+      }) as LiveBindings,
+  },
+  {
     id: 'time-controls',
     name: 'ASMapTimeControls',
     category: 'controls',

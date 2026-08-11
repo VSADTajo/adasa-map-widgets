@@ -10,7 +10,7 @@ export type { LayerRenderer, LayerRenderHooks, RenderedLayer } from './types'
 export { toErrorInstance } from './types'
 export { detectCapabilities } from './capabilities'
 export { leafletLayerRegistry } from './leaflet'
-export { maplibreLayerRegistry } from './maplibre'
+export { maplibreLayerRegistry, ensureCogProtocol } from './maplibre'
 export { geoServerLayer } from './geoserver'
 export { LAYER_KIND } from '@/types/layers'
 
