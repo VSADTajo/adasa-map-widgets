@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ASMap, { type LayerCapabilityName } from '@/components/mapping/ASMap.vue'
+import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/components/mapping/ASMap.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
 import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
 import type { LayerConfig, LayerLoadedEvent } from '@/types/layers'
@@ -23,6 +23,10 @@ const props = defineProps<{
   selectedId: string | null
   /** Capas dinámicas a cargar sobre el mapa (ver `layerExamples.ts`). */
   layers: LayerConfig[]
+  /** Basemaps disponibles, reenviados tal cual a la prop `basemaps` de `ASMap`. */
+  basemaps: BasemapOption[]
+  /** Basemap activo, reenviado tal cual a la prop `basemap` de `ASMap`. */
+  basemap: string
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +38,8 @@ const emit = defineEmits<{
   'layer-error': [event: { layerId: string; error: Error }]
   'layer-unloaded': [event: { layerId: string }]
   'capability-detected': [event: { layerId: string; capability: LayerCapabilityName }]
+  /** El basemap activo cambió (desde un `ASMapBasemapsSelector` colocado). */
+  'update:basemap': [id: string]
 }>()
 
 function resolveListeners(
@@ -45,6 +51,32 @@ function resolveListeners(
     emit('log-event', entry.label, name, payload)
   })
 }
+
+/**
+ * Props+listeners de un widget colocado. Caso especial para
+ * `basemaps-selector`: en vez de su propio `basemap` de demo desconectado,
+ * recibe/gobierna el `basemaps`/`basemap` reales de este mismo `ASMap`, para
+ * que elegir uno cambie de verdad el mapa base (no solo quede registrado en
+ * el log de eventos).
+ */
+function resolvePlacementProps(placement: WidgetPlacement): Record<string, unknown> {
+  const entry = getWidgetEntry(placement.widgetType)
+  const listeners = resolveListeners(placement)
+  const merged: Record<string, unknown> = {
+    ...entry?.staticProps?.(),
+    ...placement.props,
+    ...listeners,
+  }
+  if (placement.widgetType === 'basemaps-selector') {
+    merged.basemaps = props.basemaps
+    merged.basemap = props.basemap
+    merged['onUpdate:basemap'] = (id: string) => {
+      ;(listeners['onUpdate:basemap'] as ((id: string) => void) | undefined)?.(id)
+      emit('update:basemap', id)
+    }
+  }
+  return merged
+}
 </script>
 
 <template>
@@ -54,10 +86,13 @@ function resolveListeners(
     :center="[40.4168, -3.7038]"
     :zoom="6"
     :layers="props.layers"
+    :basemaps="props.basemaps"
+    :basemap="props.basemap"
     @layer-loaded="(event) => emit('layer-loaded', event)"
     @layer-error="(event) => emit('layer-error', event)"
     @layer-unloaded="(event) => emit('layer-unloaded', event)"
     @capability-detected="(event) => emit('capability-detected', event)"
+    @update:basemap="(id) => emit('update:basemap', id)"
   >
     <div
       v-for="placement in props.placements"
@@ -71,11 +106,7 @@ function resolveListeners(
     >
       <component
         :is="getWidgetEntry(placement.widgetType)?.component"
-        v-bind="{
-          ...getWidgetEntry(placement.widgetType)?.staticProps?.(),
-          ...placement.props,
-          ...resolveListeners(placement),
-        }"
+        v-bind="resolvePlacementProps(placement)"
       />
     </div>
   </ASMap>

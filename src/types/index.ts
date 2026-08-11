@@ -16,6 +16,11 @@ export type {
 } from './TimelineProps'
 export type { TimeRangeProps, TimeRangeEmits } from './TimeRangeProps'
 export type {
+  BasemapsSelectorPosition,
+  BasemapsSelectorProps,
+  BasemapsSelectorEmits,
+} from './BasemapsSelectorProps'
+export type {
   DayIntervalAlert,
   DayIntervalSelection,
   DayIntervalProps,

@@ -129,6 +129,12 @@ export interface BasemapOption {
   style?: string | Record<string, unknown>
   /** Atribución de este basemap. @default Atribución de OpenStreetMap. */
   attribution?: string
+  /**
+   * URL de una imagen de miniatura para mostrar en selectores de basemap (p.
+   * ej. `ASMapBasemapsSelector`). Si se omite, esos widgets muestran un
+   * marcador de posición con la inicial de `name`.
+   */
+  thumbnail?: string
 }
 
 /** Capacidad de una capa relevante para decidir qué widget mostrar (ver evento `capability-detected`). */

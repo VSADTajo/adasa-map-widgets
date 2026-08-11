@@ -1,8 +1,10 @@
 import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
 import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import type { WidgetRegistryEntry } from '@/types/playground'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import { basemapExamples } from './basemapExamples'
 
 function buildDemoTimeline(hours = 12): Date[] {
   const start = new Date()
@@ -111,6 +113,30 @@ export const widgetRegistry: WidgetRegistryEntry[] = [
         log('update:selectedIntervalStart', value)
       },
       onIntervalChanged: (interval) => log('interval-changed', interval),
+    }),
+  },
+  {
+    id: 'basemaps-selector',
+    label: 'Selector de basemap (ASMapBasemapsSelector)',
+    componentName: 'ASMapBasemapsSelector',
+    component: ASMapBasemapsSelector,
+    propsSchema: [
+      { key: 'basemap', label: 'Basemap activo (id)', type: 'string', default: 'osm' },
+      {
+        key: 'position',
+        label: 'Esquina de apertura del menú',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'bottom-right',
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    staticProps: () => ({ basemaps: basemapExamples }),
+    bindings: (widgetProps, log) => ({
+      'onUpdate:basemap': (id) => {
+        widgetProps.basemap = id
+        log('update:basemap', id)
+      },
     }),
   },
 ]

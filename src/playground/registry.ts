@@ -3,9 +3,11 @@ import ASMap from '@/components/mapping/ASMap.vue'
 import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
 import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import type { ComponentDoc } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import { layerExamples } from './utils/layerExamples'
+import { basemapExamples } from './utils/basemapExamples'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -111,7 +113,7 @@ export const registry: RegistryEntry[] = [
         type: 'string',
         default: 'osm',
         description:
-          'Id de `basemaps` (demo: "osm" o "topo"). Campo de texto simple; el selector visual será un widget aparte.',
+          'Id de `basemaps`: "osm", "topo", "positron", "dark-matter" o "satellite". Campo de texto simple; para un selector visual real usa `ASMapBasemapsSelector` en el "Compositor sobre mapa".',
       },
     ],
     events: [
@@ -177,13 +179,10 @@ export const registry: RegistryEntry[] = [
     staticProps: {
       center: [40.4168, -3.7038],
       layers: [layerExamples[0]!.config],
-      basemaps: [
-        { id: 'osm', name: 'OSM', tileLayer: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' },
-        { id: 'topo', name: 'Topo', tileLayer: 'https://tile.opentopomap.org/{z}/{x}/{y}.png' },
-      ],
+      basemaps: basemapExamples,
     },
     notes:
-      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/GeoServer/Tiles usa el modo "Compositor sobre mapa". `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con dos basemaps de ejemplo (no editable por no ser un tipo primitivo); prueba a escribir "osm" o "topo" en "Basemap activo" para alternar entre ellos, sin selector visual todavía (será un widget aparte). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
+      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/GeoServer/Tiles usa el modo "Compositor sobre mapa". `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); prueba a escribir su id ("osm", "topo", "positron", "dark-matter" o "satellite") en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
     component: ASMap,
     bindings: (values, log) => ({
       'onUpdate:center': (center) => {
@@ -349,6 +348,56 @@ export const registry: RegistryEntry[] = [
         log('update:selectedIntervalStart', value)
       },
       onIntervalChanged: (interval) => log('interval-changed', interval),
+    }),
+  },
+  {
+    id: 'basemaps-selector',
+    name: 'ASMapBasemapsSelector',
+    category: 'controls',
+    description:
+      'Selector de basemap: un recuadro con la miniatura del basemap activo que, al hacer click, despliega un menú con un recuadro por cada uno de los demás `basemaps`. Elegir uno cambia el basemap y cierra el menú. Pensado para usarse junto a las props `basemaps`/`basemap` de ASMap (mismo formato).',
+    propsSchema: [
+      {
+        key: 'basemap',
+        label: 'Basemap activo (id)',
+        type: 'string',
+        default: 'osm',
+        description: 'Id de `basemaps`: "osm", "topo", "positron", "dark-matter" o "satellite".',
+      },
+      {
+        key: 'position',
+        label: 'Posición',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'bottom-right',
+      },
+      {
+        key: 'offset',
+        label: 'Offset (px)',
+        type: 'number',
+        default: 20,
+        min: 0,
+        max: 80,
+        step: 4,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    events: [
+      {
+        name: 'update:basemap',
+        payload: 'string',
+        description: 'El usuario eligió un basemap del menú. Úsalo con v-model:basemap.',
+      },
+    ],
+    staticProps: { basemaps: basemapExamples },
+    notes:
+      'La prop "basemaps" no es editable en este playground (no es un tipo primitivo); se usan los 5 basemaps reales de `basemapExamples` (OpenStreetMap, OpenTopoMap, CARTO Positron/Dark Matter y Esri World Imagery), con su miniatura real. Haz click en el recuadro para ver el menú con los otros cuatro. Para ver que además cambia el mapa base de verdad, usa el modo "Compositor sobre mapa".',
+    component: ASMapBasemapsSelector,
+    bindings: (values, log) => ({
+      'onUpdate:basemap': (id) => {
+        values.basemap = id
+        log('update:basemap', id)
+      },
     }),
   },
 ]

@@ -5,6 +5,7 @@ import WidgetPanel from './WidgetPanel.vue'
 import type { LogEntry } from './EventLog.vue'
 import { widgetRegistry, getWidgetEntry } from '../utils/widgetRegistry'
 import { LAYER_TYPE_LABELS, layerExamples } from '../utils/layerExamples'
+import { basemapExamples } from '../utils/basemapExamples'
 import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
 import type { WidgetPosition } from '@/types/common'
 import type { LayerCapabilities, LayerConfig, LayerLoadedEvent } from '@/types/layers'
@@ -25,6 +26,14 @@ const mapLibrary = ref<MapLibraryOption>('leaflet')
 const placements = ref<WidgetPlacement[]>([])
 const selectedId = ref<string | null>(null)
 const eventLog = ref<LogEntry[]>([])
+
+/** Basemap activo real del mapa (coloca un `ASMapBasemapsSelector` para cambiarlo). */
+const activeBasemap = ref<string>(basemapExamples[0]!.id)
+
+function onBasemapChanged(id: string): void {
+  activeBasemap.value = id
+  onLogEvent('ASMap', 'update:basemap', id)
+}
 
 /** Estado en vivo de cada capa de ejemplo activada (se rellena con los eventos de `ASMap`). */
 interface LayerStatus {
@@ -218,12 +227,15 @@ function onLogEvent(widgetLabel: string, name: string, payload: unknown): void {
         :placements="placements"
         :selected-id="selectedId"
         :layers="activeLayers"
+        :basemaps="basemapExamples"
+        :basemap="activeBasemap"
         @select="selectWidget"
         @log-event="onLogEvent"
         @layer-loaded="onLayerLoaded"
         @layer-error="onLayerError"
         @layer-unloaded="onLayerUnloaded"
         @capability-detected="onCapabilityDetected"
+        @update:basemap="onBasemapChanged"
       />
     </main>
 
