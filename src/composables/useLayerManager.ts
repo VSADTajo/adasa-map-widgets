@@ -39,8 +39,8 @@ type AnyLayerManagerListener = (payload: unknown) => void
 type BooleanCapabilityKey = Exclude<keyof LayerCapabilities, 'timeRange'>
 
 /**
- * Gestiona el ciclo de vida de capas dinámicas (GeoJSON, WMS, WFS, Tiles,
- * GeoServer) sobre un mapa de `ASMap`: carga, descarga, visibilidad y
+ * Gestiona el ciclo de vida de capas dinámicas (GeoJSON, TopoJSON, KML, WMS,
+ * WFS, Tiles) sobre un mapa de `ASMap`: carga, descarga, visibilidad y
  * detección de capacidades — apoyándose en `src/layers/` (`getLayerRegistry`)
  * para el renderizado real por motor.
  *

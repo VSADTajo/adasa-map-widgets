@@ -2,21 +2,24 @@ import type { MapLayerMouseEvent, MapLibreMap } from 'maplibre-gl'
 import type {
   GeoJSONOptions,
   GeoJsonFeature,
+  KMLOptions,
+  LayerCapabilities,
   LayerConfig,
   LayerType,
   TilesOptions,
+  TopoJSONOptions,
   WFSOptions,
   WMSOptions,
 } from '@/types/layers'
 import {
   detectGeoJSONCapabilities,
-  detectGeoServerCapabilities,
   detectTilesCapabilities,
   detectWFSCapabilities,
   detectWMSCapabilities,
 } from './capabilities'
 import { fetchWfsFeatures } from './wfs'
-import { toWfsConfig, toWmsConfig } from './geoserver'
+import { resolveTopoJsonData } from './topojson'
+import { resolveKmlData } from './kml'
 import {
   toErrorInstance,
   type LayerRenderer,
@@ -124,46 +127,110 @@ function bindLayerClick(
   return () => map.off('click', renderedLayerId, handler)
 }
 
+/** Payload de error común a todos los `render*`: sin instancia, sin efecto al quitar/mostrar. */
+function toErrorResult(
+  layer: LayerConfig,
+  capabilities: LayerCapabilities,
+  error: unknown,
+): RenderedLayer {
+  return {
+    event: { layerId: layer.id, type: layer.type, capabilities, error: toErrorInstance(error) },
+    remove: () => {},
+    setVisible: () => {},
+  }
+}
+
+/**
+ * Vuelca datos GeoJSON ya resueltos (venga directamente de una capa
+ * `'geojson'`, o convertidos desde TopoJSON/KML) como fuente+capas de
+ * MapLibre. Admite tanto una URL (MapLibre la resuelve él mismo) como un
+ * objeto ya parseado — TopoJSON/KML siempre pasan el objeto, porque MapLibre
+ * no entiende esos formatos de origen, solo GeoJSON.
+ */
+async function renderGeoJsonFeatureCollection(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  hooks: LayerRenderHooks,
+  data: GeoJSON.GeoJSON | string,
+  capabilities: LayerCapabilities,
+): Promise<RenderedLayer> {
+  await waitForStyleLoaded(map)
+  const sourceId = layer.id
+  const layerIds = addGeoJsonLayers(map, sourceId, data, layer.opacity ?? 1)
+  const unbind = hooks.onFeatureSelected
+    ? layerIds.map((id) => bindLayerClick(map, id, layer.id, hooks))
+    : []
+
+  return {
+    event: {
+      layerId: layer.id,
+      type: layer.type,
+      capabilities,
+      instance: { sourceId, layerIds },
+    },
+    remove: () => {
+      unbind.forEach((off) => off())
+      removeGeoJsonLayers(map, sourceId, layerIds)
+    },
+    setVisible: (visible) => setLayersVisible(map, layerIds, visible),
+  }
+}
+
 async function renderGeoJSON(
   map: MapLibreMap,
   layer: LayerConfig,
   hooks: LayerRenderHooks,
 ): Promise<RenderedLayer> {
   const options = layer.options as GeoJSONOptions
+  const capabilities = detectGeoJSONCapabilities(layer)
   try {
-    await waitForStyleLoaded(map)
-    const sourceId = layer.id
     const data =
       typeof options.data === 'string' ? options.data : (options.data as unknown as GeoJSON.GeoJSON)
-    const layerIds = addGeoJsonLayers(map, sourceId, data, layer.opacity ?? 1)
-    const unbind = hooks.onFeatureSelected
-      ? layerIds.map((id) => bindLayerClick(map, id, layer.id, hooks))
-      : []
-
-    return {
-      event: {
-        layerId: layer.id,
-        type: 'geojson',
-        capabilities: detectGeoJSONCapabilities(layer),
-        instance: { sourceId, layerIds },
-      },
-      remove: () => {
-        unbind.forEach((off) => off())
-        removeGeoJsonLayers(map, sourceId, layerIds)
-      },
-      setVisible: (visible) => setLayersVisible(map, layerIds, visible),
-    }
+    return await renderGeoJsonFeatureCollection(map, layer, hooks, data, capabilities)
   } catch (error) {
-    return {
-      event: {
-        layerId: layer.id,
-        type: 'geojson',
-        capabilities: detectGeoJSONCapabilities(layer),
-        error: toErrorInstance(error),
-      },
-      remove: () => {},
-      setVisible: () => {},
-    }
+    return toErrorResult(layer, capabilities, error)
+  }
+}
+
+async function renderTopoJSON(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as TopoJSONOptions
+  const capabilities = detectGeoJSONCapabilities(layer)
+  try {
+    const data = await resolveTopoJsonData(options)
+    return await renderGeoJsonFeatureCollection(
+      map,
+      layer,
+      hooks,
+      data as unknown as GeoJSON.GeoJSON,
+      capabilities,
+    )
+  } catch (error) {
+    return toErrorResult(layer, capabilities, error)
+  }
+}
+
+async function renderKML(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as KMLOptions
+  const capabilities = detectGeoJSONCapabilities(layer)
+  try {
+    const data = await resolveKmlData(options)
+    return await renderGeoJsonFeatureCollection(
+      map,
+      layer,
+      hooks,
+      data as unknown as GeoJSON.GeoJSON,
+      capabilities,
+    )
+  } catch (error) {
+    return toErrorResult(layer, capabilities, error)
   }
 }
 
@@ -221,16 +288,7 @@ async function renderWMS(
       setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
     }
   } catch (error) {
-    return {
-      event: {
-        layerId: layer.id,
-        type: 'wms',
-        capabilities: detectWMSCapabilities(layer),
-        error: toErrorInstance(error),
-      },
-      remove: () => {},
-      setVisible: () => {},
-    }
+    return toErrorResult(layer, detectWMSCapabilities(layer), error)
   }
 }
 
@@ -269,16 +327,7 @@ async function renderWFS(
       setVisible: (visible) => setLayersVisible(map, layerIds, visible),
     }
   } catch (error) {
-    return {
-      event: {
-        layerId: layer.id,
-        type: 'wfs',
-        capabilities: detectWFSCapabilities(layer),
-        error: toErrorInstance(error),
-      },
-      remove: () => {},
-      setVisible: () => {},
-    }
+    return toErrorResult(layer, detectWFSCapabilities(layer), error)
   }
 }
 
@@ -322,34 +371,15 @@ async function renderTiles(
       setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
     }
   } catch (error) {
-    return {
-      event: {
-        layerId: layer.id,
-        type: 'tiles',
-        capabilities: detectTilesCapabilities(layer),
-        error: toErrorInstance(error),
-      },
-      remove: () => {},
-      setVisible: () => {},
-    }
+    return toErrorResult(layer, detectTilesCapabilities(layer), error)
   }
-}
-
-async function renderGeoServer(
-  map: MapLibreMap,
-  layer: LayerConfig,
-  hooks: LayerRenderHooks,
-): Promise<RenderedLayer> {
-  const options = layer.options as import('@/types/layers').GeoServerOptions
-  return options.mode === 'wms'
-    ? renderWMS(map, toWmsConfig(layer), hooks)
-    : renderWFS(map, toWfsConfig(layer), hooks)
 }
 
 export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
+  topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
+  kml: { render: renderKML, detectCapabilities: detectGeoJSONCapabilities },
   wms: { render: renderWMS, detectCapabilities: detectWMSCapabilities },
   wfs: { render: renderWFS, detectCapabilities: detectWFSCapabilities },
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
-  geoserver: { render: renderGeoServer, detectCapabilities: detectGeoServerCapabilities },
 }

@@ -1,34 +1,49 @@
-import type { GeoServerOptions, LayerConfig, WFSOptions, WMSOptions } from '@/types/layers'
+import type { GeoServerOptions, LayerConfig } from '@/types/layers'
 
 /**
- * GeoServer es un atajo sobre WMS/WFS: estas funciones traducen su
- * configuración a una `LayerConfig` de tipo `'wms'`/`'wfs'` equivalente, para
- * que cada registro (Leaflet/MapLibre) reutilice sus propios `renderWMS`/
- * `renderWFS` en vez de duplicar la lógica de renderizado para GeoServer.
+ * GeoServer no es un protocolo de capas distinto: un layer de GeoServer
+ * siempre se sirve como WMS o WFS. Este helper construye el `LayerConfig`
+ * correspondiente (`type: 'wms'` o `'wfs'` según `options.mode`, con la URL y
+ * el nombre `workspace:layer` ya resueltos) para no tener que concatenarlos
+ * a mano cada vez que se usa un servidor GeoServer.
+ *
+ * @example
+ * ```ts
+ * const estadosUSA = geoServerLayer({
+ *   id: 'estados-usa',
+ *   name: 'Estados de EE. UU.',
+ *   visible: true,
+ *   options: { url: 'https://ahocevar.com/geoserver', workspace: 'topp', layer: 'states', mode: 'wfs' },
+ * })
+ * // estadosUSA.type === 'wfs'
+ * // estadosUSA.options === { url: '.../geoserver/wfs', typeName: 'topp:states', cql_filter: undefined, editable: undefined }
+ * ```
  */
+export function geoServerLayer(
+  config: Omit<LayerConfig, 'type' | 'options'> & { options: GeoServerOptions },
+): LayerConfig {
+  const { options } = config
 
-export function toWmsConfig(layer: LayerConfig): LayerConfig & { options: WMSOptions } {
-  const options = layer.options as GeoServerOptions
-  return {
-    ...layer,
-    type: 'wms',
-    options: {
-      url: `${options.url}/wms`,
-      layers: `${options.workspace}:${options.layer}`,
-      style: options.style,
-    },
+  if (options.mode === 'wms') {
+    return {
+      ...config,
+      type: 'wms',
+      options: {
+        url: `${options.url}/wms`,
+        layers: `${options.workspace}:${options.layer}`,
+        style: options.style,
+      },
+    }
   }
-}
 
-export function toWfsConfig(layer: LayerConfig): LayerConfig & { options: WFSOptions } {
-  const options = layer.options as GeoServerOptions
   return {
-    ...layer,
+    ...config,
     type: 'wfs',
     options: {
       url: `${options.url}/wfs`,
       typeName: `${options.workspace}:${options.layer}`,
       cql_filter: options.filter,
+      editable: options.editable,
     },
   }
 }

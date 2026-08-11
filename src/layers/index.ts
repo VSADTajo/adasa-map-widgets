@@ -11,6 +11,8 @@ export { toErrorInstance } from './types'
 export { detectCapabilities } from './capabilities'
 export { leafletLayerRegistry } from './leaflet'
 export { maplibreLayerRegistry } from './maplibre'
+export { geoServerLayer } from './geoserver'
+export { LAYER_KIND } from '@/types/layers'
 
 /** Motor de mapas al que corresponde cada registro de renderers de capas. */
 type LayerRegistryMap<TEngine extends MapLibraryOption> = Record<

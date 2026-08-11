@@ -19,7 +19,8 @@ import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
  * composición, independiente de la galería de un solo componente.
  *
  * También deja activar/desactivar capas dinámicas de ejemplo (una por cada
- * tipo: GeoJSON, WMS, WFS, Tiles, GeoServer — ver `layerExamples.ts`) para
+ * tipo — GeoJSON, TopoJSON, KML, WMS, WFS, Tiles — más una de GeoServer
+ * construida con el helper `geoServerLayer()`; ver `layerExamples.ts`) para
  * probar el sistema de capas de `ASMap` (`useLayerManager`) en el mismo sitio.
  */
 const mapLibrary = ref<MapLibraryOption>('leaflet')

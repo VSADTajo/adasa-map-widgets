@@ -3,11 +3,30 @@ import type { LatLng } from './map'
 /**
  * Tipos de capa soportados por el sistema de capas dinámicas de `ASMap`.
  *
- * `'geoserver'` es un atajo sobre `'wms'`/`'wfs'` pensado para servidores
- * GeoServer (añade `workspace` y elige el modo de acceso), no un protocolo
- * distinto.
+ * GeoServer no es un protocolo distinto (siempre sirve WMS o WFS), así que
+ * no tiene su propio `LayerType`: usa el helper `geoServerLayer()` (ver
+ * `src/layers/geoserver.ts`) para construir un `LayerConfig` de tipo
+ * `'wms'`/`'wfs'` a partir de `url`/`workspace`/`layer`/`mode`, en vez de
+ * concatenar la URL y el nombre `workspace:layer` a mano.
  */
-export type LayerType = 'geojson' | 'wms' | 'wfs' | 'tiles' | 'geoserver'
+export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles'
+
+/**
+ * Naturaleza de una capa: si el cliente recibe/edita datos vectoriales en
+ * bruto (features individuales, clicables), o solo una imagen ya renderizada
+ * por el servidor (sin features, no clicable por feature).
+ */
+export type LayerKind = 'vector' | 'raster'
+
+/** A qué {@link LayerKind} pertenece cada {@link LayerType}. */
+export const LAYER_KIND: Record<LayerType, LayerKind> = {
+  geojson: 'vector',
+  topojson: 'vector',
+  kml: 'vector',
+  wfs: 'vector',
+  wms: 'raster',
+  tiles: 'raster',
+}
 
 /**
  * Geometría GeoJSON mínima. Se define localmente (en vez de depender del
@@ -70,6 +89,58 @@ export interface GeoJSONOptions {
   onEachFeature?: (feature: GeoJsonFeature, layer: unknown) => void
 }
 
+/**
+ * Topología TopoJSON mínima. Se define localmente (mismo motivo que
+ * {@link GeoJsonGeometry}): para que el tipado de capas siga siendo
+ * autocontenido, sin exigir el paquete `@types/topojson-specification`.
+ */
+export interface TopoJSONTopology {
+  type: 'Topology'
+  /** Cada clave es un objeto (feature o colección) convertible a GeoJSON con `topojson-client`. */
+  objects: Record<string, unknown>
+  arcs: number[][][]
+  transform?: { scale: [number, number]; translate: [number, number] }
+  bbox?: number[]
+}
+
+/**
+ * Opciones de una capa TopoJSON: como GeoJSON, pero con la topología
+ * (arcos compartidos entre features) codificada de forma más compacta.
+ * Requiere la dependencia opcional `topojson-client` para decodificarla.
+ */
+export interface TopoJSONOptions {
+  /** Topología ya resuelta, o una URL desde la que cargarla. */
+  data: TopoJSONTopology | string
+  /**
+   * Qué objeto(s) de `topology.objects` convertir a features (p. ej.
+   * `'countries'`). Si se omite, se convierten todos los objetos de la
+   * topología.
+   */
+  object?: string | string[]
+  /** Estilo por feature. El tipo de retorno depende del motor de mapas subyacente. */
+  style?: (feature: GeoJsonFeature) => Record<string, unknown>
+  /** Fábrica de la capa a usar para features de tipo punto. */
+  pointToLayer?: (feature: GeoJsonFeature, latlng: LatLng) => unknown
+  /** Hook por feature (p. ej. para enlazar popups o listeners). */
+  onEachFeature?: (feature: GeoJsonFeature, layer: unknown) => void
+}
+
+/**
+ * Opciones de una capa KML/KMZ (Keyhole Markup Language). Se convierte a
+ * GeoJSON internamente con la dependencia opcional `@tmcw/togeojson` (y
+ * `fflate` si `data` apunta a un `.kmz`, que es un `.kml` comprimido en zip).
+ */
+export interface KMLOptions {
+  /** URL de un `.kml`/`.kmz`, o contenido KML/XML ya cargado como texto. */
+  data: string
+  /** Estilo por feature. El tipo de retorno depende del motor de mapas subyacente. */
+  style?: (feature: GeoJsonFeature) => Record<string, unknown>
+  /** Fábrica de la capa a usar para features de tipo punto. */
+  pointToLayer?: (feature: GeoJsonFeature, latlng: LatLng) => unknown
+  /** Hook por feature (p. ej. para enlazar popups o listeners). */
+  onEachFeature?: (feature: GeoJsonFeature, layer: unknown) => void
+}
+
 /** Opciones de una capa WMS (Web Map Service). */
 export interface WMSOptions {
   /** URL del servidor WMS. */
@@ -112,9 +183,11 @@ export interface TilesOptions {
 }
 
 /**
- * Opciones de una capa GeoServer: un atajo sobre WMS/WFS que añade el
- * `workspace` y deja elegir el modo de acceso (`mode`), en vez de repetir
- * `WMSOptions`/`WFSOptions` a mano para servidores GeoServer.
+ * Parámetros del helper `geoServerLayer()` (ver `src/layers/geoserver.ts`):
+ * no es la forma de `options` de ningún `LayerConfig` real (por eso no forma
+ * parte de {@link LayerTypeOptions}) — es la entrada con la que se *construye*
+ * uno, de tipo `'wms'`/`'wfs'` según `mode`, con la URL y el nombre
+ * `workspace:layer` ya resueltos.
  */
 export interface GeoServerOptions {
   /** URL base de GeoServer (sin `/wms` ni `/wfs`). */
@@ -127,11 +200,13 @@ export interface GeoServerOptions {
   style?: string
   /** Filtro CQL opcional. */
   filter?: string
+  /** Si es `true` y `mode: 'wfs'`, la capa admite añadir/editar features (WFS-T). Se ignora con `mode: 'wms'`. */
+  editable?: boolean
 }
 
 /** Unión de las opciones específicas de cada {@link LayerType}. */
 export type LayerTypeOptions =
-  GeoJSONOptions | WMSOptions | WFSOptions | TilesOptions | GeoServerOptions
+  GeoJSONOptions | TopoJSONOptions | KMLOptions | WMSOptions | WFSOptions | TilesOptions
 
 /**
  * Configuración de una capa dinámica de `ASMap`. `options` no está acoplado

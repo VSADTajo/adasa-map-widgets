@@ -1,12 +1,14 @@
 import type { GeoJsonFeatureCollection, LayerConfig, LayerType } from '@/types/layers'
+import { geoServerLayer } from '@/layers'
 
 /** Etiqueta legible por tipo de capa, para los controles del compositor. */
 export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
   geojson: 'GeoJSON',
+  topojson: 'TopoJSON',
+  kml: 'KML',
   wms: 'WMS',
   wfs: 'WFS',
   tiles: 'Teselas',
-  geoserver: 'GeoServer',
 }
 
 export interface LayerExample {
@@ -55,12 +57,44 @@ const madridGeoJson: GeoJsonFeatureCollection = {
   ],
 }
 
+/** KML local (sin red): un punto y un polígono cerca de Madrid, mismo espíritu que `madridGeoJson`. */
+const madridKml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <Placemark>
+      <name>Parque del Retiro</name>
+      <ExtendedData>
+        <Data name="kind"><value>punto de interés</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>-3.6835,40.4153,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>Zona de ejemplo (KML)</name>
+      <ExtendedData>
+        <Data name="kind"><value>área</value></Data>
+      </ExtendedData>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>-3.70,40.40 -3.69,40.40 -3.69,40.41 -3.70,40.41 -3.70,40.40</coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>`
+
 /**
- * Un ejemplo por cada {@link LayerType}. Los de GeoJSON funcionan sin red;
- * WMS/WFS/GeoServer apuntan a servidores de demostración **públicos** de
- * terceros (los mismos que usan los ejemplos oficiales de Leaflet/OpenLayers),
- * así que pueden fallar si ese servicio está caído — el propio sistema de
- * capas lo refleja como un `layer-error` en vez de romper el playground.
+ * Un ejemplo por cada {@link LayerType}, más uno extra de GeoServer (que no
+ * es un `LayerType` propio: `geoServerLayer()` lo resuelve a `'wfs'`, ver
+ * `src/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
+ * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer apuntan a
+ * servidores de demostración **públicos** de terceros (los mismos que usan
+ * los ejemplos oficiales de Leaflet/OpenLayers), así que pueden fallar si ese
+ * servicio está caído — el propio sistema de capas lo refleja como un
+ * `layer-error` en vez de romper el playground.
  */
 export const layerExamples: LayerExample[] = [
   {
@@ -71,6 +105,32 @@ export const layerExamples: LayerExample[] = [
       type: 'geojson',
       visible: true,
       options: { data: madridGeoJson },
+    },
+  },
+  {
+    description:
+      'Topología pública (jsdelivr/world-atlas): las masas de tierra del mundo, convertidas a GeoJSON con `topojson-client` al vuelo.',
+    config: {
+      id: 'demo-topojson-land',
+      name: 'TopoJSON: masas de tierra',
+      type: 'topojson',
+      visible: true,
+      opacity: 0.6,
+      options: {
+        data: 'https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json',
+        object: 'land',
+      },
+    },
+  },
+  {
+    description:
+      'Datos locales (sin red), mismo contenido que el ejemplo GeoJSON pero en formato KML.',
+    config: {
+      id: 'demo-kml-madrid',
+      name: 'KML: Madrid centro',
+      type: 'kml',
+      visible: true,
+      options: { data: madridKml },
     },
   },
   {
@@ -122,11 +182,10 @@ export const layerExamples: LayerExample[] = [
   },
   {
     description:
-      'GeoServer (mismo servidor que el ejemplo WFS): demuestra el atajo workspace + layer + mode.',
-    config: {
+      'Mismo servidor que el ejemplo WFS, pero construido con el helper `geoServerLayer()` (workspace + layer + mode) en vez de la URL/typeName completos.',
+    config: geoServerLayer({
       id: 'demo-geoserver-states',
-      name: 'GeoServer: topp:states (wfs)',
-      type: 'geoserver',
+      name: 'GeoServer: topp:states (vía geoServerLayer)',
       visible: true,
       options: {
         url: 'https://ahocevar.com/geoserver',
@@ -134,7 +193,7 @@ export const layerExamples: LayerExample[] = [
         layer: 'states',
         mode: 'wfs',
       },
-    },
+    }),
   },
 ]
 

@@ -1,10 +1,4 @@
-import type {
-  GeoServerOptions,
-  LayerCapabilities,
-  LayerConfig,
-  WFSOptions,
-  WMSOptions,
-} from '@/types/layers'
+import type { LayerCapabilities, LayerConfig, WFSOptions, WMSOptions } from '@/types/layers'
 
 /**
  * Detección de capacidades por tipo de capa. No dependen del motor de mapas
@@ -44,21 +38,15 @@ export function detectTilesCapabilities(_layer: LayerConfig): LayerCapabilities 
   return { isTemporal: false, isEditable: false, hasFilters: false, hasSearch: false }
 }
 
-export function detectGeoServerCapabilities(layer: LayerConfig): LayerCapabilities {
-  const options = layer.options as GeoServerOptions
-  const haystack = `${options.layer} ${options.workspace}`.toLowerCase()
-  return {
-    isTemporal: haystack.includes('temporal') || haystack.includes('time'),
-    isEditable: options.mode === 'wfs',
-    hasFilters: Boolean(options.filter),
-    hasSearch: options.mode === 'wfs',
-  }
-}
-
 /** Despacha a la función de detección correspondiente según `layer.type`. */
 export function detectCapabilities(layer: LayerConfig): LayerCapabilities {
   switch (layer.type) {
+    // TopoJSON/KML se convierten a GeoJSON antes de renderizarse: son datos
+    // vectoriales estáticos igual que GeoJSON, sin capacidades de servidor
+    // (edición, filtros, búsqueda), así que comparten la misma detección.
     case 'geojson':
+    case 'topojson':
+    case 'kml':
       return detectGeoJSONCapabilities(layer)
     case 'wms':
       return detectWMSCapabilities(layer)
@@ -66,7 +54,5 @@ export function detectCapabilities(layer: LayerConfig): LayerCapabilities {
       return detectWFSCapabilities(layer)
     case 'tiles':
       return detectTilesCapabilities(layer)
-    case 'geoserver':
-      return detectGeoServerCapabilities(layer)
   }
 }

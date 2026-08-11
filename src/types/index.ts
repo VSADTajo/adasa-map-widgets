@@ -35,11 +35,15 @@ export type {
 } from './playground'
 export type {
   LayerType,
+  LayerKind,
   GeoJsonGeometry,
   GeoJsonFeature,
   GeoJsonFeatureCollection,
   LayerCapabilities,
   GeoJSONOptions,
+  TopoJSONTopology,
+  TopoJSONOptions,
+  KMLOptions,
   WMSOptions,
   WFSOptions,
   TilesOptions,
