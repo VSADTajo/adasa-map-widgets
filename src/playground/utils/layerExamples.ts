@@ -10,6 +10,7 @@ export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
   wfs: 'WFS',
   tiles: 'Teselas',
   wmts: 'WMTS',
+  cog: 'COG',
 }
 
 export interface LayerExample {
@@ -91,12 +92,12 @@ const madridKml = `<?xml version="1.0" encoding="UTF-8"?>
  * Un ejemplo por cada {@link LayerType}, más uno extra de GeoServer (que no
  * es un `LayerType` propio: `geoServerLayer()` lo resuelve a `'wfs'`, ver
  * `src/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
- * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS
+ * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS/COG
  * apuntan a servidores de demostración **públicos** de terceros (los mismos
  * que usan los ejemplos oficiales de Leaflet/OpenLayers, más el WMTS del IGN
- * español), así que pueden fallar si ese servicio está caído — el propio
- * sistema de capas lo refleja como un `layer-error` en vez de romper el
- * playground.
+ * español y el COG de ejemplo de `@geomatico/maplibre-cog-protocol`), así que
+ * pueden fallar si ese servicio está caído — el propio sistema de capas lo
+ * refleja como un `layer-error` en vez de romper el playground.
  */
 export const layerExamples: LayerExample[] = [
   {
@@ -180,6 +181,20 @@ export const layerExamples: LayerExample[] = [
         layer: 'MTN',
         tileMatrixSet: 'GoogleMapsCompatible',
         format: 'image/jpeg',
+      },
+    },
+  },
+  {
+    description:
+      'COG público de ejemplo (el mismo que usa la documentación de `@geomatico/maplibre-cog-protocol` para su rampa de color): un ráster de una sola banda (interpolación kriging) cerca de Lleida, con una rampa de color azul→rojo entre 1.7 y 1.8.',
+    config: {
+      id: 'demo-cog-kriging',
+      name: 'COG: interpolación kriging (Lleida)',
+      type: 'cog',
+      visible: true,
+      options: {
+        url: 'https://labs.geomatico.es/maplibre-cog-protocol/data/kriging.tif',
+        colorScale: { min: 1.7, max: 1.8, colors: ['#2166ac', '#f7f7f7', '#b2182b'] },
       },
     },
   },

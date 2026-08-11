@@ -9,7 +9,7 @@ import type { LatLng } from './map'
  * `'wms'`/`'wfs'` a partir de `url`/`workspace`/`layer`/`mode`, en vez de
  * concatenar la URL y el nombre `workspace:layer` a mano.
  */
-export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles' | 'wmts'
+export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles' | 'wmts' | 'cog'
 
 /**
  * Naturaleza de una capa: si el cliente recibe/edita datos vectoriales en
@@ -27,6 +27,7 @@ export const LAYER_KIND: Record<LayerType, LayerKind> = {
   wms: 'raster',
   tiles: 'raster',
   wmts: 'raster',
+  cog: 'raster',
 }
 
 /**
@@ -217,6 +218,38 @@ export interface WMTSOptions {
 }
 
 /**
+ * Rampa de color lineal para GeoTIFFs de una sola banda (elevación,
+ * interpolaciones, índices...): interpola entre `colors` según dónde caiga
+ * el valor del píxel entre `min` y `max`. Compartida entre motores (ver
+ * `interpolateColorScale` en `src/layers/cog.ts`) para que Leaflet y
+ * MapLibre pinten el mismo GeoTIFF con los mismos colores.
+ */
+export interface COGColorScale {
+  min: number
+  max: number
+  /** Colores del degradado (mínimo 2), en formato hexadecimal `#rrggbb`. @default ['#000000', '#ffffff'] */
+  colors?: string[]
+}
+
+/**
+ * Opciones de una capa COG (Cloud Optimized GeoTIFF): un GeoTIFF con sus
+ * datos organizados en teselas internas + overviews, para que el cliente
+ * solo pida por HTTP Range los bytes que necesita en cada zoom, sin un
+ * servidor de teselas intermedio.
+ *
+ * Bajo el capó usa las dependencias opcionales `georaster` +
+ * `georaster-layer-for-leaflet` en Leaflet, y `@geomatico/maplibre-cog-protocol`
+ * en MapLibre — esta última **exige que el COG esté en EPSG:3857** (no
+ * reproyecta; lanza si detecta otra proyección).
+ */
+export interface COGOptions {
+  /** URL del GeoTIFF (idealmente Cloud Optimized, en EPSG:3857). */
+  url: string
+  /** Para GeoTIFFs de una sola banda: rampa de color a aplicar en vez de la escala de grises por defecto. */
+  colorScale?: COGColorScale
+}
+
+/**
  * Parámetros del helper `geoServerLayer()` (ver `src/layers/geoserver.ts`):
  * no es la forma de `options` de ningún `LayerConfig` real (por eso no forma
  * parte de {@link LayerTypeOptions}) — es la entrada con la que se *construye*
@@ -247,6 +280,7 @@ export type LayerTypeOptions =
   | WFSOptions
   | TilesOptions
   | WMTSOptions
+  | COGOptions
 
 /**
  * Configuración de una capa dinámica de `ASMap`. `options` no está acoplado

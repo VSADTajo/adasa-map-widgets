@@ -6,7 +6,13 @@ import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalCont
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
-import type { LayerCapabilities, LayerKind } from '@/types/layers'
+import type {
+  FeatureSelectedEvent,
+  LayerCapabilities,
+  LayerKind,
+  LayerLoadedEvent,
+} from '@/types/layers'
+import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
 import { detectCapabilities, LAYER_KIND } from '@/layers'
 import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
@@ -81,19 +87,21 @@ function buildLayerEntry(params: {
     notes: params.notes,
     component: ASMap,
     codeOverride: JSON.stringify(example.config, null, 2),
-    bindings: (_values, log) => ({
-      onLayerLoaded: (event) =>
-        log('layer-loaded', {
-          layerId: event.layerId,
-          type: event.type,
-          capabilities: event.capabilities,
-          error: event.error?.message,
-        }),
-      onLayerError: (event) =>
-        log('layer-error', { layerId: event.layerId, error: event.error.message }),
-      onCapabilityDetected: (event) => log('capability-detected', event),
-      onFeatureSelected: (event) => log('feature-selected', event),
-    }),
+    bindings: (_values, log) =>
+      ({
+        onLayerLoaded: (event: LayerLoadedEvent) =>
+          log('layer-loaded', {
+            layerId: event.layerId,
+            type: event.type,
+            capabilities: event.capabilities,
+            error: event.error?.message,
+          }),
+        onLayerError: (event: { layerId: string; error: Error }) =>
+          log('layer-error', { layerId: event.layerId, error: event.error.message }),
+        onCapabilityDetected: (event: { layerId: string; capability: LayerCapabilityName }) =>
+          log('capability-detected', event),
+        onFeatureSelected: (event: FeatureSelectedEvent) => log('feature-selected', event),
+      }) as LiveBindings,
   }
 }
 
@@ -122,7 +130,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMap',
     category: 'mapping',
     description:
-      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
+      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS, COG — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
     propsSchema: [
       {
         key: 'mapLibrary',
@@ -258,40 +266,42 @@ export const registry: RegistryEntry[] = [
     notes:
       'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/Tiles usa el modo "Compositor sobre mapa", o mira la categoría "Layers" para la documentación completa de cada tipo. `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); prueba a escribir su id ("osm", "topo", "positron", "dark-matter" o "satellite") en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
     component: ASMap,
-    bindings: (values, log) => ({
-      'onUpdate:center': (center) => {
-        values.center = center
-        log('update:center', center)
-      },
-      'onUpdate:zoom': (zoom) => {
-        values.zoom = zoom
-        log('update:zoom', zoom)
-      },
-      'onUpdate:pitch': (pitch) => {
-        values.pitch = pitch
-        log('update:pitch', pitch)
-      },
-      'onUpdate:bearing': (bearing) => {
-        values.bearing = bearing
-        log('update:bearing', bearing)
-      },
-      'onUpdate:basemap': (id) => {
-        values.basemap = id
-        log('update:basemap', id)
-      },
-      onFeatureSelected: (event) => log('feature-selected', event),
-      onMapClick: (event) => log('map-click', event),
-      onLayerLoaded: (event) =>
-        log('layer-loaded', {
-          layerId: event.layerId,
-          type: event.type,
-          capabilities: event.capabilities,
-          error: event.error?.message,
-        }),
-      onLayerError: (event) =>
-        log('layer-error', { layerId: event.layerId, error: event.error.message }),
-      onCapabilityDetected: (event) => log('capability-detected', event),
-    }),
+    bindings: (values, log) =>
+      ({
+        'onUpdate:center': (center) => {
+          values.center = center
+          log('update:center', center)
+        },
+        'onUpdate:zoom': (zoom) => {
+          values.zoom = zoom
+          log('update:zoom', zoom)
+        },
+        'onUpdate:pitch': (pitch) => {
+          values.pitch = pitch
+          log('update:pitch', pitch)
+        },
+        'onUpdate:bearing': (bearing) => {
+          values.bearing = bearing
+          log('update:bearing', bearing)
+        },
+        'onUpdate:basemap': (id) => {
+          values.basemap = id
+          log('update:basemap', id)
+        },
+        onFeatureSelected: (event: FeatureSelectedEvent) => log('feature-selected', event),
+        onMapClick: (event: { coordinates: [number, number] }) => log('map-click', event),
+        onLayerLoaded: (event: LayerLoadedEvent) =>
+          log('layer-loaded', {
+            layerId: event.layerId,
+            type: event.type,
+            capabilities: event.capabilities,
+            error: event.error?.message,
+          }),
+        onLayerError: (event: { layerId: string; error: Error }) =>
+          log('layer-error', { layerId: event.layerId, error: event.error.message }),
+        onCapabilityDetected: (event: { layerId: string; capability: LayerCapabilityName }) =>
+          log('capability-detected', event),
+      }) as LiveBindings,
   },
   {
     id: 'time-controls',
@@ -765,6 +775,48 @@ export const registry: RegistryEntry[] = [
     exampleId: 'demo-wmts-ign-mtn',
     notes:
       'WMTS público del IGN español (Mapa Topográfico Nacional), estilo KVP: `url` es solo el endpoint base, y `buildWmtsTileUrl` construye la petición `GetTile` con `layer: "MTN"`, `tileMatrixSet: "GoogleMapsCompatible"` y `format: "image/jpeg"`. Como toda imagen ráster, no admite click en features: no emite `feature-selected`. Depende de un servidor de terceros — si está caído, verás `layer-error` en vez de que se rompa el playground.',
+  }),
+  buildLayerEntry({
+    id: 'layer-cog',
+    name: 'Capa COG',
+    description:
+      'Cloud Optimized GeoTIFF: un GeoTIFF teselado internamente (con overviews) para que el cliente pida solo los bytes que necesita por HTTP Range, sin servidor de teselas intermedio — solo un fichero en un storage cualquiera (S3, GCS, un servidor estático...). En Leaflet se apoya en `georaster` + `georaster-layer-for-leaflet`; en MapLibre, en el protocolo `cog://` de `@geomatico/maplibre-cog-protocol` (que exige que el COG esté en EPSG:3857: no reproyecta).',
+    layerOptionsSchema: [
+      {
+        key: 'url',
+        type: 'string',
+        required: true,
+        description: 'URL del GeoTIFF (idealmente Cloud Optimized, en EPSG:3857).',
+      },
+      {
+        key: 'colorScale',
+        type: 'string',
+        description:
+          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/layers/cog.ts`).',
+      },
+    ],
+    events: [
+      {
+        name: 'layer-loaded',
+        payload: 'LayerLoadedEvent',
+        description: 'La capa terminó de cargar.',
+      },
+      {
+        name: 'layer-error',
+        payload: '{ layerId, error }',
+        description: 'Fallo al cargar la capa (p. ej. si el COG no está en EPSG:3857 en MapLibre).',
+      },
+      {
+        name: 'capability-detected',
+        payload: '{ layerId, capability }',
+        description: 'COG nunca detecta capacidades especiales (comparte detección con Tiles).',
+      },
+    ],
+    center: [41.656278, 0.501394],
+    zoom: 15,
+    exampleId: 'demo-cog-kriging',
+    notes:
+      'El mismo COG de una sola banda (interpolación kriging) que usa la documentación oficial de `@geomatico/maplibre-cog-protocol` para su ejemplo de rampa de color, con `colorScale: { min: 1.7, max: 1.8 }` — los mismos límites que ese ejemplo. Como toda imagen ráster, no admite click en features: no emite `feature-selected`. Depende de un servidor de terceros — si está caído, verás `layer-error` en vez de que se rompa el playground.',
   }),
   buildLayerEntry({
     id: 'layer-wms',

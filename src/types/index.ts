@@ -48,6 +48,8 @@ export type {
   WFSOptions,
   TilesOptions,
   WMTSOptions,
+  COGColorScale,
+  COGOptions,
   GeoServerOptions,
   LayerTypeOptions,
   LayerConfig,

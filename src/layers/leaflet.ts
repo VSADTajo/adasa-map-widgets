@@ -1,6 +1,8 @@
 import type * as L from 'leaflet'
+import type { GeoRaster, GeoRasterLayerOptions } from 'georaster-layer-for-leaflet'
 import { resolveNamespace } from '@/utils/resolveNamespace'
 import type {
+  COGOptions,
   GeoJSONOptions,
   GeoJsonFeature,
   GeoJsonFeatureCollection,
@@ -24,6 +26,7 @@ import { fetchWfsFeatures } from './wfs'
 import { resolveTopoJsonData } from './topojson'
 import { resolveKmlData } from './kml'
 import { buildWmtsTileUrl } from './wmts'
+import { interpolateColorScale } from './cog'
 import {
   toErrorInstance,
   type LayerRenderer,
@@ -42,6 +45,19 @@ import {
 async function loadLeaflet(): Promise<typeof L> {
   const mod = await import('leaflet')
   return resolveNamespace<typeof L>(mod)
+}
+
+/** `georaster` no distribuye tipos propios: se apoya en `GeoRaster` de `georaster-layer-for-leaflet`, la forma que igualmente espera su constructor. */
+type ParseGeoraster = (input: string | ArrayBuffer) => Promise<GeoRaster>
+
+async function loadGeoraster(): Promise<ParseGeoraster> {
+  const mod = await import('georaster')
+  return resolveNamespace<ParseGeoraster>(mod)
+}
+
+async function loadGeoRasterLayer(): Promise<new (options: GeoRasterLayerOptions) => L.Layer> {
+  const mod = await import('georaster-layer-for-leaflet')
+  return resolveNamespace<new (options: GeoRasterLayerOptions) => L.Layer>(mod)
 }
 
 /**
@@ -363,6 +379,59 @@ async function renderWMTS(
   }
 }
 
+async function renderCOG(
+  map: L.Map,
+  layer: LayerConfig,
+  _hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as COGOptions
+  try {
+    const [parseGeoraster, GeoRasterLayer] = await Promise.all([
+      loadGeoraster(),
+      loadGeoRasterLayer(),
+    ])
+    const georaster = await parseGeoraster(options.url)
+    ensurePane(map, layer.id)
+
+    const cogLayer = new GeoRasterLayer({
+      georaster,
+      opacity: layer.opacity ?? 1,
+      pane: layer.id,
+      resolution: 256,
+      ...(options.colorScale
+        ? {
+            pixelValuesToColorFn: (values: number[]) => {
+              const value = values[0]
+              if (
+                value === undefined ||
+                !Number.isFinite(value) ||
+                value === georaster.noDataValue
+              ) {
+                return null
+              }
+              const [r, g, b, a] = interpolateColorScale(value, options.colorScale!)
+              return `rgba(${r}, ${g}, ${b}, ${a})`
+            },
+          }
+        : {}),
+    })
+    cogLayer.addTo(map)
+
+    return {
+      event: {
+        layerId: layer.id,
+        type: 'cog',
+        capabilities: detectTilesCapabilities(layer),
+        instance: cogLayer,
+      },
+      remove: () => cogLayer.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, detectTilesCapabilities(layer), error)
+  }
+}
+
 export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -371,4 +440,5 @@ export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   wfs: { render: renderWFS, detectCapabilities: detectWFSCapabilities },
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
   wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
+  cog: { render: renderCOG, detectCapabilities: detectTilesCapabilities },
 }

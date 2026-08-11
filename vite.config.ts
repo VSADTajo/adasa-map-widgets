@@ -48,7 +48,9 @@ export default defineConfig({
         id.startsWith('maplibre-gl') ||
         id.startsWith('topojson-client') ||
         id.startsWith('@tmcw/togeojson') ||
-        id.startsWith('fflate'),
+        id.startsWith('fflate') ||
+        id.startsWith('georaster') ||
+        id.startsWith('@geomatico/maplibre-cog-protocol'),
       output: {
         globals: { vue: 'Vue' },
         exports: 'named',

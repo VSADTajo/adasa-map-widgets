@@ -1,5 +1,12 @@
-import type { MapLayerMouseEvent, MapLibreMap } from 'maplibre-gl'
 import type {
+  GetResourceResponse,
+  MapLayerMouseEvent,
+  MapLibreMap,
+  RequestParameters,
+} from 'maplibre-gl'
+import { resolveNamespace } from '@/utils/resolveNamespace'
+import type {
+  COGOptions,
   GeoJSONOptions,
   GeoJsonFeature,
   KMLOptions,
@@ -22,6 +29,7 @@ import { fetchWfsFeatures } from './wfs'
 import { resolveTopoJsonData } from './topojson'
 import { resolveKmlData } from './kml'
 import { buildWmtsTileUrl } from './wmts'
+import { interpolateColorScale } from './cog'
 import {
   toErrorInstance,
   type LayerRenderer,
@@ -42,6 +50,41 @@ import {
  * capa); para estilos data-driven, usa expresiones de MapLibre basadas en
  * `properties` sobre el `instance.layerIds` devuelto.
  */
+
+/** Solo lo que se necesita de `maplibre-gl` aquí: registrar el protocolo `cog://` (ver `MaplibreNamespace` en `ASMap.vue` para el mismo patrón). */
+interface MaplibreGlNamespace {
+  addProtocol: (
+    name: string,
+    handler: (params: RequestParameters) => Promise<GetResourceResponse<unknown>>,
+  ) => void
+}
+
+async function loadMaplibreGl(): Promise<MaplibreGlNamespace> {
+  const mod = await import('maplibre-gl')
+  return resolveNamespace<MaplibreGlNamespace>(mod)
+}
+
+type MaplibreCogProtocolModule = typeof import('@geomatico/maplibre-cog-protocol')
+
+async function loadMaplibreCogProtocol(): Promise<MaplibreCogProtocolModule> {
+  const mod = await import('@geomatico/maplibre-cog-protocol')
+  return resolveNamespace<MaplibreCogProtocolModule>(mod)
+}
+
+/** Registra el protocolo `cog://` en MapLibre la primera vez que se necesita (registrarlo de nuevo es una operación segura, pero no hace falta repetirla). */
+let cogProtocolRegistration: Promise<MaplibreCogProtocolModule> | undefined
+
+async function ensureCogProtocol(): Promise<MaplibreCogProtocolModule> {
+  if (!cogProtocolRegistration) {
+    cogProtocolRegistration = Promise.all([loadMaplibreGl(), loadMaplibreCogProtocol()]).then(
+      ([maplibregl, cogProtocolModule]) => {
+        maplibregl.addProtocol('cog', cogProtocolModule.cogProtocol)
+        return cogProtocolModule
+      },
+    )
+  }
+  return cogProtocolRegistration
+}
 
 function waitForStyleLoaded(map: MapLibreMap): Promise<void> {
   if (map.isStyleLoaded()) return Promise.resolve()
@@ -421,6 +464,55 @@ async function renderWMTS(
   }
 }
 
+async function renderCOG(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  _hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as COGOptions
+  try {
+    const cogProtocolModule = await ensureCogProtocol()
+    await waitForStyleLoaded(map)
+    const sourceId = layer.id
+    const rasterLayerId = `${sourceId}-raster`
+
+    if (options.colorScale) {
+      cogProtocolModule.setColorFunction(options.url, (pixel, color, metadata) => {
+        const value = pixel[0] ?? NaN
+        if (value === metadata.noData || !Number.isFinite(value)) {
+          color.set([0, 0, 0, 0])
+          return
+        }
+        color.set(interpolateColorScale(value, options.colorScale!))
+      })
+    }
+
+    map.addSource(sourceId, { type: 'raster', url: `cog://${options.url}`, tileSize: 256 })
+    map.addLayer({
+      id: rasterLayerId,
+      type: 'raster',
+      source: sourceId,
+      paint: { 'raster-opacity': layer.opacity ?? 1 },
+    })
+
+    return {
+      event: {
+        layerId: layer.id,
+        type: 'cog',
+        capabilities: detectTilesCapabilities(layer),
+        instance: { sourceId, layerId: rasterLayerId },
+      },
+      remove: () => {
+        if (map.getLayer(rasterLayerId)) map.removeLayer(rasterLayerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      },
+      setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, detectTilesCapabilities(layer), error)
+  }
+}
+
 export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -429,4 +521,5 @@ export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>
   wfs: { render: renderWFS, detectCapabilities: detectWFSCapabilities },
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
   wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
+  cog: { render: renderCOG, detectCapabilities: detectTilesCapabilities },
 }
