@@ -40,7 +40,7 @@ type BooleanCapabilityKey = Exclude<keyof LayerCapabilities, 'timeRange'>
 
 /**
  * Gestiona el ciclo de vida de capas dinámicas (GeoJSON, TopoJSON, KML, WMS,
- * WFS, Tiles) sobre un mapa de `ASMap`: carga, descarga, visibilidad y
+ * WFS, Tiles, WMTS) sobre un mapa de `ASMap`: carga, descarga, visibilidad y
  * detección de capacidades — apoyándose en `src/layers/` (`getLayerRegistry`)
  * para el renderizado real por motor.
  *

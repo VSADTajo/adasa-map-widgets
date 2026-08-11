@@ -9,6 +9,7 @@ export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
   wms: 'WMS',
   wfs: 'WFS',
   tiles: 'Teselas',
+  wmts: 'WMTS',
 }
 
 export interface LayerExample {
@@ -90,11 +91,12 @@ const madridKml = `<?xml version="1.0" encoding="UTF-8"?>
  * Un ejemplo por cada {@link LayerType}, más uno extra de GeoServer (que no
  * es un `LayerType` propio: `geoServerLayer()` lo resuelve a `'wfs'`, ver
  * `src/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
- * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer apuntan a
- * servidores de demostración **públicos** de terceros (los mismos que usan
- * los ejemplos oficiales de Leaflet/OpenLayers), así que pueden fallar si ese
- * servicio está caído — el propio sistema de capas lo refleja como un
- * `layer-error` en vez de romper el playground.
+ * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS
+ * apuntan a servidores de demostración **públicos** de terceros (los mismos
+ * que usan los ejemplos oficiales de Leaflet/OpenLayers, más el WMTS del IGN
+ * español), así que pueden fallar si ese servicio está caído — el propio
+ * sistema de capas lo refleja como un `layer-error` en vez de romper el
+ * playground.
  */
 export const layerExamples: LayerExample[] = [
   {
@@ -162,6 +164,22 @@ export const layerExamples: LayerExample[] = [
         format: 'image/png',
         transparent: true,
         version: '1.3.0',
+      },
+    },
+  },
+  {
+    description:
+      'WMTS público (IGN España): Mapa Topográfico Nacional servido como teselas OGC. `url` es solo el endpoint base — `buildWmtsTileUrl` (en `src/layers/wmts.ts`) construye la petición `GetTile` (KVP) con `layer`/`tileMatrixSet`/`format`.',
+    config: {
+      id: 'demo-wmts-ign-mtn',
+      name: 'WMTS: IGN Mapa Topográfico Nacional',
+      type: 'wmts',
+      visible: true,
+      options: {
+        url: 'https://www.ign.es/wmts/mapa-raster',
+        layer: 'MTN',
+        tileMatrixSet: 'GoogleMapsCompatible',
+        format: 'image/jpeg',
       },
     },
   },

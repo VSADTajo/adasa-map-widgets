@@ -12,6 +12,7 @@ import type {
   TopoJSONOptions,
   WFSOptions,
   WMSOptions,
+  WMTSOptions,
 } from '@/types/layers'
 import {
   detectGeoJSONCapabilities,
@@ -22,6 +23,7 @@ import {
 import { fetchWfsFeatures } from './wfs'
 import { resolveTopoJsonData } from './topojson'
 import { resolveKmlData } from './kml'
+import { buildWmtsTileUrl } from './wmts'
 import {
   toErrorInstance,
   type LayerRenderer,
@@ -67,6 +69,18 @@ function withOpacity(
 function setPaneVisible(map: L.Map, paneId: string, visible: boolean): void {
   const pane = map.getPane(paneId)
   if (pane) pane.style.display = visible ? '' : 'none'
+}
+
+/**
+ * Crea el pane dedicado de una capa de teselas (WMS/Tiles/WMTS) si todavía no
+ * existe. Sin esto, pasar `pane: layer.id` a `L.TileLayer`/`L.TileLayer.WMS`
+ * apunta a un pane que Leaflet nunca creó (`map.getPane()` devuelve
+ * `undefined`), y el propio `onAdd` del `GridLayer` explota al intentar
+ * usarlo (y deja el layer en un estado a medio inicializar que también rompe
+ * animaciones de zoom posteriores).
+ */
+function ensurePane(map: L.Map, paneId: string): void {
+  if (!map.getPane(paneId)) map.createPane(paneId)
 }
 
 /**
@@ -222,6 +236,7 @@ async function renderWMS(
   const options = layer.options as WMSOptions
   try {
     const Leaflet = await loadLeaflet()
+    ensurePane(map, layer.id)
     const wmsLayer = Leaflet.tileLayer.wms(options.url, {
       layers: options.layers,
       format: options.format ?? 'image/png',
@@ -290,6 +305,7 @@ async function renderTiles(
   const options = layer.options as TilesOptions
   try {
     const Leaflet = await loadLeaflet()
+    ensurePane(map, layer.id)
     const tiles = Leaflet.tileLayer(options.url, {
       attribution: options.attribution,
       maxZoom: options.maxZoom ?? 19,
@@ -314,6 +330,39 @@ async function renderTiles(
   }
 }
 
+async function renderWMTS(
+  map: L.Map,
+  layer: LayerConfig,
+  _hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as WMTSOptions
+  try {
+    const Leaflet = await loadLeaflet()
+    ensurePane(map, layer.id)
+    const tiles = Leaflet.tileLayer(buildWmtsTileUrl(options), {
+      attribution: options.attribution,
+      maxZoom: options.maxZoom ?? 19,
+      minZoom: options.minZoom ?? 0,
+      opacity: layer.opacity ?? 1,
+      pane: layer.id,
+    })
+    tiles.addTo(map)
+
+    return {
+      event: {
+        layerId: layer.id,
+        type: 'wmts',
+        capabilities: detectTilesCapabilities(layer),
+        instance: tiles,
+      },
+      remove: () => tiles.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, detectTilesCapabilities(layer), error)
+  }
+}
+
 export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -321,4 +370,5 @@ export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   wms: { render: renderWMS, detectCapabilities: detectWMSCapabilities },
   wfs: { render: renderWFS, detectCapabilities: detectWFSCapabilities },
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
+  wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
 }

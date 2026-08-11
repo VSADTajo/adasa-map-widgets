@@ -47,6 +47,7 @@ export type {
   WMSOptions,
   WFSOptions,
   TilesOptions,
+  WMTSOptions,
   GeoServerOptions,
   LayerTypeOptions,
   LayerConfig,

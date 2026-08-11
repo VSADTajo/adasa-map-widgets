@@ -9,7 +9,7 @@ import type { LatLng } from './map'
  * `'wms'`/`'wfs'` a partir de `url`/`workspace`/`layer`/`mode`, en vez de
  * concatenar la URL y el nombre `workspace:layer` a mano.
  */
-export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles'
+export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles' | 'wmts'
 
 /**
  * Naturaleza de una capa: si el cliente recibe/edita datos vectoriales en
@@ -26,6 +26,7 @@ export const LAYER_KIND: Record<LayerType, LayerKind> = {
   wfs: 'vector',
   wms: 'raster',
   tiles: 'raster',
+  wmts: 'raster',
 }
 
 /**
@@ -183,6 +184,39 @@ export interface TilesOptions {
 }
 
 /**
+ * Opciones de una capa WMTS (Web Map Tile Service). A diferencia de WMS
+ * (una imagen por petición, cualquier bbox/tamaño), WMTS sirve teselas
+ * pre-renderizadas fijas, como `'tiles'` pero describiéndolas con el
+ * vocabulario del estándar OGC (`layer`/`style`/`tileMatrixSet`) en vez de
+ * una URL ya armada.
+ *
+ * Admite los dos estilos de despliegue habituales, detectados automáticamente
+ * a partir de `url` (ver `buildWmtsTileUrl` en `src/layers/wmts.ts`):
+ * - **RESTful**: `url` ya es una plantilla de teselas (contiene `{z}`/`{x}`/`{y}`
+ *   o los tokens WMTS equivalentes `{TileMatrix}`/`{TileRow}`/`{TileCol}`) — en
+ *   este caso el resto de campos no se usan.
+ * - **KVP**: `url` es el endpoint base del servicio, y se construye una
+ *   petición `GetTile` con `layer`/`style`/`tileMatrixSet`/`format`.
+ */
+export interface WMTSOptions {
+  /** URL base del servicio WMTS, o una plantilla de teselas ya resuelta. */
+  url: string
+  /** Nombre de la capa en el servidor. No se usa si `url` ya es una plantilla RESTful. */
+  layer?: string
+  /** @default 'default' */
+  style?: string
+  /** Identificador del TileMatrixSet, p. ej. `'EPSG:3857'` o `'GoogleMapsCompatible'`. @default 'EPSG:3857' */
+  tileMatrixSet?: string
+  /** @default 'image/png' */
+  format?: string
+  /** @default '1.0.0' */
+  version?: string
+  attribution?: string
+  maxZoom?: number
+  minZoom?: number
+}
+
+/**
  * Parámetros del helper `geoServerLayer()` (ver `src/layers/geoserver.ts`):
  * no es la forma de `options` de ningún `LayerConfig` real (por eso no forma
  * parte de {@link LayerTypeOptions}) — es la entrada con la que se *construye*
@@ -206,7 +240,13 @@ export interface GeoServerOptions {
 
 /** Unión de las opciones específicas de cada {@link LayerType}. */
 export type LayerTypeOptions =
-  GeoJSONOptions | TopoJSONOptions | KMLOptions | WMSOptions | WFSOptions | TilesOptions
+  | GeoJSONOptions
+  | TopoJSONOptions
+  | KMLOptions
+  | WMSOptions
+  | WFSOptions
+  | TilesOptions
+  | WMTSOptions
 
 /**
  * Configuración de una capa dinámica de `ASMap`. `options` no está acoplado

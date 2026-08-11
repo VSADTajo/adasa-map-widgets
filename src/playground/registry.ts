@@ -122,7 +122,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMap',
     category: 'mapping',
     description:
-      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
+      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
     propsSchema: [
       {
         key: 'mapLibrary',
@@ -700,6 +700,71 @@ export const registry: RegistryEntry[] = [
     exampleId: 'demo-tiles-opentopo',
     notes:
       'OpenTopoMap (relieve/topográfico) superpuesto con opacidad 0.85 sobre el basemap de OpenStreetMap, centrado en los Pirineos para que se note el relieve. No admite click en features (es una imagen, no datos vectoriales): no emite `feature-selected`.',
+  }),
+  buildLayerEntry({
+    id: 'layer-wmts',
+    name: 'Capa WMTS',
+    description:
+      'Web Map Tile Service: como WMS, el servidor devuelve la capa ya renderizada (sin datos vectoriales), pero como teselas pre-generadas y fijas en vez de una imagen a medida por petición — más barato de servir para el proveedor. Admite tanto endpoints RESTful (una plantilla de teselas) como KVP (`layer`/`tileMatrixSet`/`format`, con los que se construye la petición `GetTile`); `buildWmtsTileUrl` detecta cuál es cuál a partir de `url`.',
+    layerOptionsSchema: [
+      {
+        key: 'url',
+        type: 'string',
+        required: true,
+        description:
+          'Endpoint base del servicio WMTS (estilo KVP), o una plantilla de teselas ya resuelta (estilo RESTful, con {z}/{x}/{y} o {TileMatrix}/{TileRow}/{TileCol}).',
+      },
+      {
+        key: 'layer',
+        type: 'string',
+        description: 'Nombre de la capa en el servidor. Solo aplica al estilo KVP.',
+      },
+      { key: 'style', type: 'string', description: "Nombre del estilo. @default 'default'" },
+      {
+        key: 'tileMatrixSet',
+        type: 'string',
+        description: "Identificador del TileMatrixSet. @default 'EPSG:3857'",
+      },
+      { key: 'format', type: 'string', description: "@default 'image/png'" },
+      {
+        key: 'version',
+        type: 'string',
+        description: "Versión del protocolo WMTS. @default '1.0.0'",
+      },
+      { key: 'attribution', type: 'string', description: 'Atribución de este proveedor.' },
+      {
+        key: 'maxZoom',
+        type: 'number',
+        description: 'Zoom máximo al que el proveedor sirve teselas.',
+      },
+      {
+        key: 'minZoom',
+        type: 'number',
+        description: 'Zoom mínimo al que el proveedor sirve teselas.',
+      },
+    ],
+    events: [
+      {
+        name: 'layer-loaded',
+        payload: 'LayerLoadedEvent',
+        description: 'La capa terminó de cargar.',
+      },
+      {
+        name: 'layer-error',
+        payload: '{ layerId, error }',
+        description: 'Fallo al cargar la capa.',
+      },
+      {
+        name: 'capability-detected',
+        payload: '{ layerId, capability }',
+        description: 'WMTS nunca detecta capacidades especiales (comparte detección con Tiles).',
+      },
+    ],
+    center: [40.2, -3.7],
+    zoom: 6,
+    exampleId: 'demo-wmts-ign-mtn',
+    notes:
+      'WMTS público del IGN español (Mapa Topográfico Nacional), estilo KVP: `url` es solo el endpoint base, y `buildWmtsTileUrl` construye la petición `GetTile` con `layer: "MTN"`, `tileMatrixSet: "GoogleMapsCompatible"` y `format: "image/jpeg"`. Como toda imagen ráster, no admite click en features: no emite `feature-selected`. Depende de un servidor de terceros — si está caído, verás `layer-error` en vez de que se rompa el playground.',
   }),
   buildLayerEntry({
     id: 'layer-wms',

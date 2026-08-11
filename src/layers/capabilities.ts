@@ -52,7 +52,10 @@ export function detectCapabilities(layer: LayerConfig): LayerCapabilities {
       return detectWMSCapabilities(layer)
     case 'wfs':
       return detectWFSCapabilities(layer)
+    // WMTS es, para efectos de capacidades, indistinguible de Tiles: teselas
+    // ráster estáticas servidas por el servidor, sin edición/filtros/búsqueda.
     case 'tiles':
+    case 'wmts':
       return detectTilesCapabilities(layer)
   }
 }

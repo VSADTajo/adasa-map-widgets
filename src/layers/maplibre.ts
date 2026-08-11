@@ -10,6 +10,7 @@ import type {
   TopoJSONOptions,
   WFSOptions,
   WMSOptions,
+  WMTSOptions,
 } from '@/types/layers'
 import {
   detectGeoJSONCapabilities,
@@ -20,6 +21,7 @@ import {
 import { fetchWfsFeatures } from './wfs'
 import { resolveTopoJsonData } from './topojson'
 import { resolveKmlData } from './kml'
+import { buildWmtsTileUrl } from './wmts'
 import {
   toErrorInstance,
   type LayerRenderer,
@@ -375,6 +377,50 @@ async function renderTiles(
   }
 }
 
+async function renderWMTS(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  _hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as WMTSOptions
+  try {
+    await waitForStyleLoaded(map)
+    const sourceId = layer.id
+    const rasterLayerId = `${sourceId}-raster`
+
+    map.addSource(sourceId, {
+      type: 'raster',
+      tiles: [buildWmtsTileUrl(options)],
+      tileSize: 256,
+      ...(options.attribution ? { attribution: options.attribution } : {}),
+      ...(options.maxZoom !== undefined ? { maxzoom: options.maxZoom } : {}),
+      ...(options.minZoom !== undefined ? { minzoom: options.minZoom } : {}),
+    })
+    map.addLayer({
+      id: rasterLayerId,
+      type: 'raster',
+      source: sourceId,
+      paint: { 'raster-opacity': layer.opacity ?? 1 },
+    })
+
+    return {
+      event: {
+        layerId: layer.id,
+        type: 'wmts',
+        capabilities: detectTilesCapabilities(layer),
+        instance: { sourceId, layerId: rasterLayerId },
+      },
+      remove: () => {
+        if (map.getLayer(rasterLayerId)) map.removeLayer(rasterLayerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      },
+      setVisible: (visible) => setLayersVisible(map, [rasterLayerId], visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, detectTilesCapabilities(layer), error)
+  }
+}
+
 export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -382,4 +428,5 @@ export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>
   wms: { render: renderWMS, detectCapabilities: detectWMSCapabilities },
   wfs: { render: renderWFS, detectCapabilities: detectWFSCapabilities },
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
+  wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
 }
