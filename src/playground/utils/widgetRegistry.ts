@@ -2,6 +2,7 @@ import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
 import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/components/controls/ASMapScale.vue'
 import type { WidgetRegistryEntry } from '@/types/playground'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import { basemapExamples } from './basemapExamples'
@@ -138,6 +139,37 @@ export const widgetRegistry: WidgetRegistryEntry[] = [
         log('update:basemap', id)
       },
     }),
+  },
+  {
+    id: 'scale',
+    label: 'Escala (ASMapScale)',
+    componentName: 'ASMapScale',
+    component: ASMapScale,
+    propsSchema: [
+      { key: 'mode', label: 'Modo', type: 'select', options: ['bar', 'numeric'], default: 'bar' },
+      {
+        key: 'units',
+        label: 'Unidades (solo "bar")',
+        type: 'select',
+        options: ['metric', 'imperial'],
+        default: 'metric',
+      },
+      {
+        key: 'width',
+        label: 'Ancho (px, solo "bar")',
+        type: 'number',
+        default: 100,
+        min: 40,
+        max: 200,
+        step: 10,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    // Mismo center/zoom fijo con el que MapCanvas.vue crea el ASMap del
+    // compositor: no refleja el zoom real tras hacer scroll (el compositor no
+    // rastrea el zoom en vivo de ningún widget colocado), pero sí demuestra
+    // el widget con un valor coherente con lo que se ve en el mapa.
+    staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
   },
 ]
 

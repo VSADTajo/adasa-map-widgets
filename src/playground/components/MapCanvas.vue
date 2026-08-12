@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/components/mapping/ASMap.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
 import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
@@ -42,6 +43,10 @@ const emit = defineEmits<{
   'update:basemap': [id: string]
 }>()
 
+/** Centro/zoom reales de este `ASMap` (a diferencia de antes, ya no son fijos: se leen y escriben con `v-model` en el template). */
+const liveCenter = ref<[number, number]>([40.4168, -3.7038])
+const liveZoom = ref(6)
+
 function resolveListeners(
   placement: WidgetPlacement,
 ): Record<string, (...args: unknown[]) => void> {
@@ -53,11 +58,14 @@ function resolveListeners(
 }
 
 /**
- * Props+listeners de un widget colocado. Caso especial para
- * `basemaps-selector`: en vez de su propio `basemap` de demo desconectado,
- * recibe/gobierna el `basemaps`/`basemap` reales de este mismo `ASMap`, para
- * que elegir uno cambie de verdad el mapa base (no solo quede registrado en
- * el log de eventos).
+ * Props+listeners de un widget colocado. Casos especiales:
+ * - `basemaps-selector`: en vez de su propio `basemap` de demo desconectado,
+ *   recibe/gobierna el `basemaps`/`basemap` reales de este mismo `ASMap`, para
+ *   que elegir uno cambie de verdad el mapa base (no solo quede registrado en
+ *   el log de eventos).
+ * - `scale`: en vez de su `center`/`zoom` de demo fijos, recibe el
+ *   `center`/`zoom` reales de este mismo `ASMap` (`liveCenter`/`liveZoom`),
+ *   para que la escala cambie de verdad al hacer scroll/zoom en el mapa.
  */
 function resolvePlacementProps(placement: WidgetPlacement): Record<string, unknown> {
   const entry = getWidgetEntry(placement.widgetType)
@@ -75,16 +83,20 @@ function resolvePlacementProps(placement: WidgetPlacement): Record<string, unkno
       emit('update:basemap', id)
     }
   }
+  if (placement.widgetType === 'scale') {
+    merged.center = liveCenter.value
+    merged.zoom = liveZoom.value
+  }
   return merged
 }
 </script>
 
 <template>
   <ASMap
+    v-model:center="liveCenter"
+    v-model:zoom="liveZoom"
     class="map-canvas"
     :map-library="props.mapLibrary"
-    :center="[40.4168, -3.7038]"
-    :zoom="6"
     :layers="props.layers"
     :basemaps="props.basemaps"
     :basemap="props.basemap"

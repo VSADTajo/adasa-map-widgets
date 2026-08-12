@@ -4,6 +4,7 @@ import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
 import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/components/controls/ASMapScale.vue'
 import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import type {
@@ -559,6 +560,61 @@ export const registry: RegistryEntry[] = [
         log('update:basemap', id)
       },
     }),
+  },
+  {
+    id: 'scale',
+    name: 'ASMapScale',
+    category: 'controls',
+    description:
+      'Indicador de escala del mapa: una regla graduada (segmentos alternos con una marca cada 25%) o una razón numérica tipo "1 : 50 000". Componente controlado (recibe `center`/`zoom`, los mismos valores que `v-model:center`/`v-model:zoom` de ASMap) y agnóstico del motor de mapas: el cálculo es el mismo para Leaflet y MapLibre.',
+    propsSchema: [
+      { key: 'zoom', label: 'Zoom', type: 'number', default: 6, min: 0, max: 18, step: 1 },
+      {
+        key: 'mode',
+        label: 'Modo',
+        type: 'select',
+        options: ['bar', 'numeric'],
+        default: 'bar',
+      },
+      {
+        key: 'units',
+        label: 'Unidades (solo modo "bar")',
+        type: 'select',
+        options: ['metric', 'imperial'],
+        default: 'metric',
+      },
+      {
+        key: 'width',
+        label: 'Ancho (px, solo modo "bar")',
+        type: 'number',
+        default: 100,
+        min: 40,
+        max: 200,
+        step: 10,
+      },
+      {
+        key: 'position',
+        label: 'Posición',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'bottom-left',
+      },
+      {
+        key: 'offset',
+        label: 'Offset (px)',
+        type: 'number',
+        default: 20,
+        min: 0,
+        max: 80,
+        step: 4,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    events: [],
+    staticProps: { center: [40.4168, -3.7038] },
+    notes:
+      'No emite eventos: es un simple indicador de lectura. Sube/baja el zoom para ver cómo cambia la regla/razón — se recalcula automáticamente porque `bar`/`ratioLabel` son `computed()` sobre `zoom`/`center`. El ancho real de la regla puede ser algo menor que `width`, para que la distancia total mostrada sea un número redondo.',
+    component: ASMapScale,
   },
   buildLayerEntry({
     id: 'layer-geojson',

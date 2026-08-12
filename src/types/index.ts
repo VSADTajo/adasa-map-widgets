@@ -20,6 +20,7 @@ export type {
   BasemapsSelectorProps,
   BasemapsSelectorEmits,
 } from './BasemapsSelectorProps'
+export type { ScalePosition, ScaleMode, ScaleUnits, ScaleProps } from './ScaleProps'
 export type {
   DayIntervalAlert,
   DayIntervalSelection,
