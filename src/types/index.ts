@@ -50,6 +50,7 @@ export type {
   WMTSOptions,
   COGColorScale,
   COGOptions,
+  MVTOptions,
   GeoServerOptions,
   LayerTypeOptions,
   LayerConfig,

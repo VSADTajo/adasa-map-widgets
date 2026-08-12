@@ -41,12 +41,14 @@ export function detectTilesCapabilities(_layer: LayerConfig): LayerCapabilities 
 /** Despacha a la función de detección correspondiente según `layer.type`. */
 export function detectCapabilities(layer: LayerConfig): LayerCapabilities {
   switch (layer.type) {
-    // TopoJSON/KML se convierten a GeoJSON antes de renderizarse: son datos
-    // vectoriales estáticos igual que GeoJSON, sin capacidades de servidor
-    // (edición, filtros, búsqueda), así que comparten la misma detección.
+    // TopoJSON/KML se convierten a GeoJSON antes de renderizarse, y MVT es
+    // vectorial igual que GeoJSON solo que servido por teselas: los tres son
+    // datos estáticos sin capacidades de servidor (edición, filtros,
+    // búsqueda), así que comparten la misma detección.
     case 'geojson':
     case 'topojson':
     case 'kml':
+    case 'mvt':
       return detectGeoJSONCapabilities(layer)
     case 'wms':
       return detectWMSCapabilities(layer)

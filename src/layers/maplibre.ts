@@ -13,6 +13,7 @@ import type {
   LayerCapabilities,
   LayerConfig,
   LayerType,
+  MVTOptions,
   TilesOptions,
   TopoJSONOptions,
   WFSOptions,
@@ -134,6 +135,52 @@ function addGeoJsonLayers(
     id: circleId,
     type: 'circle',
     source: sourceId,
+    filter: ['==', ['geometry-type'], 'Point'],
+    paint: { 'circle-color': '#2563eb', 'circle-radius': 5, 'circle-opacity': opacity },
+  })
+
+  return [fillId, lineId, circleId]
+}
+
+/**
+ * Como {@link addGeoJsonLayers}, pero para una fuente `vector` (MVT): cada
+ * capa de estilo necesita además `source-layer` (la sub-capa dentro de la
+ * tesela a dibujar) — a diferencia de GeoJSON, una fuente vectorial no tiene
+ * un único conjunto de features, sino varios por nombre. No añade la fuente
+ * (a diferencia de `addGeoJsonLayers`): su forma difiere según sea `tiles` o
+ * `url`, así que la añade quien llama.
+ */
+function addVectorTileLayers(
+  map: MapLibreMap,
+  sourceId: string,
+  sourceLayer: string,
+  opacity: number,
+): string[] {
+  const fillId = `${sourceId}-fill`
+  const lineId = `${sourceId}-line`
+  const circleId = `${sourceId}-circle`
+
+  map.addLayer({
+    id: fillId,
+    type: 'fill',
+    source: sourceId,
+    'source-layer': sourceLayer,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.35 * opacity },
+  })
+  map.addLayer({
+    id: lineId,
+    type: 'line',
+    source: sourceId,
+    'source-layer': sourceLayer,
+    filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+    paint: { 'line-color': '#2563eb', 'line-width': 2, 'line-opacity': opacity },
+  })
+  map.addLayer({
+    id: circleId,
+    type: 'circle',
+    source: sourceId,
+    'source-layer': sourceLayer,
     filter: ['==', ['geometry-type'], 'Point'],
     paint: { 'circle-color': '#2563eb', 'circle-radius': 5, 'circle-opacity': opacity },
   })
@@ -519,6 +566,47 @@ async function renderCOG(
   }
 }
 
+async function renderMVT(
+  map: MapLibreMap,
+  layer: LayerConfig,
+  hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as MVTOptions
+  const capabilities = detectGeoJSONCapabilities(layer)
+  try {
+    await waitForStyleLoaded(map)
+    const sourceId = layer.id
+
+    map.addSource(sourceId, {
+      type: 'vector',
+      tiles: [options.url],
+      minzoom: options.minZoom ?? 0,
+      maxzoom: options.maxZoom ?? 14,
+      ...(options.attribution ? { attribution: options.attribution } : {}),
+    })
+    const layerIds = addVectorTileLayers(map, sourceId, options.sourceLayer, layer.opacity ?? 1)
+    const unbind = hooks.onFeatureSelected
+      ? layerIds.map((id) => bindLayerClick(map, id, layer.id, hooks))
+      : []
+
+    return {
+      event: {
+        layerId: layer.id,
+        type: 'mvt',
+        capabilities,
+        instance: { sourceId, layerIds },
+      },
+      remove: () => {
+        unbind.forEach((off) => off())
+        removeGeoJsonLayers(map, sourceId, layerIds)
+      },
+      setVisible: (visible) => setLayersVisible(map, layerIds, visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, capabilities, error)
+  }
+}
+
 export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -528,4 +616,5 @@ export const maplibreLayerRegistry: Record<LayerType, LayerRenderer<MapLibreMap>
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
   wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
   cog: { render: renderCOG, detectCapabilities: detectTilesCapabilities },
+  mvt: { render: renderMVT, detectCapabilities: detectGeoJSONCapabilities },
 }

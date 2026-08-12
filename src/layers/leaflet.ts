@@ -10,6 +10,7 @@ import type {
   LayerCapabilities,
   LayerConfig,
   LayerType,
+  MVTOptions,
   TilesOptions,
   TopoJSONOptions,
   WFSOptions,
@@ -58,6 +59,22 @@ async function loadGeoraster(): Promise<ParseGeoraster> {
 async function loadGeoRasterLayer(): Promise<new (options: GeoRasterLayerOptions) => L.Layer> {
   const mod = await import('georaster-layer-for-leaflet')
   return resolveNamespace<new (options: GeoRasterLayerOptions) => L.Layer>(mod)
+}
+
+/**
+ * `leaflet.vectorgrid` (dependencia opcional para renderizar MVT en Leaflet)
+ * es un plugin "clásico": su bundle da por hecho que `L` ya existe como
+ * variable global (lo muta directamente, `L.vectorGrid.protobuf = ...`) en
+ * vez de importar `leaflet` como módulo. Como aquí `Leaflet` se carga vía
+ * `import()` (nunca se expone en `window`), hay que exponerlo temporalmente
+ * antes de cargar el plugin para que pueda encontrarlo y ampliarlo — después
+ * de este `import()`, `Leaflet.vectorGrid` ya está disponible en la misma
+ * referencia que ya teníamos.
+ */
+async function loadVectorGrid(Leaflet: typeof L): Promise<void> {
+  const globalScope = globalThis as unknown as { L?: typeof L }
+  if (globalScope.L !== Leaflet) globalScope.L = Leaflet
+  await import('leaflet.vectorgrid')
 }
 
 /**
@@ -432,6 +449,68 @@ async function renderCOG(
   }
 }
 
+/** Estilo por defecto de una capa MVT si no se indica `options.style`. */
+const DEFAULT_MVT_STYLE: L.PathOptions = { color: '#2563eb', weight: 2, fillColor: '#2563eb' }
+
+async function renderMVT(
+  map: L.Map,
+  layer: LayerConfig,
+  hooks: LayerRenderHooks,
+): Promise<RenderedLayer> {
+  const options = layer.options as MVTOptions
+  const capabilities = detectGeoJSONCapabilities(layer)
+  try {
+    const Leaflet = await loadLeaflet()
+    await loadVectorGrid(Leaflet)
+    ensurePane(map, layer.id)
+
+    const interactive = Boolean(hooks.onFeatureSelected)
+    const vectorGridLayer = Leaflet.vectorGrid.protobuf(options.url, {
+      vectorTileLayerStyles: {
+        [options.sourceLayer]: (properties: Record<string, string>, zoom: number) => ({
+          ...DEFAULT_MVT_STYLE,
+          opacity: layer.opacity ?? 1,
+          fillOpacity: (layer.opacity ?? 1) * 0.35,
+          ...(options.style?.(properties, zoom) ?? {}),
+        }),
+      },
+      interactive,
+      minZoom: options.minZoom ?? 0,
+      maxZoom: options.maxZoom ?? 14,
+      attribution: options.attribution,
+      pane: layer.id,
+    })
+    vectorGridLayer.addTo(map)
+
+    if (interactive) {
+      vectorGridLayer.on('click', (event: L.LeafletMouseEvent) => {
+        // `leaflet.vectorgrid` no tipa `event.layer` (el feature clicado, con
+        // sus `properties`): existe en runtime pero no en `@types/leaflet.vectorgrid`.
+        const properties =
+          (event as unknown as { layer?: { properties?: Record<string, unknown> } }).layer
+            ?.properties ?? {}
+        Leaflet.DomEvent.stopPropagation(event)
+        hooks.onFeatureSelected?.({
+          layerId: layer.id,
+          // El evento de click solo trae las propiedades del feature, no su
+          // geometría completa: `leaflet.vectorgrid` no la expone ahí.
+          feature: { type: 'Feature', geometry: null, properties },
+          properties,
+          coordinates: [event.latlng.lng, event.latlng.lat],
+        })
+      })
+    }
+
+    return {
+      event: { layerId: layer.id, type: 'mvt', capabilities, instance: vectorGridLayer },
+      remove: () => vectorGridLayer.remove(),
+      setVisible: (visible) => setPaneVisible(map, layer.id, visible),
+    }
+  } catch (error) {
+    return toErrorResult(layer, capabilities, error)
+  }
+}
+
 export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   geojson: { render: renderGeoJSON, detectCapabilities: detectGeoJSONCapabilities },
   topojson: { render: renderTopoJSON, detectCapabilities: detectGeoJSONCapabilities },
@@ -441,4 +520,5 @@ export const leafletLayerRegistry: Record<LayerType, LayerRenderer<L.Map>> = {
   tiles: { render: renderTiles, detectCapabilities: detectTilesCapabilities },
   wmts: { render: renderWMTS, detectCapabilities: detectTilesCapabilities },
   cog: { render: renderCOG, detectCapabilities: detectTilesCapabilities },
+  mvt: { render: renderMVT, detectCapabilities: detectGeoJSONCapabilities },
 }

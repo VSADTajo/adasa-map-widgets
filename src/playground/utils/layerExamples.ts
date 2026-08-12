@@ -11,6 +11,7 @@ export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
   tiles: 'Teselas',
   wmts: 'WMTS',
   cog: 'COG',
+  mvt: 'MVT',
 }
 
 export interface LayerExample {
@@ -92,12 +93,13 @@ const madridKml = `<?xml version="1.0" encoding="UTF-8"?>
  * Un ejemplo por cada {@link LayerType}, más uno extra de GeoServer (que no
  * es un `LayerType` propio: `geoServerLayer()` lo resuelve a `'wfs'`, ver
  * `src/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
- * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS/COG
+ * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS/COG/MVT
  * apuntan a servidores de demostración **públicos** de terceros (los mismos
  * que usan los ejemplos oficiales de Leaflet/OpenLayers, más el WMTS del IGN
- * español y el COG de ejemplo de `@geomatico/maplibre-cog-protocol`), así que
- * pueden fallar si ese servicio está caído — el propio sistema de capas lo
- * refleja como un `layer-error` en vez de romper el playground.
+ * español, el COG de ejemplo de `@geomatico/maplibre-cog-protocol` y el MVT
+ * de demostración de MapLibre GL JS), así que pueden fallar si ese servicio
+ * está caído — el propio sistema de capas lo refleja como un `layer-error`
+ * en vez de romper el playground.
  */
 export const layerExamples: LayerExample[] = [
   {
@@ -195,6 +197,21 @@ export const layerExamples: LayerExample[] = [
       options: {
         url: 'https://labs.geomatico.es/maplibre-cog-protocol/data/kriging.tif',
         colorScale: { min: 1.7, max: 1.8, colors: ['#2166ac', '#f7f7f7', '#b2182b'] },
+      },
+    },
+  },
+  {
+    description:
+      'Teselas vectoriales (MVT) públicas: el propio dataset de demostración de MapLibre GL JS (países del mundo), servido por teselas en vez de como un único GeoJSON — solo se pide lo que hace falta según el viewport/zoom.',
+    config: {
+      id: 'demo-mvt-countries',
+      name: 'MVT: países (demo MapLibre)',
+      type: 'mvt',
+      visible: true,
+      options: {
+        url: 'https://demotiles.maplibre.org/tiles/{z}/{x}/{y}.pbf',
+        sourceLayer: 'countries',
+        maxZoom: 6,
       },
     },
   },

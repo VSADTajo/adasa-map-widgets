@@ -47,6 +47,7 @@
     "georaster": "^1.6.0",
     "georaster-layer-for-leaflet": "^4.1.2",
     "leaflet": "^1.9.0",
+    "leaflet.vectorgrid": "^1.3.0",
     "maplibre-gl": "^6.0.0",
     "topojson-client": "^3.1.0",
     "vue": "^3.4.0"
@@ -70,6 +71,9 @@
     "leaflet": {
       "optional": true
     },
+    "leaflet.vectorgrid": {
+      "optional": true
+    },
     "maplibre-gl": {
       "optional": true
     },
@@ -86,6 +90,7 @@
     "@geomatico/maplibre-cog-protocol": "^0.9.1",
     "@tmcw/togeojson": "^7.1.2",
     "@types/leaflet": "^1.9.22",
+    "@types/leaflet.vectorgrid": "^1.3.10",
     "@types/node": "^20.14.0",
     "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-vue": "^5.1.2",
@@ -98,6 +103,7 @@
     "georaster": "^1.6.0",
     "georaster-layer-for-leaflet": "^4.1.2",
     "leaflet": "^1.9.4",
+    "leaflet.vectorgrid": "^1.3.0",
     "maplibre-gl": "^6.2.0",
     "prettier": "^3.3.3",
     "topojson-client": "^3.1.0",

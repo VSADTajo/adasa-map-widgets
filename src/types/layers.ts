@@ -9,7 +9,8 @@ import type { LatLng } from './map'
  * `'wms'`/`'wfs'` a partir de `url`/`workspace`/`layer`/`mode`, en vez de
  * concatenar la URL y el nombre `workspace:layer` a mano.
  */
-export type LayerType = 'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles' | 'wmts' | 'cog'
+export type LayerType =
+  'geojson' | 'topojson' | 'kml' | 'wms' | 'wfs' | 'tiles' | 'wmts' | 'cog' | 'mvt'
 
 /**
  * Naturaleza de una capa: si el cliente recibe/edita datos vectoriales en
@@ -28,6 +29,7 @@ export const LAYER_KIND: Record<LayerType, LayerKind> = {
   tiles: 'raster',
   wmts: 'raster',
   cog: 'raster',
+  mvt: 'vector',
 }
 
 /**
@@ -250,6 +252,35 @@ export interface COGOptions {
 }
 
 /**
+ * Opciones de una capa MVT (Mapbox Vector Tiles): teselas vectoriales
+ * (protobuf), a diferencia de WMTS/Tiles/COG (ráster). El cliente recibe
+ * geometría real por feature — clicable, como GeoJSON/WFS — pero pedida por
+ * teselas según el viewport/zoom en vez de todo de golpe.
+ *
+ * Un esquema MVT normalmente empaqueta varias sub-capas nombradas dentro de
+ * cada tesela (p. ej. `'water'`, `'roads'`, `'buildings'`...); `sourceLayer`
+ * indica cuál renderizar — el mismo concepto que el `source-layer` de un
+ * estilo de MapLibre.
+ */
+export interface MVTOptions {
+  /** Plantilla de URL de teselas, p. ej. `'https://.../{z}/{x}/{y}.pbf'`. */
+  url: string
+  /** Nombre de la sub-capa dentro de la tesela vectorial a renderizar. */
+  sourceLayer: string
+  attribution?: string
+  minZoom?: number
+  maxZoom?: number
+  /**
+   * Estilo por feature. Solo tiene efecto en Leaflet (vía la dependencia
+   * opcional `leaflet.vectorgrid`, que expone las propiedades del feature y
+   * el zoom actual, no un objeto GeoJSON completo); MapLibre estiliza con un
+   * `paint` fijo, mismo motivo/precedente que en GeoJSON/WFS (ver
+   * `src/layers/maplibre.ts`).
+   */
+  style?: (properties: Record<string, unknown>, zoom: number) => Record<string, unknown>
+}
+
+/**
  * Parámetros del helper `geoServerLayer()` (ver `src/layers/geoserver.ts`):
  * no es la forma de `options` de ningún `LayerConfig` real (por eso no forma
  * parte de {@link LayerTypeOptions}) — es la entrada con la que se *construye*
@@ -281,6 +312,7 @@ export type LayerTypeOptions =
   | TilesOptions
   | WMTSOptions
   | COGOptions
+  | MVTOptions
 
 /**
  * Configuración de una capa dinámica de `ASMap`. `options` no está acoplado

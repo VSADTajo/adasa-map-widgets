@@ -130,7 +130,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMap',
     category: 'mapping',
     description:
-      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS, COG — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
+      'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS, COG, MVT — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
     propsSchema: [
       {
         key: 'mapLibrary',
@@ -735,6 +735,72 @@ export const registry: RegistryEntry[] = [
     exampleId: 'demo-kml-madrid',
     notes:
       'Datos 100% locales (contenido KML como texto, sin fetch): mismo punto y polígono que el ejemplo GeoJSON, para comparar. Para un `.kmz` (zip) se necesita además la dependencia opcional `fflate`.',
+  }),
+  buildLayerEntry({
+    id: 'layer-mvt',
+    name: 'Capa MVT',
+    description:
+      'Mapbox Vector Tiles: geometría vectorial real (clicable, como GeoJSON/WFS) pero servida por teselas protobuf según el viewport/zoom, en vez de todo de golpe — pensado para datasets grandes. En Leaflet se apoya en la dependencia opcional `leaflet.vectorgrid`; en MapLibre usa su soporte nativo de fuentes `vector` (es, literalmente, el formato para el que se diseñó MapLibre).',
+    layerOptionsSchema: [
+      {
+        key: 'url',
+        type: 'string',
+        required: true,
+        description: "Plantilla de URL de teselas, p. ej. 'https://.../{z}/{x}/{y}.pbf'.",
+      },
+      {
+        key: 'sourceLayer',
+        type: 'string',
+        required: true,
+        description:
+          'Nombre de la sub-capa dentro de la tesela a renderizar (una tesela MVT suele empaquetar varias, p. ej. "water", "roads"...).',
+      },
+      { key: 'attribution', type: 'string', description: 'Atribución de este proveedor.' },
+      {
+        key: 'minZoom',
+        type: 'number',
+        description: 'Zoom mínimo al que el proveedor sirve teselas.',
+      },
+      {
+        key: 'maxZoom',
+        type: 'number',
+        description: 'Zoom máximo al que el proveedor sirve teselas.',
+      },
+      {
+        key: 'style',
+        type: '(properties, zoom) => Record<string, unknown>',
+        description:
+          'Estilo por feature (solo Leaflet, vía `leaflet.vectorgrid`); MapLibre usa un `paint` fijo, igual que en GeoJSON/WFS.',
+      },
+    ],
+    events: [
+      {
+        name: 'layer-loaded',
+        payload: 'LayerLoadedEvent',
+        description: 'La capa terminó de cargar.',
+      },
+      {
+        name: 'layer-error',
+        payload: '{ layerId, error }',
+        description: 'Fallo al cargar la capa.',
+      },
+      {
+        name: 'capability-detected',
+        payload: '{ layerId, capability }',
+        description: 'MVT nunca detecta capacidades especiales (mismo motivo que GeoJSON).',
+      },
+      {
+        name: 'feature-selected',
+        payload: 'FeatureSelectedEvent',
+        description:
+          'El usuario hizo click en un feature. En Leaflet solo trae `properties` (sin geometría): `leaflet.vectorgrid` no la expone en el evento de click.',
+      },
+    ],
+    center: [20, 0],
+    zoom: 1,
+    exampleId: 'demo-mvt-countries',
+    notes:
+      'El propio dataset de demostración de MapLibre GL JS (países del mundo), servido como MVT en vez de como un único GeoJSON: mismo tipo de datos que el ejemplo TopoJSON, pero pedido por teselas. `sourceLayer: "countries"` es una de las tres sub-capas que trae ese dataset (las otras son "geolines" y "centroids"). Depende de un servidor de terceros — si está caído, verás `layer-error` en vez de que se rompa el playground.',
   }),
   buildLayerEntry({
     id: 'layer-tiles',

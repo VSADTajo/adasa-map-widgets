@@ -56,7 +56,7 @@ export interface ASMapProps {
   zoom: number
   /**
    * Capas dinámicas a cargar sobre el mapa (GeoJSON, TopoJSON, KML, WMS, WFS,
-   * Tiles, WMTS, COG; para GeoServer usa el helper `geoServerLayer()`, que no es un tipo
+   * Tiles, WMTS, COG, MVT; para GeoServer usa el helper `geoServerLayer()`, que no es un tipo
    * aparte), gestionadas internamente con `useLayerManager`. Se cargan al
    * montar (y al recrear el mapa, si cambia `mapLibrary`) y se sincronizan
    * reactivamente con este array: añadir, quitar o cambiar un elemento
