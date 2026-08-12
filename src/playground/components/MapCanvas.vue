@@ -66,6 +66,9 @@ function resolveListeners(
  * - `scale`: en vez de su `center`/`zoom` de demo fijos, recibe el
  *   `center`/`zoom` reales de este mismo `ASMap` (`liveCenter`/`liveZoom`),
  *   para que la escala cambie de verdad al hacer scroll/zoom en el mapa.
+ * - `legend`: en vez de su `layers` de demo (vacío), recibe las `layers`
+ *   reales activas en este mismo `ASMap`, para que muestre de verdad la
+ *   leyenda de lo que esté activado en "Capas de ejemplo".
  */
 function resolvePlacementProps(placement: WidgetPlacement): Record<string, unknown> {
   const entry = getWidgetEntry(placement.widgetType)
@@ -86,6 +89,9 @@ function resolvePlacementProps(placement: WidgetPlacement): Record<string, unkno
   if (placement.widgetType === 'scale') {
     merged.center = liveCenter.value
     merged.zoom = liveZoom.value
+  }
+  if (placement.widgetType === 'legend') {
+    merged.layers = props.layers
   }
   return merged
 }

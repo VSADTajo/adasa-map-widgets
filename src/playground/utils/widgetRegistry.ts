@@ -3,6 +3,7 @@ import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import ASMapScale from '@/components/controls/ASMapScale.vue'
+import ASMapLegend from '@/components/controls/ASMapLegend.vue'
 import type { WidgetRegistryEntry } from '@/types/playground'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import { basemapExamples } from './basemapExamples'
@@ -165,11 +166,25 @@ export const widgetRegistry: WidgetRegistryEntry[] = [
       },
       { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
     ],
-    // Mismo center/zoom fijo con el que MapCanvas.vue crea el ASMap del
-    // compositor: no refleja el zoom real tras hacer scroll (el compositor no
-    // rastrea el zoom en vivo de ningún widget colocado), pero sí demuestra
-    // el widget con un valor coherente con lo que se ve en el mapa.
+    // Solo el valor inicial: MapCanvas.vue sustituye center/zoom por los
+    // reales del ASMap del compositor (liveCenter/liveZoom), así que la
+    // regla/razón sí cambia de verdad al hacer scroll/zoom en el mapa.
     staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
+  },
+  {
+    id: 'legend',
+    label: 'Leyenda (ASMapLegend)',
+    componentName: 'ASMapLegend',
+    component: ASMapLegend,
+    propsSchema: [
+      { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
+      { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    // Solo el valor inicial: MapCanvas.vue sustituye `layers` por las capas
+    // reales activas en el compositor (props.layers), así que la leyenda
+    // muestra de verdad lo que hay activado en "Capas de ejemplo".
+    staticProps: () => ({ layers: [] }),
   },
 ]
 

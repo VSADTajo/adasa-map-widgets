@@ -5,11 +5,13 @@ import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import ASMapScale from '@/components/controls/ASMapScale.vue'
+import ASMapLegend from '@/components/controls/ASMapLegend.vue'
 import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import type {
   FeatureSelectedEvent,
   LayerCapabilities,
+  LayerConfig,
   LayerKind,
   LayerLoadedEvent,
 } from '@/types/layers'
@@ -123,6 +125,18 @@ function buildDemoAlerts(): DayIntervalAlert[] {
     { start: at(1, 12), end: at(1, 24), level: 'naranja' },
     { start: at(2, 0), end: at(2, 12), level: 'rojo' },
   ]
+}
+
+/**
+ * Cuatro capas de ejemplo (`layerExamples.ts`) elegidas para que `ASMapLegend`
+ * muestre sus tres tipos de leyenda a la vez: imagen (WMS), degradado (COG)
+ * y símbolo genérico (GeoJSON) — más una capa Tiles que a propósito no
+ * genera leyenda, para mostrar también ese caso.
+ */
+function buildLegendDemoLayers(): LayerConfig[] {
+  return ['demo-wms-osm', 'demo-cog-kriging', 'demo-geojson-madrid', 'demo-tiles-opentopo']
+    .map((id) => getLayerExample(id)?.config)
+    .filter((config): config is LayerConfig => Boolean(config))
 }
 
 export const registry: RegistryEntry[] = [
@@ -615,6 +629,39 @@ export const registry: RegistryEntry[] = [
     notes:
       'No emite eventos: es un simple indicador de lectura. Sube/baja el zoom para ver cómo cambia la regla/razón — se recalcula automáticamente porque `bar`/`ratioLabel` son `computed()` sobre `zoom`/`center`. El ancho real de la regla puede ser algo menor que `width`, para que la distancia total mostrada sea un número redondo.',
     component: ASMapScale,
+  },
+  {
+    id: 'legend',
+    name: 'ASMapLegend',
+    category: 'controls',
+    description:
+      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
+    propsSchema: [
+      { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
+      { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
+      {
+        key: 'position',
+        label: 'Posición',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'bottom-right',
+      },
+      {
+        key: 'offset',
+        label: 'Offset (px)',
+        type: 'number',
+        default: 20,
+        min: 0,
+        max: 80,
+        step: 4,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    events: [],
+    staticProps: { layers: buildLegendDemoLayers() },
+    notes:
+      'Se precargan 4 capas de ejemplo para ver los tres tipos de leyenda a la vez: imagen (WMS, vía `GetLegendGraphic`), degradado (COG con `colorScale`) y símbolo genérico (GeoJSON) — más una capa Tiles que a propósito NO aparece en la leyenda (su `canGenerateLegend` es `false`: no hay nada fiable que mostrar, así que no se rellena con un símbolo inventado). No emite eventos: es un simple indicador de lectura.',
+    component: ASMapLegend,
   },
   buildLayerEntry({
     id: 'layer-geojson',

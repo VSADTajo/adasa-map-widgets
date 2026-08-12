@@ -12,6 +12,7 @@ export { detectCapabilities } from './capabilities'
 export { leafletLayerRegistry } from './leaflet'
 export { maplibreLayerRegistry, ensureCogProtocol } from './maplibre'
 export { geoServerLayer } from './geoserver'
+export { interpolateColorScale } from './cog'
 export { LAYER_KIND } from '@/types/layers'
 
 /** Motor de mapas al que corresponde cada registro de renderers de capas. */

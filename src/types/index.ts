@@ -21,6 +21,7 @@ export type {
   BasemapsSelectorEmits,
 } from './BasemapsSelectorProps'
 export type { ScalePosition, ScaleMode, ScaleUnits, ScaleProps } from './ScaleProps'
+export type { LegendPosition, LegendProps } from './LegendProps'
 export type {
   DayIntervalAlert,
   DayIntervalSelection,
@@ -58,3 +59,12 @@ export type {
   LayerLoadedEvent,
   FeatureSelectedEvent,
 } from './layers'
+export type {
+  LegendType,
+  LegendSource,
+  LegendSymbol,
+  LegendItem,
+  LegendRamp,
+  LegendCapabilities,
+  LegendAdapter,
+} from './legend'

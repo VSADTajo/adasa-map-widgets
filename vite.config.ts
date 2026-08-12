@@ -20,6 +20,7 @@ export default defineConfig({
         'src/types/**/*.ts',
         'src/composables/**/*.ts',
         'src/layers/**/*.ts',
+        'src/legend/**/*.ts',
         'src/utils/**/*.ts',
       ],
       exclude: ['src/playground/**/*'],
