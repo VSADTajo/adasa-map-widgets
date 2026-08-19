@@ -60,13 +60,15 @@ const previewProps = computed(() => ({
   ...liveListeners.value,
 }))
 
-const code = computed(() =>
-  buildSnippet(
-    entry.value.name,
-    entry.value.propsSchema,
-    propValues,
-    entry.value.slotDefault !== undefined ? slotContent.value : undefined,
-  ),
+const code = computed(
+  () =>
+    entry.value.codeOverride ??
+    buildSnippet(
+      entry.value.name,
+      entry.value.propsSchema,
+      propValues,
+      entry.value.slotDefault !== undefined ? slotContent.value : undefined,
+    ),
 )
 </script>
 
@@ -122,7 +124,17 @@ const code = computed(() =>
             <section class="pg-card pg-card--preview" aria-label="Vista previa en vivo">
               <h2 class="pg-card__heading">Vista previa</h2>
               <div class="pg-preview__stage">
-                <component :is="entry.component" v-bind="previewProps">
+                <!--
+                  `:key="activeId"` fuerza a Vue a desmontar/remontar en vez de
+                  parchear en sitio: varias entradas (todas las de "as-map" y
+                  "layers") comparten el mismo componente `ASMap`, así que sin
+                  key, cambiar entre ellas reutiliza la MISMA instancia viva y
+                  le empuja un salto brusco de center/zoom/layers por props
+                  reactivas en vez de una recreación limpia — Leaflet no lo
+                  soporta bien y lanza errores internos (`setView` a mitad de
+                  una animación de zoom con capas cambiando a la vez).
+                -->
+                <component :is="entry.component" :key="activeId" v-bind="previewProps">
                   <template v-if="entry.slotDefault !== undefined" #default>{{
                     slotContent
                   }}</template>
@@ -130,6 +142,8 @@ const code = computed(() =>
               </div>
               <h3 class="pg-card__subheading">Eventos emitidos</h3>
               <EventLog :entries="logEntries" />
+              <h3 class="pg-card__subheading">Código</h3>
+              <CodePreview :code="code" />
             </section>
 
             <section class="pg-card" aria-label="Editor de props">
@@ -153,11 +167,6 @@ const code = computed(() =>
             <section class="pg-card" aria-label="Documentación">
               <h2 class="pg-card__heading">Documentación</h2>
               <DocsPanel :entry="entry" />
-            </section>
-
-            <section class="pg-card" aria-label="Código">
-              <h2 class="pg-card__heading">Código</h2>
-              <CodePreview :code="code" />
             </section>
           </div>
         </main>

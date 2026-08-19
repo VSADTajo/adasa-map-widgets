@@ -1,8 +1,12 @@
 import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
 import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
 import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/components/controls/ASMapScale.vue'
+import ASMapLegend from '@/components/controls/ASMapLegend.vue'
 import type { WidgetRegistryEntry } from '@/types/playground'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import { basemapExamples } from './basemapExamples'
 
 function buildDemoTimeline(hours = 12): Date[] {
   const start = new Date()
@@ -112,6 +116,75 @@ export const widgetRegistry: WidgetRegistryEntry[] = [
       },
       onIntervalChanged: (interval) => log('interval-changed', interval),
     }),
+  },
+  {
+    id: 'basemaps-selector',
+    label: 'Selector de basemap (ASMapBasemapsSelector)',
+    componentName: 'ASMapBasemapsSelector',
+    component: ASMapBasemapsSelector,
+    propsSchema: [
+      { key: 'basemap', label: 'Basemap activo (id)', type: 'string', default: 'osm' },
+      {
+        key: 'position',
+        label: 'Esquina de apertura del menú',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'bottom-right',
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    staticProps: () => ({ basemaps: basemapExamples }),
+    bindings: (widgetProps, log) => ({
+      'onUpdate:basemap': (id) => {
+        widgetProps.basemap = id
+        log('update:basemap', id)
+      },
+    }),
+  },
+  {
+    id: 'scale',
+    label: 'Escala (ASMapScale)',
+    componentName: 'ASMapScale',
+    component: ASMapScale,
+    propsSchema: [
+      { key: 'mode', label: 'Modo', type: 'select', options: ['bar', 'numeric'], default: 'bar' },
+      {
+        key: 'units',
+        label: 'Unidades (solo "bar")',
+        type: 'select',
+        options: ['metric', 'imperial'],
+        default: 'metric',
+      },
+      {
+        key: 'width',
+        label: 'Ancho (px, solo "bar")',
+        type: 'number',
+        default: 100,
+        min: 40,
+        max: 200,
+        step: 10,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    // Solo el valor inicial: MapCanvas.vue sustituye center/zoom por los
+    // reales del ASMap del compositor (liveCenter/liveZoom), así que la
+    // regla/razón sí cambia de verdad al hacer scroll/zoom en el mapa.
+    staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
+  },
+  {
+    id: 'legend',
+    label: 'Leyenda (ASMapLegend)',
+    componentName: 'ASMapLegend',
+    component: ASMapLegend,
+    propsSchema: [
+      { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
+      { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    // Solo el valor inicial: MapCanvas.vue sustituye `layers` por las capas
+    // reales activas en el compositor (props.layers), así que la leyenda
+    // muestra de verdad lo que hay activado en "Capas de ejemplo".
+    staticProps: () => ({ layers: [] }),
   },
 ]
 
