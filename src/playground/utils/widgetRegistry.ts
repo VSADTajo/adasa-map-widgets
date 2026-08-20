@@ -4,6 +4,7 @@ import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalCont
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import ASMapScale from '@/components/controls/ASMapScale.vue'
 import ASMapLegend from '@/components/controls/ASMapLegend.vue'
+import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
 import type { WidgetRegistryEntry } from '@/types/playground'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import { basemapExamples } from './basemapExamples'
@@ -185,6 +186,30 @@ export const widgetRegistry: WidgetRegistryEntry[] = [
     // reales activas en el compositor (props.layers), así que la leyenda
     // muestra de verdad lo que hay activado en "Capas de ejemplo".
     staticProps: () => ({ layers: [] }),
+  },
+  {
+    id: 'button-toggle',
+    label: 'Grupo de botones (ASMapButtonToggle)',
+    componentName: 'ASMapButtonToggle',
+    component: ASMapButtonToggle,
+    propsSchema: [
+      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    staticProps: () => ({
+      modelValue: 'observado',
+      options: [
+        { value: 'observado', label: 'Observado' },
+        { value: 'harmonie', label: 'Harmonie' },
+        { value: 'epsmedio', label: 'EPS Medio' },
+      ],
+    }),
+    bindings: (widgetProps, log) => ({
+      'onUpdate:modelValue': (value) => {
+        widgetProps.modelValue = value
+        log('update:modelValue', value)
+      },
+    }),
   },
 ]
 

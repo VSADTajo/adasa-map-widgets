@@ -23,6 +23,12 @@ export type {
 export type { ScalePosition, ScaleMode, ScaleUnits, ScaleProps } from './ScaleProps'
 export type { LegendPosition, LegendProps } from './LegendProps'
 export type {
+  ButtonTogglePosition,
+  ButtonToggleOption,
+  ButtonToggleProps,
+  ButtonToggleEmits,
+} from './ButtonToggleProps'
+export type {
   DayIntervalAlert,
   DayIntervalSelection,
   DayIntervalProps,
