@@ -15,4 +15,6 @@ import './styles/tokens.css'
 
 export * from './components'
 export * from './composables'
+export * from './layers'
+export * from './legend'
 export type * from './types'

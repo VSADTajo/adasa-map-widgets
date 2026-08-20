@@ -6,6 +6,10 @@ const props = defineProps<{ entry: RegistryEntry }>()
 
 <template>
   <div class="pg-docs">
+    <span v-if="props.entry.layerKind" class="pg-docs__kind-badge">
+      {{ props.entry.layerKind === 'vector' ? 'Vectorial' : 'Ráster' }}
+    </span>
+
     <p class="pg-docs__description">{{ props.entry.description }}</p>
 
     <p v-if="props.entry.notes" class="pg-docs__note">ℹ️ {{ props.entry.notes }}</p>
@@ -32,6 +36,40 @@ const props = defineProps<{ entry: RegistryEntry }>()
       </tbody>
     </table>
     <p v-else class="pg-docs__empty">Sin props editables en este playground.</p>
+
+    <template v-if="props.entry.layerOptionsSchema">
+      <h3 class="pg-docs__heading">Opciones de la capa (<code>options</code>)</h3>
+      <table class="pg-docs__table">
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="field in props.entry.layerOptionsSchema" :key="field.key">
+            <td>
+              <code>{{ field.key }}{{ field.required ? '' : '?' }}</code>
+            </td>
+            <td>
+              <code>{{ field.type }}</code>
+            </td>
+            <td>{{ field.description }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+
+    <template v-if="props.entry.layerCapabilities">
+      <h3 class="pg-docs__heading">Capacidades detectadas en este ejemplo</h3>
+      <ul class="pg-docs__capabilities">
+        <li v-for="[key, value] in Object.entries(props.entry.layerCapabilities)" :key="key">
+          <code>{{ key }}</code
+          >: {{ typeof value === 'boolean' ? (value ? 'sí' : 'no') : JSON.stringify(value) }}
+        </li>
+      </ul>
+    </template>
 
     <h3 class="pg-docs__heading">Eventos</h3>
     <table v-if="props.entry.events.length" class="pg-docs__table">
@@ -66,6 +104,18 @@ const props = defineProps<{ entry: RegistryEntry }>()
   font-size: 0.85rem;
 }
 
+.pg-docs__kind-badge {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: var(--pg-surface-muted);
+  color: var(--pg-text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .pg-docs__description {
   margin: 0;
   color: var(--pg-text);
@@ -86,6 +136,12 @@ const props = defineProps<{ entry: RegistryEntry }>()
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--pg-text-muted);
+}
+
+.pg-docs__capabilities {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 0.8rem;
 }
 
 .pg-docs__table {

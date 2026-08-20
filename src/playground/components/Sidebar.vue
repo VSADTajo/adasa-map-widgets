@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { registry } from '../registry'
+import { registry, type RegistryEntry } from '../registry'
+import type { LayerKind } from '@/types/layers'
 
 const props = defineProps<{ activeId: string }>()
 const emit = defineEmits<{ select: [id: string] }>()
@@ -8,15 +9,45 @@ const emit = defineEmits<{ select: [id: string] }>()
 const categories = [
   { key: 'mapping', label: 'Mapping' },
   { key: 'controls', label: 'Controls' },
+  { key: 'layers', label: 'Layers' },
 ] as const
 
+/** Subgrupos dentro de la categoría 'layers': vectoriales antes que ráster. */
+const LAYER_KIND_LABELS: Record<LayerKind, string> = {
+  vector: 'Vectoriales',
+  raster: 'Ráster',
+}
+
+interface Subgroup {
+  key: string
+  /** `null` = sin subtítulo visible (categorías que no se subdividen). */
+  label: string | null
+  items: RegistryEntry[]
+}
+
+/**
+ * Cada categoría se divide en subgrupos: para 'layers', por `layerKind`
+ * (vector/raster, ver `src/types/layers.ts`); para el resto, un único
+ * subgrupo sin subtítulo. Así, cuando se añadan más tipos de capa, solo hace
+ * falta que declaren su `layerKind` para encajar en el sitio correcto.
+ */
 const grouped = computed(() =>
   categories
-    .map((category) => ({
-      ...category,
-      items: registry.filter((entry) => entry.category === category.key),
-    }))
-    .filter((group) => group.items.length > 0),
+    .map((category) => {
+      const items = registry.filter((entry) => entry.category === category.key)
+      const subgroups: Subgroup[] =
+        category.key === 'layers'
+          ? (['vector', 'raster'] as const)
+              .map((kind) => ({
+                key: kind,
+                label: LAYER_KIND_LABELS[kind],
+                items: items.filter((entry) => entry.layerKind === kind),
+              }))
+              .filter((subgroup) => subgroup.items.length > 0)
+          : [{ key: 'all', label: null, items }]
+      return { key: category.key, label: category.label, subgroups }
+    })
+    .filter((group) => group.subgroups.length > 0),
 )
 </script>
 
@@ -28,19 +59,22 @@ const grouped = computed(() =>
     </div>
     <div v-for="group in grouped" :key="group.key" class="pg-sidebar__group">
       <h3 class="pg-sidebar__group-title">{{ group.label }}</h3>
-      <ul class="pg-sidebar__list">
-        <li v-for="item in group.items" :key="item.id">
-          <button
-            type="button"
-            class="pg-sidebar__item"
-            :class="{ 'pg-sidebar__item--active': item.id === props.activeId }"
-            :aria-current="item.id === props.activeId ? 'true' : undefined"
-            @click="emit('select', item.id)"
-          >
-            {{ item.name }}
-          </button>
-        </li>
-      </ul>
+      <div v-for="subgroup in group.subgroups" :key="subgroup.key" class="pg-sidebar__subgroup">
+        <h4 v-if="subgroup.label" class="pg-sidebar__subgroup-title">{{ subgroup.label }}</h4>
+        <ul class="pg-sidebar__list">
+          <li v-for="item in subgroup.items" :key="item.id">
+            <button
+              type="button"
+              class="pg-sidebar__item"
+              :class="{ 'pg-sidebar__item--active': item.id === props.activeId }"
+              :aria-current="item.id === props.activeId ? 'true' : undefined"
+              @click="emit('select', item.id)"
+            >
+              {{ item.name }}
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
   </nav>
 </template>
@@ -74,6 +108,18 @@ const grouped = computed(() =>
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--pg-text-muted);
+}
+
+.pg-sidebar__subgroup {
+  margin-bottom: 8px;
+}
+
+.pg-sidebar__subgroup-title {
+  margin: 0 0 4px 8px;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--pg-text-muted);
+  opacity: 0.8;
 }
 
 .pg-sidebar__list {

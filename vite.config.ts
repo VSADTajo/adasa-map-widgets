@@ -19,6 +19,9 @@ export default defineConfig({
         'src/components/**/*.ts',
         'src/types/**/*.ts',
         'src/composables/**/*.ts',
+        'src/layers/**/*.ts',
+        'src/legend/**/*.ts',
+        'src/utils/**/*.ts',
       ],
       exclude: ['src/playground/**/*'],
       rollupTypes: true,
@@ -40,7 +43,15 @@ export default defineConfig({
       // `leaflet` y `maplibre-gl` son peerDependencies opcionales (ver ASMap.vue):
       // deben quedar como import() externos en tiempo de ejecución, nunca
       // empaquetados dentro de esta librería.
-      external: (id) => id === 'vue' || id.startsWith('leaflet') || id.startsWith('maplibre-gl'),
+      external: (id) =>
+        id === 'vue' ||
+        id.startsWith('leaflet') ||
+        id.startsWith('maplibre-gl') ||
+        id.startsWith('topojson-client') ||
+        id.startsWith('@tmcw/togeojson') ||
+        id.startsWith('fflate') ||
+        id.startsWith('georaster') ||
+        id.startsWith('@geomatico/maplibre-cog-protocol'),
       output: {
         globals: { vue: 'Vue' },
         exports: 'named',
