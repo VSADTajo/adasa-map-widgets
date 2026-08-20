@@ -6,6 +6,7 @@ import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalCont
 import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
 import ASMapScale from '@/components/controls/ASMapScale.vue'
 import ASMapLegend from '@/components/controls/ASMapLegend.vue'
+import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
 import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
 import type { DayIntervalAlert } from '@/types/DayIntervalProps'
 import type {
@@ -662,6 +663,63 @@ export const registry: RegistryEntry[] = [
     notes:
       'Se precargan 4 capas de ejemplo para ver los tres tipos de leyenda a la vez: imagen (WMS, vía `GetLegendGraphic`), degradado (COG con `colorScale`) y símbolo genérico (GeoJSON) — más una capa Tiles que a propósito NO aparece en la leyenda (su `canGenerateLegend` es `false`: no hay nada fiable que mostrar, así que no se rellena con un símbolo inventado). No emite eventos: es un simple indicador de lectura.',
     component: ASMapLegend,
+  },
+  {
+    id: 'button-toggle',
+    name: 'ASMapButtonToggle',
+    category: 'controls',
+    description:
+      'Grupo de botones de selección única, genérico (tú decides `options`) — el equivalente de esta librería a un `v-btn-toggle` de Vuetify, pero sin depender de Vuetify (ningún widget de esta librería exige un framework de UI en el proyecto consumidor). Componente controlado: `modelValue` con `v-model`, selección obligatoria (siempre hay un botón activo).',
+    propsSchema: [
+      {
+        key: 'modelValue',
+        label: 'Valor activo',
+        type: 'string',
+        default: 'observado',
+        description: 'Si no coincide con ningún `value` de `options`, se activa el primero.',
+      },
+      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
+      {
+        key: 'position',
+        label: 'Posición',
+        type: 'select',
+        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        default: 'top-left',
+      },
+      {
+        key: 'offset',
+        label: 'Offset (px)',
+        type: 'number',
+        default: 20,
+        min: 0,
+        max: 80,
+        step: 4,
+      },
+      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+    ],
+    events: [
+      {
+        name: 'update:modelValue',
+        payload: 'string',
+        description: 'El usuario eligió otro botón. Úsalo con v-model.',
+      },
+    ],
+    staticProps: {
+      options: [
+        { value: 'observado', label: 'Observado' },
+        { value: 'harmonie', label: 'Harmonie' },
+        { value: 'epsmedio', label: 'EPS Medio' },
+      ],
+    },
+    notes:
+      'La prop "options" no es editable aquí (no es un tipo primitivo): son fijas, tres fuentes de datos meteorológicos de ejemplo. Haz click en un botón para ver `update:modelValue` en el log, y cómo se refleja en "Valor activo".',
+    component: ASMapButtonToggle,
+    bindings: (values, log) => ({
+      'onUpdate:modelValue': (value) => {
+        values.modelValue = value
+        log('update:modelValue', value)
+      },
+    }),
   },
   buildLayerEntry({
     id: 'layer-geojson',
