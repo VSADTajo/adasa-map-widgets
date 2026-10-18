@@ -56,13 +56,16 @@ export interface DayIntervalProps {
    */
   levels?: string[]
   /**
-   * Color de fondo por nivel (CSS válido).
-   * @default { amarillo: '#ffd54f', naranja: '#fb8c00', rojo: '#e53935' }
+   * Color de fondo por nivel (CSS válido, también `var(--x)`). Por defecto,
+   * los tokens de aviso `--as-alert-<nivel>` de core.
+   * @default { amarillo: 'var(--as-alert-amarillo, #ffd54f)', naranja: 'var(--as-alert-naranja, #fb8c00)', rojo: 'var(--as-alert-rojo, #d32f2f)' }
    */
   levelColors?: Record<string, string>
   /**
-   * Color de texto por nivel; los niveles no listados usan blanco.
-   * @default { amarillo: '#2f2f2f' }
+   * Color de texto por nivel; los niveles no listados usan blanco. Por
+   * defecto, los tokens `--as-alert-<nivel>-text` (contraste ≥ 4.5:1 sobre
+   * su relleno).
+   * @default { amarillo: 'var(--as-alert-amarillo-text, #2f2f2f)', naranja: 'var(--as-alert-naranja-text, #1a1a1a)', rojo: 'var(--as-alert-rojo-text, #ffffff)' }
    */
   levelTextColors?: Record<string, string>
   /** Número de columnas de día. @default 3 */

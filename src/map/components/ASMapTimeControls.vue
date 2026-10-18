@@ -252,8 +252,22 @@ const playPauseIconPath = computed(() =>
 
 <style scoped>
 .as-time-controls {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  /* En oscuro, bordes y texto secundario más suaves que el resto de
+     overlays: valores propios, no los tokens --as-overlay-*. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-text-muted: light-dark(#5a6a81, #cbd5e1);
+  --as-color-surface-muted: light-dark(#f1f5f9, rgba(255, 255, 255, 0.12));
+  --as-color-border: light-dark(#cbd5e1, rgba(255, 255, 255, 0.2));
+  background-color: var(
+    --as-overlay-bg,
+    light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85))
+  );
+  color: var(--as-color-text);
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   width: min(720px, 94%);
   border-radius: var(--as-radius, 14px);
   padding: calc(var(--as-spacing-unit, 4px) * 3) calc(var(--as-spacing-unit, 4px) * 4);
@@ -289,21 +303,11 @@ const playPauseIconPath = computed(() =>
 }
 
 .as-time-controls--dark {
-  --as-color-text: #ffffff;
-  --as-color-text-muted: #cbd5e1;
-  --as-color-surface-muted: rgba(255, 255, 255, 0.12);
-  --as-color-border: rgba(255, 255, 255, 0.2);
-  background-color: rgba(24, 24, 27, 0.85);
-  color: var(--as-color-text);
+  color-scheme: dark;
 }
 
 .as-time-controls--light {
-  --as-color-text: #0f172a;
-  --as-color-text-muted: #64748b;
-  --as-color-surface-muted: #f1f5f9;
-  --as-color-border: #cbd5e1;
-  background-color: rgba(255, 255, 255, 0.92);
-  color: var(--as-color-text);
+  color-scheme: light;
 }
 
 .as-time-controls__header {

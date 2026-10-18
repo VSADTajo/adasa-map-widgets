@@ -7,6 +7,7 @@ import {
   computeMetricScaleBar,
   computeScaleRatio,
   metersPerPixel,
+  pickScaleLabels,
 } from '@/map/utils/mapScale'
 
 /**
@@ -62,6 +63,24 @@ const ticks = computed<string[]>(() => {
   })
 })
 
+/**
+ * Etiquetas que caben sin solaparse, en la posición real de su marca. Si
+ * solo cabe la última, `single` la saca de la regla para que el recuadro
+ * crezca con el texto en vez de desbordarse.
+ */
+const visibleTicks = computed(() => {
+  const indices = pickScaleLabels(ticks.value, bar.value.widthPx)
+  return {
+    single: indices.length === 1 ? ticks.value[indices[0]!] : undefined,
+    items: indices.map((index) => ({
+      index,
+      text: ticks.value[index]!,
+      align: index === 0 ? 'start' : index === SEGMENT_COUNT ? 'end' : 'center',
+      left: `${(index / SEGMENT_COUNT) * 100}%`,
+    })),
+  }
+})
+
 const ratioLabel = computed(
   () => `1 : ${computeScaleRatio(metersPerPx.value).toLocaleString('es-ES')}`,
 )
@@ -79,8 +98,9 @@ const offsetStyle = computed(() => {
     :class="[`as-scale--${props.position}`, `as-scale--${resolvedTheme}`]"
     :style="offsetStyle"
   >
-    <div v-if="props.mode === 'bar'" class="as-scale__ruler" :style="{ width: `${bar.widthPx}px` }">
-      <div class="as-scale__ruler-track">
+    <div v-if="props.mode === 'bar'" class="as-scale__ruler">
+      <!-- La regla mide exactamente `bar.widthPx`: es la distancia que representa. -->
+      <div class="as-scale__ruler-track" :style="{ width: `${bar.widthPx}px` }">
         <span
           v-for="segment in SEGMENT_COUNT"
           :key="segment"
@@ -88,8 +108,19 @@ const offsetStyle = computed(() => {
           :class="{ 'as-scale__ruler-segment--alt': segment % 2 === 0 }"
         />
       </div>
-      <div class="as-scale__ruler-labels">
-        <span v-for="(tick, index) in ticks" :key="index">{{ tick }}</span>
+      <div v-if="visibleTicks.single" class="as-scale__ruler-label-single">
+        {{ visibleTicks.single }}
+      </div>
+      <div v-else class="as-scale__ruler-labels" :style="{ width: `${bar.widthPx}px` }">
+        <span
+          v-for="tick in visibleTicks.items"
+          :key="tick.index"
+          class="as-scale__ruler-label"
+          :class="`as-scale__ruler-label--${tick.align}`"
+          :style="{ left: tick.left }"
+        >
+          {{ tick.text }}
+        </span>
       </div>
     </div>
     <div v-else class="as-scale__ratio">{{ ratioLabel }}</div>
@@ -98,23 +129,27 @@ const offsetStyle = computed(() => {
 
 <style scoped>
 .as-scale {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  /* Más transparente y con bordes más marcados que el resto de overlays
+     para no tapar el mapa bajo la regla: valores propios. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-border: light-dark(rgba(15, 23, 42, 0.55), rgba(255, 255, 255, 0.7));
+  --as-scale-bg: light-dark(rgba(255, 255, 255, 0.85), rgba(24, 24, 27, 0.72));
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   font-family: var(--as-font-family, system-ui, sans-serif);
   font-size: 0.7rem;
   line-height: 1.2;
 }
 
 .as-scale--dark {
-  --as-color-text: #ffffff;
-  --as-color-border: rgba(255, 255, 255, 0.7);
-  --as-scale-bg: rgba(24, 24, 27, 0.72);
+  color-scheme: dark;
 }
 
 .as-scale--light {
-  --as-color-text: #0f172a;
-  --as-color-border: rgba(15, 23, 42, 0.55);
-  --as-scale-bg: rgba(255, 255, 255, 0.85);
+  color-scheme: light;
 }
 
 .as-scale__ruler {
@@ -129,6 +164,7 @@ const offsetStyle = computed(() => {
 }
 
 .as-scale__ruler-track {
+  box-sizing: border-box;
   display: flex;
   height: 6px;
   overflow: hidden;
@@ -146,12 +182,27 @@ const offsetStyle = computed(() => {
 }
 
 .as-scale__ruler-labels {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 1.2em;
   margin-top: 3px;
 }
 
-.as-scale__ruler-labels span {
+.as-scale__ruler-label {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.as-scale__ruler-label--center {
+  transform: translateX(-50%);
+}
+
+.as-scale__ruler-label--end {
+  transform: translateX(-100%);
+}
+
+.as-scale__ruler-label-single {
+  margin-top: 3px;
   white-space: nowrap;
 }
 

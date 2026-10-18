@@ -93,8 +93,17 @@ const offsetStyle = computed(() => {
 
 <style scoped>
 .as-button-toggle {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-border: var(--as-overlay-border, light-dark(#cbd5e1, rgba(255, 255, 255, 0.45)));
+  --as-button-toggle-bg: var(
+    --as-overlay-bg,
+    light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85))
+  );
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   display: inline-flex;
   font-family: var(--as-font-family, system-ui, sans-serif);
   font-size: 0.78rem;
@@ -105,15 +114,11 @@ const offsetStyle = computed(() => {
 }
 
 .as-button-toggle--dark {
-  --as-color-text: #ffffff;
-  --as-color-border: rgba(255, 255, 255, 0.45);
-  --as-button-toggle-bg: rgba(24, 24, 27, 0.85);
+  color-scheme: dark;
 }
 
 .as-button-toggle--light {
-  --as-color-text: #0f172a;
-  --as-color-border: #cbd5e1;
-  --as-button-toggle-bg: rgba(255, 255, 255, 0.92);
+  color-scheme: light;
 }
 
 .as-button-toggle__btn {
