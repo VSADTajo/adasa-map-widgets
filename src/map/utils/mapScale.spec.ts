@@ -4,6 +4,7 @@ import {
   computeMetricScaleBar,
   computeScaleRatio,
   metersPerPixel,
+  pickScaleLabels,
 } from './mapScale'
 
 /** Metros por píxel en el ecuador a zoom 0 (Web Mercator, teselas de 256px). */
@@ -89,5 +90,45 @@ describe('computeScaleRatio', () => {
 
   it('redondea a un entero', () => {
     expect(Number.isInteger(computeScaleRatio(metersPerPixel(40.4, 6)))).toBe(true)
+  })
+})
+
+describe('pickScaleLabels', () => {
+  const labels = ['0', '25', '50', '75', '100 km']
+
+  it('etiqueta todas las marcas cuando hay sitio', () => {
+    expect(pickScaleLabels(labels, 240)).toEqual([0, 1, 2, 3, 4])
+  })
+
+  it('pasa a una de cada dos cuando las intermedias no caben', () => {
+    expect(pickScaleLabels(labels, 120)).toEqual([0, 2, 4])
+  })
+
+  it('deja solo los extremos cuando tampoco cabe la central', () => {
+    expect(pickScaleLabels(labels, 80)).toEqual([0, 4])
+  })
+
+  it('con una regla muy corta deja solo la última, la que lleva la unidad', () => {
+    expect(pickScaleLabels(labels, 50)).toEqual([4])
+  })
+
+  it.each([60, 90, 110, 140, 180, 260])(
+    'con %i px, las etiquetas elegidas nunca se solapan',
+    (trackPx) => {
+      const indices = pickScaleLabels(labels, trackPx)
+      const spans = indices.map((index) => {
+        const width = labels[index]!.length * 7
+        if (index === 0) return [0, width]
+        if (index === 4) return [trackPx - width, trackPx]
+        const center = (trackPx * index) / 4
+        return [center - width / 2, center + width / 2]
+      })
+      spans.slice(1).forEach(([start], i) => expect(start).toBeGreaterThan(spans[i]![1]!))
+    },
+  )
+
+  it('sin etiquetas no devuelve nada, y con una sola la devuelve', () => {
+    expect(pickScaleLabels([], 100)).toEqual([])
+    expect(pickScaleLabels(['5 km'], 100)).toEqual([0])
   })
 })

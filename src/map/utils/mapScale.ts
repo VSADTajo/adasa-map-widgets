@@ -65,3 +65,47 @@ const METERS_PER_SCREEN_PIXEL_AT_96DPI = 0.0254 / 96
 export function computeScaleRatio(metersPerPx: number): number {
   return Math.round(metersPerPx / METERS_PER_SCREEN_PIXEL_AT_96DPI)
 }
+
+/**
+ * Ancho aproximado de un carácter de las etiquetas de la regla, en px: la
+ * fuente es 0.7rem (≈ 11.2 px con la raíz a 16 px) y una cifra ocupa ≈ 0.6
+ * em; se redondea al alza para que la estimación nunca se quede corta.
+ */
+const LABEL_CHAR_PX = 7
+/** Separación mínima entre dos etiquetas contiguas, en px. */
+const LABEL_GAP_PX = 6
+
+/**
+ * Qué marcas de una regla graduada se pueden etiquetar sin que los textos se
+ * solapen. Prueba, por orden de preferencia: todas, una de cada dos y solo
+ * los extremos. Si ni eso cabe, devuelve solo la última (la que lleva la
+ * unidad), que el componente pinta fuera de la regla.
+ *
+ * Las etiquetas de los extremos se alinean hacia dentro de la regla (la
+ * primera empieza en 0 y la última termina en `trackPx`) y las intermedias
+ * se centran en su marca, que está en `trackPx * i / (n - 1)`.
+ */
+export function pickScaleLabels(labels: string[], trackPx: number): number[] {
+  const last = labels.length - 1
+  if (last < 1) return labels.length ? [0] : []
+
+  const span = (index: number): [number, number] => {
+    const width = labels[index]!.length * LABEL_CHAR_PX
+    if (index === 0) return [0, width]
+    if (index === last) return [trackPx - width, trackPx]
+    const center = (trackPx * index) / last
+    return [center - width / 2, center + width / 2]
+  }
+  const fits = (indices: number[]) =>
+    indices.every((index, i) => {
+      if (i === 0) return true
+      return span(indices[i - 1]!)[1] + LABEL_GAP_PX <= span(index)[0]
+    })
+
+  const all = labels.map((_, index) => index)
+  const everyOther = all.filter((index) => index % 2 === 0 || index === last)
+  for (const candidate of [all, everyOther, [0, last]]) {
+    if (fits(candidate)) return candidate
+  }
+  return [last]
+}
