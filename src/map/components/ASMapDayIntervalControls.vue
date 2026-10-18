@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import type { DayIntervalEmits, DayIntervalProps } from '@/map/types/DayIntervalProps'
 
@@ -46,7 +47,7 @@ const props = withDefaults(defineProps<DayIntervalProps>(), {
   intervalHours: 6,
   baseDate: () => new Date(),
   dayLabels: undefined,
-  title: 'Avisos',
+  title: undefined,
   subtitle: undefined,
   position: 'bottom',
   offset: 20,
@@ -76,19 +77,20 @@ function addHours(date: Date, amount: number): Date {
   return next
 }
 
-const dayFormatter = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit' })
-const hourFormatter = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', hour12: false })
-const weekdayFormatter = new Intl.DateTimeFormat('es-ES', { weekday: 'long' })
+/** Textos y formatos en el idioma de `provideLocale` (español por defecto). */
+const { t, formatDate } = useLocale()
+
+const HOUR_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', hourCycle: 'h23' }
 
 function formatIntervalLabel(start: Date, end: Date): string {
-  return `${hourFormatter.format(start)}-${hourFormatter.format(end)}`
+  return `${formatDate(start, HOUR_FORMAT)}-${formatDate(end, HOUR_FORMAT)}`
 }
 
 function defaultDayLabel(index: number, date: Date): string {
-  if (index === 0) return 'Hoy'
-  if (index === 1) return 'Mañana'
-  if (index === 2) return 'Pasado mañana'
-  const label = weekdayFormatter.format(date)
+  if (index === 0) return t('dayInterval.today')
+  if (index === 1) return t('dayInterval.tomorrow')
+  if (index === 2) return t('dayInterval.dayAfterTomorrow')
+  const label = formatDate(date, 'weekday')
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
@@ -147,7 +149,7 @@ const dayViews = computed<DayView[]>(() => {
   return Array.from({ length: Math.max(props.days, 0) }, (_, dayIndex) => {
     const dayDate = addDays(today, dayIndex)
     const label = props.dayLabels?.[dayIndex] ?? defaultDayLabel(dayIndex, dayDate)
-    const dayTitle = `${label} ${dayFormatter.format(dayDate)}`
+    const dayTitle = `${label} ${formatDate(dayDate, 'dayMonth')}`
 
     return {
       key: `day-${dayIndex}`,
@@ -164,10 +166,13 @@ const dayViews = computed<DayView[]>(() => {
           start,
           end,
           label,
-          ariaLabel:
-            `${dayTitle}, ${label}h` +
-            (level ? `, nivel ${level}` : '') +
-            (isSelected ? ', seleccionado' : ''),
+          ariaLabel: [
+            t('dayInterval.intervalLabel', { day: dayTitle, hours: label }),
+            level ? t('dayInterval.level', { level }) : '',
+            isSelected ? t('dayInterval.selected') : '',
+          ]
+            .filter(Boolean)
+            .join(', '),
           isSelected,
           isCurrent: currentStart === start.getTime(),
           level,
@@ -194,7 +199,7 @@ function pillStyle(interval: IntervalView): Record<string, string> | undefined {
 }
 
 const selectedDayLabel = computed(() =>
-  props.selectedIntervalStart ? dayFormatter.format(props.selectedIntervalStart) : '',
+  props.selectedIntervalStart ? formatDate(props.selectedIntervalStart, 'dayMonth') : '',
 )
 const selectedIntervalLabel = computed(() =>
   props.selectedIntervalStart
@@ -250,7 +255,9 @@ const rowStyle = computed(() => ({
   >
     <div class="as-day-interval-controls__header">
       <div>
-        <div class="as-day-interval-controls__title">{{ props.title }}</div>
+        <div class="as-day-interval-controls__title">
+          {{ props.title ?? t('dayInterval.title') }}
+        </div>
         <div v-if="props.subtitle" class="as-day-interval-controls__subtitle">
           {{ props.subtitle }}
         </div>

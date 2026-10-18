@@ -8,7 +8,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 
 | Import                         | Contenido                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `@vsadtajo/adasa-ui`           | `core`: tema (`provideTheme`, `useTheme`, `useResolvedTheme`), `useClickOutside`, tipos de tema |
+| `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
@@ -125,6 +125,37 @@ watch(tokens, (t) => t && chart.setOption({ color: t.data.categorical }))
 ```
 
 Cada widget acepta además una prop `theme` (`'dark' | 'light'`) que tiene prioridad sobre el tema global. Si no hay `provideTheme` ni prop, se usa `'dark'`. Los que lo admiten aceptan también `accentColor`, para tintar el widget con un color puntual (p. ej. el resultado de tu propia escala de color).
+
+## Idioma y formatos
+
+Los textos de los componentes (incluidas las etiquetas para lectores de pantalla) y el formato de números, fechas y unidades siguen el idioma de `provideLocale`. Por defecto es español; también se incluye inglés:
+
+```ts
+import { provideLocale } from '@vsadtajo/adasa-ui'
+
+const { setLocale } = provideLocale('es') // 'es' | 'en'
+```
+
+Para otro idioma (catalán, euskera, gallego...), defínelo al proveerlo. Las claves que no traduzcas se muestran en español:
+
+```ts
+import { ca } from 'date-fns/locale'
+
+provideLocale('ca', {
+  locales: { ca: { intl: 'ca-ES', dateFns: ca, messages: { 'legend.title': 'Llegenda' } } },
+})
+```
+
+Los mismos formateadores están disponibles para tu propio código, ligados al idioma activo con `useLocale()` o como funciones puras:
+
+```ts
+import { formatUnit, formatDate, formatDuration, formatNumber } from '@vsadtajo/adasa-ui'
+
+formatUnit(12.4, 'm³/s') // "12,4 m³/s"  (también 'mm', 'hm³', 'm', '%', '°C')
+formatDate(fecha, 'datetime') // "18/10/2026, 06:00"  (presets, opciones de Intl o { pattern })
+formatDuration(5_400_000) // "1 h 30 min"
+formatNumber(12345.6) // "12.345,6"
+```
 
 ## Scripts
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import type { LegendProps } from '@/map/types/LegendProps'
 import type { LayerConfig } from '@/map/types/layers'
@@ -26,7 +27,7 @@ import { generateLegend, getLegendCapabilities } from '@/map/legend'
  * ```
  */
 const props = withDefaults(defineProps<LegendProps>(), {
-  title: 'Leyenda',
+  title: undefined,
   collapsible: true,
   position: 'bottom-right',
   offset: 20,
@@ -35,6 +36,9 @@ const props = withDefaults(defineProps<LegendProps>(), {
 
 /** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
 const resolvedTheme = useResolvedTheme(() => props.theme)
+
+/** Textos en el idioma de `provideLocale` (español por defecto). */
+const { t } = useLocale()
 
 interface LegendSection {
   layerId: string
@@ -91,12 +95,12 @@ const offsetStyle = computed(() => {
     :style="offsetStyle"
   >
     <div class="as-legend__header">
-      <span class="as-legend__title">{{ props.title }}</span>
+      <span class="as-legend__title">{{ props.title ?? t('legend.title') }}</span>
       <button
         v-if="props.collapsible"
         type="button"
         class="as-legend__toggle"
-        :aria-label="collapsed ? 'Expandir leyenda' : 'Colapsar leyenda'"
+        :aria-label="collapsed ? t('legend.expand') : t('legend.collapse')"
         :aria-expanded="!collapsed"
         @click="collapsed = !collapsed"
       >
@@ -105,7 +109,7 @@ const offsetStyle = computed(() => {
     </div>
 
     <div v-if="!collapsed" class="as-legend__body">
-      <p v-if="sections.length === 0" class="as-legend__empty">Sin leyenda disponible.</p>
+      <p v-if="sections.length === 0" class="as-legend__empty">{{ t('legend.empty') }}</p>
 
       <section v-for="section in sections" :key="section.layerId" class="as-legend__section">
         <h4 class="as-legend__section-title">{{ section.layerName }}</h4>
