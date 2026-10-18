@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import { useClickOutside } from '@/core/composables/useClickOutside'
 import type { BasemapOption } from '@/map/components/ASMap.vue'
@@ -34,6 +35,9 @@ const props = withDefaults(defineProps<BasemapsSelectorProps>(), {
 
 /** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
 const resolvedTheme = useResolvedTheme(() => props.theme)
+
+/** Textos en el idioma de `provideLocale` (español por defecto). */
+const { t } = useLocale()
 
 const emit = defineEmits<BasemapsSelectorEmits>()
 
@@ -87,7 +91,7 @@ const offsetStyle = computed(() => {
       class="as-basemaps-selector__trigger"
       aria-haspopup="menu"
       :aria-expanded="isOpen"
-      :aria-label="`Basemap: ${activeBasemap?.name ?? 'ninguno'}. Cambiar basemap`"
+      :aria-label="t('basemaps.current', { name: activeBasemap?.name ?? t('basemaps.none') })"
       :title="activeBasemap?.name"
       :disabled="otherBasemaps.length === 0"
       @click="toggleOpen"
@@ -109,7 +113,7 @@ const offsetStyle = computed(() => {
       v-if="isOpen"
       class="as-basemaps-selector__menu"
       role="menu"
-      aria-label="Basemaps disponibles"
+      :aria-label="t('basemaps.list')"
     >
       <button
         v-for="option in otherBasemaps"

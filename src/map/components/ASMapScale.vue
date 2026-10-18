@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import type { ScaleProps } from '@/map/types/ScaleProps'
 import {
@@ -42,6 +43,9 @@ const props = withDefaults(defineProps<ScaleProps>(), {
 /** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
 const resolvedTheme = useResolvedTheme(() => props.theme)
 
+/** Números en el idioma de `provideLocale` (español por defecto). */
+const { formatNumber } = useLocale()
+
 /** Número de segmentos (y de marcas intermedias) de la regla graduada. */
 const SEGMENT_COUNT = 4
 
@@ -81,9 +85,7 @@ const visibleTicks = computed(() => {
   }
 })
 
-const ratioLabel = computed(
-  () => `1 : ${computeScaleRatio(metersPerPx.value).toLocaleString('es-ES')}`,
-)
+const ratioLabel = computed(() => `1 : ${formatNumber(computeScaleRatio(metersPerPx.value))}`)
 
 const offsetStyle = computed(() => {
   const resolved = typeof props.offset === 'number' ? `${props.offset}px` : props.offset

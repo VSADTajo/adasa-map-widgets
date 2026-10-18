@@ -10,10 +10,15 @@ import TokensPage from './components/TokensPage.vue'
 import { registry, getEntry } from './registry'
 import { buildSnippet } from './propTypes'
 import { provideTheme } from '@/core/composables/useTheme'
+import { provideLocale, type LocaleCode } from '@/core/composables/useLocale'
 import type { ThemeMode } from '@/core/types/theme'
 
 const { mode, resolvedMode, setMode } = provideTheme('auto')
 const modes: ThemeMode[] = ['light', 'dark', 'auto']
+
+// Idioma de los textos y formatos de todos los componentes del playground.
+const { locale, setLocale } = provideLocale('es')
+const locales: LocaleCode[] = ['es', 'en']
 
 /** Alterna entre la galería de un solo componente, el compositor de widgets sobre un mapa y los tokens de diseño. */
 type ViewMode = 'gallery' | 'composer' | 'tokens'
@@ -122,18 +127,33 @@ const code = computed(
               <h1 class="pg-main__title">{{ entry.name }}</h1>
               <p class="pg-main__category">{{ entry.category }}</p>
             </div>
-            <div class="pg-theme-toggle" role="group" aria-label="Tema">
-              <button
-                v-for="m in modes"
-                :key="m"
-                type="button"
-                class="pg-theme-toggle__button"
-                :class="{ 'pg-theme-toggle__button--active': mode === m }"
-                :aria-pressed="mode === m"
-                @click="setMode(m)"
-              >
-                {{ m }}
-              </button>
+            <div class="pg-main__controls">
+              <div class="pg-theme-toggle" role="group" aria-label="Idioma">
+                <button
+                  v-for="lang in locales"
+                  :key="lang"
+                  type="button"
+                  class="pg-theme-toggle__button"
+                  :class="{ 'pg-theme-toggle__button--active': locale === lang }"
+                  :aria-pressed="locale === lang"
+                  @click="setLocale(lang)"
+                >
+                  {{ lang }}
+                </button>
+              </div>
+              <div class="pg-theme-toggle" role="group" aria-label="Tema">
+                <button
+                  v-for="m in modes"
+                  :key="m"
+                  type="button"
+                  class="pg-theme-toggle__button"
+                  :class="{ 'pg-theme-toggle__button--active': mode === m }"
+                  :aria-pressed="mode === m"
+                  @click="setMode(m)"
+                >
+                  {{ m }}
+                </button>
+              </div>
             </div>
           </header>
 
@@ -245,6 +265,11 @@ const code = computed(
 .pg-main {
   padding: 20px 28px 40px;
   overflow-y: auto;
+}
+
+.pg-main__controls {
+  display: flex;
+  gap: 8px;
 }
 
 .pg-main__header {

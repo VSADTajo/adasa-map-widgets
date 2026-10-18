@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
-import { format } from 'date-fns'
 import type { TimeRangeEmits, TimeRangeProps } from '@/map/types/TimeRangeProps'
 
 /**
@@ -38,6 +38,9 @@ const props = withDefaults(defineProps<TimeRangeProps>(), {
 /** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
 const resolvedTheme = useResolvedTheme(() => props.theme)
 
+/** Textos y formatos en el idioma de `provideLocale` (español por defecto). */
+const { t, formatDate } = useLocale()
+
 const emit = defineEmits<TimeRangeEmits>()
 
 const startIndex = computed(() => props.currentRange[0])
@@ -48,18 +51,26 @@ const startTime = computed<Date | undefined>(() => props.timeline[startIndex.val
 const endTime = computed<Date | undefined>(() => props.timeline[endIndex.value])
 
 const formattedStartDate = computed(() =>
-  startTime.value ? format(startTime.value, 'd MMM yyyy') : '',
+  startTime.value ? formatDate(startTime.value, { pattern: 'd MMM yyyy' }) : '',
 )
-const formattedStartHour = computed(() => (startTime.value ? format(startTime.value, 'HH:mm') : ''))
-const formattedEndDate = computed(() => (endTime.value ? format(endTime.value, 'd MMM yyyy') : ''))
-const formattedEndHour = computed(() => (endTime.value ? format(endTime.value, 'HH:mm') : ''))
+const formattedStartHour = computed(() =>
+  startTime.value ? formatDate(startTime.value, { pattern: 'HH:mm' }) : '',
+)
+const formattedEndDate = computed(() =>
+  endTime.value ? formatDate(endTime.value, { pattern: 'd MMM yyyy' }) : '',
+)
+const formattedEndHour = computed(() =>
+  endTime.value ? formatDate(endTime.value, { pattern: 'HH:mm' }) : '',
+)
 
 const startLabel = computed(() =>
-  props.timeline.length > 0 ? format(props.timeline[0] as Date, 'd MMM HH:mm') : '',
+  props.timeline.length > 0
+    ? formatDate(props.timeline[0] as Date, { pattern: 'd MMM HH:mm' })
+    : '',
 )
 const endLabel = computed(() =>
   props.timeline.length > 0
-    ? format(props.timeline[props.timeline.length - 1] as Date, 'd MMM HH:mm')
+    ? formatDate(props.timeline[props.timeline.length - 1] as Date, { pattern: 'd MMM HH:mm' })
     : '',
 )
 
@@ -153,8 +164,8 @@ const fillStyle = computed(() => {
       <button
         type="button"
         class="as-time-range-controls__button"
-        aria-label="Retroceder inicio del rango"
-        title="Inicio -1"
+        :aria-label="t('timeRange.startBack')"
+        :title="t('timeRange.startBackShort')"
         :disabled="isFromBackDisabled"
         @click="stepFromBack"
       >
@@ -176,8 +187,8 @@ const fillStyle = computed(() => {
       <button
         type="button"
         class="as-time-range-controls__button"
-        aria-label="Avanzar inicio del rango"
-        title="Inicio +1"
+        :aria-label="t('timeRange.startForward')"
+        :title="t('timeRange.startForwardShort')"
         :disabled="isFromForwardDisabled"
         @click="stepFromForward"
       >
@@ -213,7 +224,7 @@ const fillStyle = computed(() => {
           :max="maxIndex"
           step="1"
           :value="startIndex"
-          aria-label="Inicio del rango"
+          :aria-label="t('timeRange.start')"
           :aria-valuetext="`${formattedStartDate} ${formattedStartHour}`"
           @input="onStartInput"
         />
@@ -224,7 +235,7 @@ const fillStyle = computed(() => {
           :max="maxIndex"
           step="1"
           :value="endIndex"
-          aria-label="Fin del rango"
+          :aria-label="t('timeRange.end')"
           :aria-valuetext="`${formattedEndDate} ${formattedEndHour}`"
           @input="onEndInput"
         />
@@ -233,8 +244,8 @@ const fillStyle = computed(() => {
       <button
         type="button"
         class="as-time-range-controls__button"
-        aria-label="Retroceder fin del rango"
-        title="Fin -1"
+        :aria-label="t('timeRange.endBack')"
+        :title="t('timeRange.endBackShort')"
         :disabled="isToBackDisabled"
         @click="stepToBack"
       >
@@ -256,8 +267,8 @@ const fillStyle = computed(() => {
       <button
         type="button"
         class="as-time-range-controls__button"
-        aria-label="Avanzar fin del rango"
-        title="Fin +1"
+        :aria-label="t('timeRange.endForward')"
+        :title="t('timeRange.endForwardShort')"
         :disabled="isToForwardDisabled"
         @click="stepToForward"
       >

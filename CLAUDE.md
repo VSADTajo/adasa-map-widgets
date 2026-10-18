@@ -78,6 +78,26 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 - `useTheme()` es para quien necesite leer o cambiar el contexto. Si no lo hay, crea uno local en `auto`, así que los widgets no lo usan para resolver su tema.
 - `accentColor`: color CSS libre para tintar el elemento activo de un widget.
 
+## Textos e idiomas
+
+- **Idioma principal: español de España (`es` → `es-ES`)**. Es el idioma de referencia de los textos (`es` en `messages.ts` define todas las claves) y el valor por defecto en todas partes: sin `provideLocale`, en `provideLocale()`, como respaldo de claves e idiomas que falten y en los formateadores puros. Formato de España: coma decimal, `dd/mm/aaaa` y reloj de 24 h. El inglés y el resto de idiomas son secundarios.
+- **Ningún texto visible ni `aria-label` va escrito a mano en un componente**:
+  - Se pide con `const { t } = useLocale()` y `t('<componente>.<texto>', { param })`.
+  - Las claves viven en `src/core/i18n/messages.ts`: añade la clave en `es` (la referencia) **y** en `en`.
+  - Los textos que vienen de una prop (p. ej. `title`) se resuelven como `props.title ?? t('...')`, sin default en `withDefaults`.
+- **Ningún número, fecha o unidad se formatea a mano**: nada de `toLocaleString`, `Intl.*('es-ES')` ni `format()` de date-fns sin locale. Usa los formateadores de `useLocale()`:
+  - `formatNumber`.
+  - `formatDate(fecha, preset | opcionesIntl | { pattern })`.
+  - `formatDuration`.
+  - `formatUnit(valor, 'm³/s' | 'mm' | 'hm³' | 'm' | '%' | '°C')`.
+
+  Ya van ligados al idioma activo, y fuera de un componente se usan las versiones puras de `src/core/utils/format.ts`.
+- **Idiomas**:
+  - `provideLocale(code)` en la raíz de la app. Sin él, español.
+  - `es` y `en` (en-GB) vienen incluidos.
+  - ca/eu/gl los define el proyecto con `provideLocale(code, { locales: { ca: { intl, messages, dateFns } } })`. Las claves que falten caen al español.
+- No se usa vue-i18n: la librería necesita pocos textos con interpolación simple, y no debe obligar a cada proyecto a instalar y configurar un plugin.
+
 ## Playground
 
 `npm run dev` (http://localhost:5173). **Todo componente, prop o evento nuevo debe verse en el playground, no basta con el código fuente:**
@@ -149,5 +169,6 @@ Una tarea no está terminada hasta que se cumple todo esto:
 - [ ] Export público en `src/<dominio>/index.ts` (componente y tipos).
 - [ ] Entrada en `src/playground/registry.ts` (con `composer` si va sobre el mapa) con todas sus props y eventos nuevos.
 - [ ] Funciona en tema claro y oscuro (por prop y heredado de `provideTheme`) y se puede manejar con teclado.
+- [ ] Sin textos ni formatos escritos a mano: `t()` con la clave en `es` y `en`, y los formateadores de `useLocale()`.
 - [ ] README actualizado (lista de componentes y la sección que corresponda).
 - [ ] Changeset creado (`npx changeset`) con el tipo de bump correcto.

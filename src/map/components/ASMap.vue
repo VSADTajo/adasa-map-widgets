@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import type * as L from 'leaflet'
 import type {
   MapLibreMap,
@@ -320,6 +321,9 @@ const emit = defineEmits<{
 
 const containerEl = ref<HTMLDivElement | null>(null)
 const mapInstance = shallowRef<L.Map | MapLibreMap | null>(null)
+/** Textos en el idioma de `provideLocale` (español por defecto). */
+const { t } = useLocale()
+
 /** Mensaje de error legible cuando la librería de mapas elegida no está instalada. */
 const loadError = ref<string | null>(null)
 
@@ -525,9 +529,7 @@ async function createMap(): Promise<void> {
     syncLayers(props.layers)
   } catch (error) {
     loadError.value =
-      props.mapLibrary === 'leaflet'
-        ? 'No se pudo cargar Leaflet. Instala la dependencia opcional: npm i leaflet'
-        : 'No se pudo cargar MapLibre GL JS. Instala la dependencia opcional: npm i maplibre-gl'
+      props.mapLibrary === 'leaflet' ? t('map.loadErrorLeaflet') : t('map.loadErrorMaplibre')
     console.error('[ASMap]', error)
   }
 }

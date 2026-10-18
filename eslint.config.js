@@ -59,6 +59,11 @@ export default [
     },
   },
   {
+    // Los tests montan componentes auxiliares junto al que prueban.
+    files: ['**/*.spec.ts'],
+    rules: { 'vue/one-component-per-file': 'off' },
+  },
+  {
     // Scripts de Node (p. ej. scripts/check-entries.mjs).
     files: ['scripts/**/*.mjs'],
     languageOptions: { globals: { console: 'readonly', process: 'readonly' } },

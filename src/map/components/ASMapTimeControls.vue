@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
 import { useResolvedTheme } from '@/core/composables/useTheme'
-import { format } from 'date-fns'
 import type { TimelineEmits, TimelineProps } from '@/map/types/TimelineProps'
 
 /**
@@ -37,6 +37,9 @@ const props = withDefaults(defineProps<TimelineProps>(), {
 /** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
 const resolvedTheme = useResolvedTheme(() => props.theme)
 
+/** Textos y formatos en el idioma de `provideLocale` (español por defecto). */
+const { t, formatDate } = useLocale()
+
 /** Override local de `--as-color-primary` cuando se pasa `accentColor` (p. ej. desde una escala de color). */
 const accentStyle = computed(() =>
   props.accentColor ? { '--as-color-primary': props.accentColor } : undefined,
@@ -56,16 +59,20 @@ let intervalId: ReturnType<typeof window.setInterval> | null = null
 const currentTime = computed<Date | undefined>(() => props.timeline[props.currentTimeIndex])
 
 const formattedDate = computed(() =>
-  currentTime.value ? format(currentTime.value, 'd MMM yyyy') : '',
+  currentTime.value ? formatDate(currentTime.value, { pattern: 'd MMM yyyy' }) : '',
 )
-const formattedHour = computed(() => (currentTime.value ? format(currentTime.value, 'HH:mm') : ''))
+const formattedHour = computed(() =>
+  currentTime.value ? formatDate(currentTime.value, { pattern: 'HH:mm' }) : '',
+)
 
 const startLabel = computed(() =>
-  props.timeline.length > 0 ? format(props.timeline[0] as Date, 'd MMM HH:mm') : '',
+  props.timeline.length > 0
+    ? formatDate(props.timeline[0] as Date, { pattern: 'd MMM HH:mm' })
+    : '',
 )
 const endLabel = computed(() =>
   props.timeline.length > 0
-    ? format(props.timeline[props.timeline.length - 1] as Date, 'd MMM HH:mm')
+    ? formatDate(props.timeline[props.timeline.length - 1] as Date, { pattern: 'd MMM HH:mm' })
     : '',
 )
 
@@ -163,7 +170,7 @@ const playPauseIconPath = computed(() =>
       <button
         type="button"
         class="as-time-controls__button"
-        aria-label="Instante anterior"
+        :aria-label="t('time.previous')"
         :disabled="props.currentTimeIndex <= 0"
         @click="stepBack"
       >
@@ -186,7 +193,7 @@ const playPauseIconPath = computed(() =>
       <button
         type="button"
         class="as-time-controls__button"
-        :aria-label="props.isPlaying ? 'Pausar' : 'Reproducir'"
+        :aria-label="props.isPlaying ? t('time.pause') : t('time.play')"
         @click="togglePlay"
       >
         <svg
@@ -208,7 +215,7 @@ const playPauseIconPath = computed(() =>
       <button
         type="button"
         class="as-time-controls__button"
-        aria-label="Siguiente instante"
+        :aria-label="t('time.next')"
         :disabled="props.currentTimeIndex >= props.timeline.length - 1"
         @click="stepForward"
       >
@@ -235,7 +242,7 @@ const playPauseIconPath = computed(() =>
         :max="Math.max(props.timeline.length - 1, 0)"
         step="1"
         :value="props.currentTimeIndex"
-        aria-label="Posición en la línea de tiempo"
+        :aria-label="t('time.position')"
         :aria-valuetext="`${formattedDate} ${formattedHour}`"
         @input="onSliderInput"
         @pointerdown="onSliderStart"
