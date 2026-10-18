@@ -22,6 +22,10 @@ export interface HydroForecast {
 export interface HydroVariable {
   /** Serie observada: línea sólida (caudal) o barras sólidas (precipitación). */
   observed?: HydroPoint[]
+  /** Nombre de la serie observada en la leyenda y el tooltip. Por defecto, "Observado". */
+  observedName?: string
+  /** Color de la serie observada. Por defecto, el 1.º de la paleta. */
+  observedColor?: string
   forecasts?: HydroForecast[]
   /** Unidad. Por defecto, `m³/s` o `m` (caudal/nivel) y `mm` (precipitación). */
   unit?: string
@@ -47,6 +51,7 @@ export interface HydrographProps extends Pick<
   | 'legend'
   | 'legendValues'
   | 'zoom'
+  | 'toolbar'
   | 'height'
   | 'animation'
   | 'loading'
@@ -89,4 +94,19 @@ export interface HydrographProps extends Pick<
   extraSeries?: ChartSeries[]
   /** Ejes Y adicionales (hasta 4 en total). */
   extraYAxes?: ChartYAxis[]
+  /**
+   * Cambios sobre las series que genera el hidrograma (nombre, color, eje,
+   * estilo, leyenda...), por id de serie:
+   * - `'discharge-observed'`, `'precipitation-observed'`;
+   * - `'discharge-<fuente>'`, `'precipitation-<fuente>'` (p. ej. `'discharge-eps'`);
+   * - `'discharge-<fuente>-p10-p90'`, `'discharge-<fuente>-p25-p75'` (bandas).
+   *
+   * @example { 'discharge-eps': { name: 'EPS (mediana)', color: '#7c3aed', yAxis: 'nivel' } }
+   */
+  seriesOverrides?: Record<string, Partial<Omit<ChartSeries, 'id' | 'data'>>>
+  /**
+   * Cambios sobre los ejes que genera el hidrograma, por id: `'precipitation'`
+   * y `'discharge'` (p. ej. su título, lado, mínimo y máximo).
+   */
+  yAxisOverrides?: Record<string, Partial<Omit<ChartYAxis, 'id'>>>
 }

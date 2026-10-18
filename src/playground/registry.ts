@@ -23,14 +23,13 @@ import { basemapExamples } from './utils/basemapExamples'
 import ASChart from '@/charts/components/ASChart.vue'
 import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import {
-  EXAMPLE_NOW,
-  exampleChartAnnotations,
-  exampleChartAxes,
-  exampleChartSeries,
-  exampleDischarge,
-  examplePrecipitation,
-  exampleThresholds,
-} from './utils/chartExamples'
+  CHART_SERIES_FIELDS,
+  HYDROGRAPH_SERIES_FIELDS,
+  chartToProps,
+  chartToSnippet,
+  hydrographToProps,
+  hydrographToSnippet,
+} from './utils/chartPlayground'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -57,6 +56,14 @@ export interface RegistryEntry extends ComponentDoc {
   layerCapabilities?: LayerCapabilities
   /** Si el cliente ve datos vectoriales o solo una imagen ya renderizada (ver `LAYER_KIND`), solo categoría `'layers'`. */
   layerKind?: LayerKind
+  /**
+   * Convierte los valores del formulario en los props reales del
+   * componente, cuando estos no son primitivos (p. ej. un control "número
+   * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
+   */
+  toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
+  toSnippet?: (values: Record<string, unknown>) => string
   /**
    * Si se define, el widget también se puede colocar en el compositor sobre
    * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
@@ -218,6 +225,14 @@ const CHART_INTERACTION_FIELDS: PropField[] = [
     type: 'boolean',
     default: false,
     description: 'Rueda/pellizco para acercar; barra de zoom en ECharts.',
+  },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: false,
+    description:
+      'Descargar PNG y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom.',
   },
   { key: 'animation', label: 'Animación', type: 'boolean', default: true },
 ]
@@ -871,21 +886,19 @@ export const registry: RegistryEntry[] = [
         key: 'height',
         label: 'Alto (px)',
         type: 'number',
-        default: 320,
+        default: 360,
         min: 200,
         max: 700,
         step: 20,
       },
       CHART_THEME_FIELD,
+      ...CHART_SERIES_FIELDS,
     ],
     events: CHART_EVENTS,
-    staticProps: {
-      series: exampleChartSeries,
-      yAxes: exampleChartAxes,
-      annotations: exampleChartAnnotations,
-    },
+    toProps: chartToProps,
+    toSnippet: chartToSnippet,
     notes:
-      'Ejemplo con dos ejes Y (caudal a la izquierda, nivel a la derecha), un umbral de aviso y un intervalo sombreado. `series`, `yAxes`, `panels` y `annotations` no son editables aquí (no son tipos primitivos): ver el JSDoc de ChartProps para todas sus opciones.',
+      'Cambia el número de ejes Y (1–4) y el nombre, el color y el eje de cada serie: el código de ejemplo se actualiza con los `series` e `yAxes` resultantes. El intervalo sombreado y el umbral son `annotations`.',
     component: ASChart,
     bindings: chartBindings,
   },
@@ -942,16 +955,13 @@ export const registry: RegistryEntry[] = [
         step: 20,
       },
       CHART_THEME_FIELD,
+      ...HYDROGRAPH_SERIES_FIELDS,
     ],
     events: CHART_EVENTS,
-    staticProps: {
-      discharge: exampleDischarge,
-      precipitation: examplePrecipitation,
-      thresholds: exampleThresholds,
-      now: EXAMPLE_NOW,
-    },
+    toProps: hydrographToProps,
+    toSnippet: hydrographToSnippet,
     notes:
-      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). `discharge`, `precipitation` y `thresholds` no son editables aquí (no son tipos primitivos).',
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el color de cada serie (`observedName`/`observedColor` y `name`/`color` de cada previsión). Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
     component: ASHydrographChart,
     bindings: chartBindings,
   },

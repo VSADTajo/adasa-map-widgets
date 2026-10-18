@@ -86,7 +86,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         ]
       : [{ id: DISCHARGE_AXIS }]
 
-  const yAxes: ChartYAxis[] = [
+  const defaultYAxes: ChartYAxis[] = [
     ...(hasPrecipitation
       ? [
           {
@@ -113,6 +113,10 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       // El nivel rara vez parte de 0: ajustar el eje a los datos.
       beginAtZero: !isLevel,
     },
+  ]
+  // Retoques del proyecto sobre los ejes generados, y después los ejes extra.
+  const yAxes: ChartYAxis[] = [
+    ...defaultYAxes.map((axis) => ({ ...axis, ...props.yAxisOverrides?.[axis.id], id: axis.id })),
     ...(props.extraYAxes ?? []),
   ]
 
@@ -122,11 +126,11 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     if (precipitation!.observed?.length) {
       series.push({
         id: 'precipitation-observed',
-        name: observedName,
+        name: precipitation!.observedName ?? observedName,
         type: 'bar',
         data: precipitation!.observed,
         yAxis: PRECIPITATION_AXIS,
-        color: observedColor,
+        color: precipitation!.observedColor ?? observedColor,
       })
     }
     for (const forecast of precipitation!.forecasts ?? []) {
@@ -166,11 +170,11 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
   if (discharge.observed?.length) {
     series.push({
       id: 'discharge-observed',
-      name: observedName,
+      name: discharge.observedName ?? observedName,
       type: 'line',
       data: discharge.observed,
       yAxis: DISCHARGE_AXIS,
-      color: observedColor,
+      color: discharge.observedColor ?? observedColor,
       lineWidth: 2,
     })
   }
@@ -187,8 +191,15 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       lineWidth: 2,
     })
   }
+  // Retoques del proyecto (nombre, color, eje, estilo...) sobre las series generadas.
+  const customized = series.map((generated) => ({
+    ...generated,
+    ...props.seriesOverrides?.[generated.id],
+    id: generated.id,
+    data: generated.data,
+  }))
   for (const extra of props.extraSeries ?? []) {
-    series.push({ yAxis: DISCHARGE_AXIS, ...extra })
+    customized.push({ yAxis: DISCHARGE_AXIS, ...extra })
   }
 
   const thresholds: ChartYAnnotation[] = (props.thresholds ?? []).map((threshold) => ({
@@ -200,7 +211,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
 
   return {
     chartLibrary: props.chartLibrary,
-    series,
+    series: customized,
     xAxis: { type: 'time' },
     yAxes,
     panels,
@@ -210,6 +221,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     legend: props.legend,
     legendValues: props.legendValues,
     zoom: props.zoom,
+    toolbar: props.toolbar,
     height: props.height,
     animation: props.animation,
     loading: props.loading,

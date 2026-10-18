@@ -164,3 +164,58 @@ describe('buildHydrograph · disposición de la precipitación', () => {
     })
   })
 })
+
+describe('buildHydrograph · nombres, colores y ejes de cada serie', () => {
+  it('nombre y color propios del observado, por variable', () => {
+    const series = build({
+      discharge: { ...props.discharge, observedName: 'Caudal medido', observedColor: '#111111' },
+      precipitation: { ...props.precipitation, observedName: 'Lluvia medida' },
+    }).series
+    expect(series.find((s) => s.id === 'discharge-observed')).toMatchObject({
+      name: 'Caudal medido',
+      color: '#111111',
+    })
+    expect(series.find((s) => s.id === 'precipitation-observed')).toMatchObject({
+      name: 'Lluvia medida',
+      color: 'var(--as-data-cat-1)',
+    })
+  })
+
+  it('seriesOverrides cambia nombre, color, eje y estilo de cualquier serie generada', () => {
+    const series = build({
+      extraYAxes: [{ id: 'nivel', unit: 'm', position: 'right' }],
+      seriesOverrides: {
+        'discharge-eps': { name: 'EPS (mediana)', color: '#7c3aed', yAxis: 'nivel' },
+        'discharge-eps-p10-p90': { legend: true },
+      },
+    }).series
+    expect(series.find((s) => s.id === 'discharge-eps')).toMatchObject({
+      name: 'EPS (mediana)',
+      color: '#7c3aed',
+      yAxis: 'nivel',
+      lineStyle: 'dashed',
+    })
+    expect(series.find((s) => s.id === 'discharge-eps-p10-p90')!.legend).toBe(true)
+  })
+
+  it('seriesOverrides no puede cambiar el id ni los datos', () => {
+    const overrides = { 'discharge-observed': { id: 'otro', data: [] } } as never
+    const observed = build({ seriesOverrides: overrides }).series.find(
+      (s) => s.id === 'discharge-observed',
+    )!
+    expect(observed.data).toHaveLength(2)
+  })
+
+  it('yAxisOverrides retoca los ejes generados y los extra se añaden detrás', () => {
+    const chart = build({
+      yAxisOverrides: { discharge: { label: 'Q', position: 'right', max: 500 } },
+      extraYAxes: [{ id: 'nivel' }],
+    })
+    expect(chart.yAxes!.map((a) => a.id)).toEqual(['precipitation', 'discharge', 'nivel'])
+    expect(chart.yAxes![1]).toMatchObject({ label: 'Q', position: 'right', max: 500, unit: 'm³/s' })
+  })
+
+  it('pasa la barra de herramientas', () => {
+    expect(build({ toolbar: true }).toolbar).toBe(true)
+  })
+})

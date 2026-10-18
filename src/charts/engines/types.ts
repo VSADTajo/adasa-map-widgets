@@ -17,6 +17,8 @@ export interface ChartEngineInstance {
   dispose: () => void
   /** PNG de la gráfica, como data URL. */
   exportImage: () => Promise<string>
+  /** Vuelve al rango X completo tras un zoom. */
+  resetZoom: () => void
   /** Objeto(s) nativo(s) del motor, para `ready` y `getInstance()`. */
   native: unknown
 }
@@ -101,4 +103,35 @@ export function alignedTimeTicks(min: number, max: number): number[] {
     else date.setMinutes(date.getMinutes() + step)
   }
   return ticks
+}
+
+/** Número de marcas que caben en un eje de `height` px (una cada ~40 px, entre 2 y 6). */
+export function ticksForHeight(height: number): number {
+  return Math.max(2, Math.min(6, Math.floor(height / 40)))
+}
+
+/**
+ * ¿Cabe el título (vertical) de un eje en un panel de `height` px? Si no,
+ * se oculta: un título cortado ("ecipitación") es peor que ninguno; la
+ * unidad sigue en el tooltip y en la leyenda.
+ */
+export function axisTitleFits(title: string | undefined, height: number): boolean {
+  return Boolean(title) && title!.length * 6.5 + 12 <= height
+}
+
+/**
+ * Número de intervalos (≤ `limit`) que divide [min, max] en pasos "redondos"
+ * (1, 2, 2,5 o 5 × 10^n); así las marcas son 0, 50, 100... y no 83,33.
+ */
+export function niceTickCount(min: number, max: number, limit: number): number {
+  const range = max - min
+  if (!(range > 0)) return Math.max(limit, 1)
+  for (let count = limit; count >= 2; count--) {
+    const step = range / count
+    const magnitude = 10 ** Math.floor(Math.log10(step))
+    if ([1, 2, 2.5, 5, 10].some((nice) => Math.abs(step - nice * magnitude) < 1e-9 * magnitude)) {
+      return count
+    }
+  }
+  return Math.max(Math.min(limit, 2), 1)
 }

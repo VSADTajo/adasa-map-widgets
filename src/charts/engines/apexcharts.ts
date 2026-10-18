@@ -2,7 +2,14 @@ import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
-import { niceRound, Y_AXIS_WIDTH, type ChartEngine } from './types'
+import {
+  axisTitleFits,
+  niceRound,
+  niceTickCount,
+  ticksForHeight,
+  Y_AXIS_WIDTH,
+  type ChartEngine,
+} from './types'
 import { createCrosshair, createFrame, panelContainers, panelHeights, renderLegend } from './panels'
 
 type Options = Record<string, unknown>
@@ -110,18 +117,32 @@ export function toApexOptions(
     const yaxis = panelSeries.map((s, index) => {
       const axis = axes.find((a) => a.id === s.yAxis)!
       const visible = firstSeriesOfAxis.get(s.yAxis) === index
+      const scale = extent(axis.id)
+      const panelHeight = heights[panel.index] ?? 200
       return {
         seriesName: s.id,
         show: visible,
         opposite: axis.position === 'right',
         reversed: axis.inverse,
         logarithmic: axis.scale === 'log',
-        ...extent(axis.id),
+        ...scale,
         forceNiceScale: false,
-        // Una marca cada ~45 px como mucho: en paneles bajos, 5 marcas se amontonan.
-        tickAmount: Math.max(2, Math.min(5, Math.floor((heights[panel.index] ?? 200) / 45))),
+        // Tantas marcas como quepan, en pasos redondos (0, 50, 100... y no 83,33).
+        tickAmount:
+          scale.min !== undefined && scale.max !== undefined
+            ? niceTickCount(scale.min, scale.max, ticksForHeight(panelHeight))
+            : ticksForHeight(panelHeight),
         title: {
-          text: visible ? axis.title : undefined,
+          // Sin título si no cabe entero en el panel (un título cortado es peor que
+          // ninguno). Se deja un espacio duro: Apex reserva el mismo ancho y los
+          // paneles siguen alineados.
+          text: visible
+            ? axisTitleFits(axis.title, panelHeight)
+              ? axis.title
+              : axis.title
+                ? ' '
+                : undefined
+            : undefined,
           style: { color: theme.textMuted, fontFamily: theme.fontFamily, fontWeight: 400 },
         },
         labels: {
@@ -191,18 +212,9 @@ export function toApexOptions(
         foreColor: theme.textMuted,
         fontFamily: theme.fontFamily,
         animations: { enabled: spec.animation },
-        toolbar: {
-          show: Boolean(spec.zoom) && panel.index === 0,
-          tools: {
-            download: false,
-            selection: false,
-            zoom: true,
-            zoomin: false,
-            zoomout: false,
-            pan: false,
-            reset: true,
-          },
-        },
+        // Sin toolbar nativo (la barra es común a los tres motores, en ASChart); el
+        // zoom por arrastre sigue activo con la herramienta "zoom" preseleccionada.
+        toolbar: { show: false, autoSelected: 'zoom' },
         zoom: { enabled: Boolean(spec.zoom), type: 'x' },
         parentHeightOffset: 0,
         locales: [apexLocale(spec.intlLocale)],
@@ -480,6 +492,13 @@ export const apexchartsEngine: ChartEngine = {
           (chart, index) =>
             void chart.updateOptions({ chart: { height: heights[index] } }, false, false),
         )
+      },
+      resetZoom() {
+        const { min, max } = spec.xAxis
+        charts.forEach((chart) => {
+          if (typeof min === 'number' && typeof max === 'number') chart.zoomX(min, max)
+          else chart.resetSeries(true, true)
+        })
       },
       dispose() {
         charts.forEach((chart) => chart.destroy())

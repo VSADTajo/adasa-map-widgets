@@ -6,7 +6,14 @@ import type { HydroPoint } from '@/charts/types/HydrographProps'
 import { toEChartsOption } from './echarts'
 import { toChartJsConfigs } from './chartjs'
 import { toApexOptions } from './apexcharts'
-import { alignedTimeTicks, layoutPanels, niceRound } from './types'
+import {
+  alignedTimeTicks,
+  axisTitleFits,
+  layoutPanels,
+  niceRound,
+  niceTickCount,
+  ticksForHeight,
+} from './types'
 
 type Any = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -193,6 +200,24 @@ describe('utilidades de maquetación', () => {
     expect(niceRound(212.7, 'up')).toBe(250)
     expect(niceRound(27, 'down')).toBe(25)
     expect(niceRound(0, 'up')).toBe(0)
+  })
+
+  it('ticksForHeight: una marca cada ~40 px, entre 2 y 6', () => {
+    expect(ticksForHeight(60)).toBe(2)
+    expect(ticksForHeight(160)).toBe(4)
+    expect(ticksForHeight(900)).toBe(6)
+  })
+
+  it('niceTickCount elige un número de marcas con pasos redondos', () => {
+    expect(niceTickCount(0, 250, 3)).toBe(2) // 125 no vale con 3 (83,33): 2 intervalos de 125
+    expect(niceTickCount(0, 250, 5)).toBe(5) // 50
+    expect(niceTickCount(0, 30, 6)).toBe(6) // 5
+  })
+
+  it('axisTitleFits oculta los títulos que no caben enteros en el panel', () => {
+    expect(axisTitleFits('Precipitación (mm)', 80)).toBe(false)
+    expect(axisTitleFits('Precipitación (mm)', 200)).toBe(true)
+    expect(axisTitleFits(undefined, 200)).toBe(false)
   })
 
   it('alignedTimeTicks pone las marcas a medianoche en rangos de varios días', () => {

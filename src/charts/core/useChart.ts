@@ -120,6 +120,7 @@ export function useChart(
     /** Vuelve a leer los tokens (si el tema de la página cambió por una vía que no es provideTheme). */
     refresh: refreshTokens,
     exportImage: () => instance.value?.exportImage() ?? Promise.resolve(''),
+    resetZoom: () => instance.value?.resetZoom(),
     getInstance: () => instance.value?.native,
   }
 }

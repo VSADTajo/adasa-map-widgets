@@ -38,6 +38,9 @@ const props = withDefaults(defineProps<HydrographProps>(), {
   bands: undefined,
   extraSeries: undefined,
   extraYAxes: undefined,
+  seriesOverrides: undefined,
+  yAxisOverrides: undefined,
+  toolbar: undefined,
   tooltip: true,
   legend: undefined,
   legendValues: false,
@@ -63,6 +66,8 @@ defineExpose({
   exportImage: () => chart.value?.exportImage() ?? Promise.resolve(''),
   /** Objeto(s) nativo(s) del motor. */
   getInstance: () => chart.value?.getInstance(),
+  /** Vuelve al rango de tiempo completo tras un zoom. */
+  resetZoom: () => chart.value?.resetZoom(),
 })
 </script>
 

@@ -12,7 +12,9 @@ Nuevo dominio de gráficas, `@vsadtajo/adasa-ui/charts`:
   Todos son `peerDependencies` opcionales y se cargan bajo demanda. Por props se configura:
   - de 1 a 4 ejes Y y paneles apilados con el eje X compartido;
   - umbrales e intervalos como anotaciones, coloreados por nivel de aviso;
-  - línea "ahora", tooltip, zoom y exportación PNG;
+  - nombre, color y eje de cada serie;
+  - línea "ahora", tooltip y zoom;
+  - barra de herramientas común (`toolbar`): descargar PNG y restablecer zoom;
   - leyenda HTML común a los tres motores, colocable con `legend="top|bottom|left|right"` y con los valores bajo el cursor (`legend-values`) como alternativa al tooltip;
   - `nativeOptions` como vía de escape.
 
@@ -22,6 +24,7 @@ Nuevo dominio de gráficas, `@vsadtajo/adasa-ui/charts`:
   - observado frente a previsto;
   - varias fuentes de previsión con bandas p10–p90 y p25–p75;
   - umbrales del punto de control;
+  - nombre y color del observado (`observedName`/`observedColor`) y de cada previsión, y retoques de cualquier serie o eje generado (`seriesOverrides`, `yAxisOverrides`);
   - precipitación alineada en su propio panel o superpuesta al caudal (`precipitation-layout`), colgando desde arriba o no (`precipitation-inverted`).
 
 Además:

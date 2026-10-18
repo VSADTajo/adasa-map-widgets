@@ -47,6 +47,9 @@ export const es = {
 
   'chart.now': 'Ahora',
   'chart.resetZoom': 'Restablecer zoom',
+  'chart.download': 'Descargar PNG',
+  'chart.toolbar': 'Herramientas de la gráfica',
+  'chart.fileName': 'grafica',
   'chart.empty': 'Sin datos',
   'chart.loading': 'Cargando…',
   'chart.loadError':
@@ -110,6 +113,9 @@ export const en: Messages = {
 
   'chart.now': 'Now',
   'chart.resetZoom': 'Reset zoom',
+  'chart.download': 'Download PNG',
+  'chart.toolbar': 'Chart tools',
+  'chart.fileName': 'chart',
   'chart.empty': 'No data',
   'chart.loading': 'Loading…',
   'chart.loadError':

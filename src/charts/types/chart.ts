@@ -157,6 +157,14 @@ export interface ChartLegendConfig {
   position?: ChartLegendPosition
 }
 
+/** Acciones de la barra de herramientas de la gráfica. */
+export interface ChartToolbarConfig {
+  /** Botón "Descargar PNG". @default true */
+  download?: boolean
+  /** Botón "Restablecer zoom" (solo si hay `zoom`). @default true */
+  resetZoom?: boolean
+}
+
 export interface ChartZoomConfig {
   /** Barra de zoom bajo la gráfica, además de la rueda / el arrastre. @default true */
   slider?: boolean
@@ -195,6 +203,13 @@ export interface ChartProps {
   legendValues?: boolean
   /** Zoom horizontal (rueda, arrastre y barra). @default false */
   zoom?: boolean | ChartZoomConfig
+  /**
+   * Barra de herramientas encima de la gráfica (igual en los tres motores):
+   * `true` muestra "Descargar PNG" y, con zoom, "Restablecer zoom"; `false`
+   * la oculta; un objeto elige las acciones.
+   * @default solo "Restablecer zoom", y solo si hay `zoom`
+   */
+  toolbar?: boolean | ChartToolbarConfig
   /** Alto total (px, o CSS si es string). @default 320 */
   height?: number | string
   /** @default true */

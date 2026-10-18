@@ -37,6 +37,7 @@ const props = withDefaults(defineProps<ChartProps>(), {
   legend: undefined,
   legendValues: false,
   zoom: false,
+  toolbar: undefined,
   height: 320,
   animation: true,
   loading: false,
@@ -52,7 +53,32 @@ const emit = defineEmits<ChartEmits>()
 const { t } = useLocale()
 const root = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLElement | null>(null)
-const { theme, loadError, refresh, exportImage, getInstance } = useChart(props, root, canvas, emit)
+const { theme, loadError, refresh, exportImage, getInstance, resetZoom } = useChart(
+  props,
+  root,
+  canvas,
+  emit,
+)
+
+/** Acciones visibles de la barra de herramientas (por defecto, solo "Restablecer zoom" con zoom). */
+const toolbarActions = computed(() => {
+  const hasZoom = Boolean(props.zoom)
+  const toolbar = props.toolbar
+  if (toolbar === false) return { download: false, resetZoom: false }
+  if (toolbar === undefined) return { download: false, resetZoom: hasZoom }
+  if (toolbar === true) return { download: true, resetZoom: hasZoom }
+  return { download: toolbar.download ?? true, resetZoom: (toolbar.resetZoom ?? true) && hasZoom }
+})
+const showToolbar = computed(() => toolbarActions.value.download || toolbarActions.value.resetZoom)
+
+async function download(): Promise<void> {
+  const url = await exportImage()
+  if (!url) return
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${t('chart.fileName')}.png`
+  link.click()
+}
 
 const isEmpty = computed(() => props.series.every((series) => series.data.length === 0))
 const message = computed(() => {
@@ -78,6 +104,8 @@ defineExpose({
   getInstance,
   /** Vuelve a leer los colores del tema, si cambió por una vía distinta de `provideTheme`. */
   refresh,
+  /** Vuelve al rango X completo tras un zoom. */
+  resetZoom,
 })
 </script>
 
@@ -87,17 +115,37 @@ defineExpose({
     class="as-chart"
     :class="theme ? `as-${theme}` : undefined"
     :style="{ height: heightStyle }"
-    role="img"
+    role="figure"
     :aria-label="label"
     :aria-busy="props.loading || undefined"
   >
-    <div ref="canvas" class="as-chart__canvas" :class="{ 'as-chart__canvas--hidden': message }" />
     <div
-      v-if="message"
-      class="as-chart__message"
-      :class="{ 'as-chart__message--error': props.error || loadError }"
+      v-if="showToolbar"
+      class="as-chart__toolbar"
+      role="toolbar"
+      :aria-label="t('chart.toolbar')"
     >
-      {{ message }}
+      <button
+        v-if="toolbarActions.resetZoom"
+        type="button"
+        class="as-chart__tool"
+        @click="resetZoom()"
+      >
+        {{ t('chart.resetZoom') }}
+      </button>
+      <button v-if="toolbarActions.download" type="button" class="as-chart__tool" @click="download">
+        {{ t('chart.download') }}
+      </button>
+    </div>
+    <div class="as-chart__body">
+      <div ref="canvas" class="as-chart__canvas" :class="{ 'as-chart__canvas--hidden': message }" />
+      <div
+        v-if="message"
+        class="as-chart__message"
+        :class="{ 'as-chart__message--error': props.error || loadError }"
+      >
+        {{ message }}
+      </div>
     </div>
   </div>
 </template>
@@ -105,9 +153,44 @@ defineExpose({
 <style scoped>
 .as-chart {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   font-family: var(--as-font-family, system-ui, sans-serif);
   color: var(--as-color-text, #0f172a);
+}
+
+.as-chart__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--as-space-2, 8px);
+  padding-bottom: var(--as-space-1, 4px);
+}
+
+.as-chart__tool {
+  padding: 2px 10px;
+  border: 1px solid var(--as-color-border, #cbd5e1);
+  border-radius: var(--as-radius-sm, 4px);
+  background: var(--as-color-surface, #ffffff);
+  color: var(--as-color-text, #0f172a);
+  font: inherit;
+  font-size: var(--as-font-size-xs, 0.75rem);
+  cursor: pointer;
+}
+
+.as-chart__tool:hover {
+  background: var(--as-color-surface-muted, #f1f5f9);
+}
+
+.as-chart__tool:focus-visible {
+  outline: none;
+  box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);
+}
+
+.as-chart__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .as-chart__canvas {

@@ -2,10 +2,16 @@ import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpe
 import { withAlpha } from '@/charts/core/resolveSpec'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
-import { alignedTimeTicks, timeTickUnit, Y_AXIS_WIDTH, type ChartEngine } from './types'
+import {
+  alignedTimeTicks,
+  axisTitleFits,
+  ticksForHeight,
+  timeTickUnit,
+  Y_AXIS_WIDTH,
+  type ChartEngine,
+} from './types'
 import {
   createFrame,
-  createResetZoomButton,
   createTooltipElement,
   panelContainers,
   panelHeights,
@@ -99,7 +105,7 @@ function datasetsFor(series: ResolvedSeries): Dataset[] {
  * siempre `Y_AXIS_WIDTH` y se reserva el hueco de los ejes que un panel no
  * tiene. Pura (sin DOM): el tooltip HTML y la sincronización se enganchan en `mount`.
  */
-export function toChartJsConfigs(spec: ResolvedChartSpec): Config[] {
+export function toChartJsConfigs(spec: ResolvedChartSpec, heights?: number[]): Config[] {
   const { theme } = spec
   const font = { family: theme.fontFamily, size: theme.fontSize, weight: 'normal' }
   const tickUnit =
@@ -162,10 +168,17 @@ export function toChartJsConfigs(spec: ResolvedChartSpec): Config[] {
         suggestedMin: axis.include.length ? Math.min(...axis.include) : undefined,
         suggestedMax: axis.include.length ? Math.max(...axis.include) : undefined,
         beginAtZero: axis.beginAtZero,
-        title: { display: Boolean(axis.title), text: axis.title, color: theme.textMuted, font },
+        // En paneles bajos (con `heights`): menos marcas y sin título si no cabe entero.
+        title: {
+          display: heights ? axisTitleFits(axis.title, heights[panel.index]!) : Boolean(axis.title),
+          text: axis.title,
+          color: theme.textMuted,
+          font,
+        },
         ticks: {
           color: theme.textMuted,
           font,
+          maxTicksLimit: heights ? ticksForHeight(heights[panel.index]!) + 1 : undefined,
           callback: (value: number) => axis.formatTick(value),
         },
         grid: { display: axis.grid, drawOnChartArea: axis.grid, color: theme.grid },
@@ -316,12 +329,6 @@ export const chartjsEngine: ChartEngine = {
     const hidden = new Set<string>()
     const frame = createFrame(element)
     const tooltip = createTooltipElement(element, spec)
-    const resetButton = createResetZoomButton(element, spec, () => {
-      charts.forEach((chart) =>
-        (chart as unknown as { resetZoom: (mode?: string) => void }).resetZoom('none'),
-      )
-      resetButton.style.display = 'none'
-    })
 
     /** Cruceta vertical en todos los paneles a la vez, en el X bajo el cursor. */
     const crosshair = {
@@ -383,7 +390,7 @@ export const chartjsEngine: ChartEngine = {
       drawLegend()
       const heights = panelHeights(spec, frame.host.clientHeight || 320, X_LABELS_SPACE)
       const containers = panelContainers(frame.host, heights)
-      const configs = toChartJsConfigs(spec)
+      const configs = toChartJsConfigs(spec, heights)
       charts = configs.map((config, index) => {
         const container = containers[index]!
         container.replaceChildren()
@@ -467,7 +474,6 @@ export const chartjsEngine: ChartEngine = {
                   other as unknown as { zoomScale: (id: string, r: object, m: string) => void }
                 ).zoomScale('x', { min, max }, 'none'),
               )
-            resetButton.style.display = 'block'
             handlers.onRangeChange({ start: toChartX(min), end: toChartX(max) })
           }
           zoom.zoom!.onZoomComplete = sync
@@ -495,9 +501,12 @@ export const chartjsEngine: ChartEngine = {
       update(next) {
         spec = next
         styleTooltip(tooltip, spec)
-        resetButton.textContent = spec.texts.resetZoom
-        resetButton.style.display = 'none'
         build()
+      },
+      resetZoom() {
+        charts.forEach((chart) =>
+          (chart as unknown as { resetZoom: (mode?: string) => void }).resetZoom('none'),
+        )
       },
       resize() {
         const heights = panelHeights(spec, frame.host.clientHeight || 320, X_LABELS_SPACE)

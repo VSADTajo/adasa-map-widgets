@@ -14,6 +14,7 @@ const engine = vi.hoisted(() => ({
   mount: vi.fn(),
   update: vi.fn(),
   dispose: vi.fn(),
+  resetZoom: vi.fn(),
   fail: false,
 }))
 
@@ -31,6 +32,7 @@ vi.mock('@/charts/engines', () => ({
           update: engine.update,
           resize: vi.fn(),
           dispose: engine.dispose,
+          resetZoom: engine.resetZoom,
           exportImage: async () => 'data:image/png;base64,x',
         }
       },
@@ -54,6 +56,7 @@ beforeEach(() => {
   engine.mount.mockReset()
   engine.update.mockReset()
   engine.dispose.mockReset()
+  engine.resetZoom.mockReset()
   engine.fail = false
 })
 afterEach(() => vi.restoreAllMocks())
@@ -134,5 +137,52 @@ describe('ASChart', () => {
       }),
     )
     expect(wrapper.find('.as-chart__message').text()).toBe('No data')
+  })
+})
+
+describe('ASChart · barra de herramientas', () => {
+  const tools = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('.as-chart__tool').map((button) => button.text())
+
+  it('por defecto no hay barra; con zoom, solo "Restablecer zoom"', () => {
+    expect(mount(ASChart, { props: { series } }).find('[role="toolbar"]').exists()).toBe(false)
+    expect(tools(mount(ASChart, { props: { series, zoom: true } }))).toEqual(['Restablecer zoom'])
+  })
+
+  it('toolbar muestra "Descargar PNG" (y "Restablecer zoom" si hay zoom)', () => {
+    expect(tools(mount(ASChart, { props: { series, toolbar: true } }))).toEqual(['Descargar PNG'])
+    expect(tools(mount(ASChart, { props: { series, toolbar: true, zoom: true } }))).toEqual([
+      'Restablecer zoom',
+      'Descargar PNG',
+    ])
+  })
+
+  it('toolbar: false la oculta aunque haya zoom; un objeto elige las acciones', () => {
+    expect(
+      mount(ASChart, { props: { series, toolbar: false, zoom: true } })
+        .find('[role="toolbar"]')
+        .exists(),
+    ).toBe(false)
+    expect(
+      tools(mount(ASChart, { props: { series, zoom: true, toolbar: { resetZoom: false } } })),
+    ).toEqual(['Descargar PNG'])
+  })
+
+  it('"Restablecer zoom" llama al motor', async () => {
+    const wrapper = mount(ASChart, { props: { series, zoom: true } })
+    await flushPromises()
+    await wrapper.find('.as-chart__tool').trigger('click')
+    expect(engine.resetZoom).toHaveBeenCalledOnce()
+  })
+
+  it('"Descargar PNG" descarga la imagen del motor como grafica.png', async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const wrapper = mount(ASChart, { props: { series, toolbar: true } })
+    await flushPromises()
+    await wrapper.find('.as-chart__tool').trigger('click')
+    await flushPromises()
+    const link = click.mock.contexts[0] as HTMLAnchorElement
+    expect(link.download).toBe('grafica.png')
+    expect(link.href).toBe('data:image/png;base64,x')
   })
 })

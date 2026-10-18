@@ -1,7 +1,14 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
-import { layoutPanels, niceRound, Y_AXIS_WIDTH, type ChartEngine } from './types'
+import {
+  axisTitleFits,
+  layoutPanels,
+  niceRound,
+  ticksForHeight,
+  Y_AXIS_WIDTH,
+  type ChartEngine,
+} from './types'
 import { createFrame, renderLegend } from './panels'
 
 type Option = Record<string, unknown>
@@ -102,7 +109,9 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
         axis.max ??
         (axis.include.length ? (v: { min: number; max: number }) => extent(v, 'max') : undefined),
       scale: !axis.beginAtZero,
-      name: axis.title,
+      // En paneles bajos: menos marcas y sin título si no cabe entero.
+      name: axisTitleFits(axis.title, layouts[axis.panelIndex]!.height) ? axis.title : undefined,
+      splitNumber: ticksForHeight(layouts[axis.panelIndex]!.height),
       nameLocation: 'middle',
       nameGap: Y_AXIS_WIDTH - 18,
       nameRotate: axis.position === 'left' ? 90 : -90,
@@ -330,15 +339,8 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
             : []),
         ]
       : [],
-    toolbox: spec.zoom
-      ? {
-          right: EDGE,
-          top: EDGE - 4,
-          itemSize: 14,
-          iconStyle: { borderColor: theme.textMuted },
-          feature: { restore: { title: spec.texts.resetZoom } },
-        }
-      : { show: false },
+    // Sin toolbox nativo: la barra de herramientas es común a los tres motores (ASChart).
+    toolbox: { show: false },
   }
   return option
 }
@@ -477,6 +479,9 @@ export const echartsEngine: ChartEngine = {
       resize() {
         chart.resize()
         render()
+      },
+      resetZoom() {
+        chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })
       },
       dispose() {
         chart.dispose()

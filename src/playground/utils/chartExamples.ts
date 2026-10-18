@@ -1,4 +1,4 @@
-import type { ChartAnnotations, ChartSeries, ChartYAxis } from '@/charts/types/chart'
+import type { ChartAnnotations } from '@/charts/types/chart'
 import type { HydroPoint, HydroThreshold, HydroVariable } from '@/charts/types/HydrographProps'
 
 /**
@@ -86,34 +86,8 @@ export const exampleThresholds: HydroThreshold[] = [
   { value: 180, level: 'rojo' },
 ]
 
-/** Ejemplo de `ASChart` genérico: caudal y nivel en dos ejes, con un umbral. */
-export const exampleChartSeries: ChartSeries[] = [
-  {
-    id: 'flow',
-    name: 'Caudal',
-    type: 'line',
-    data: exampleDischarge.observed!,
-    yAxis: 'flow',
-  },
-  {
-    id: 'level',
-    name: 'Nivel',
-    type: 'line',
-    data: exampleDischarge.observed!.map(([date, value]) => [
-      date,
-      value === null ? null : Math.round((0.8 + value / 60) * 100) / 100,
-    ]),
-    yAxis: 'level',
-    lineStyle: 'dashed',
-  },
-]
-
-export const exampleChartAxes: ChartYAxis[] = [
-  { id: 'flow', label: 'Caudal', unit: 'm³/s' },
-  { id: 'level', label: 'Nivel', unit: 'm' },
-]
-
+/** Anotaciones del ejemplo de `ASChart`: un umbral y un intervalo sombreado. */
 export const exampleChartAnnotations: ChartAnnotations = {
-  y: [{ yAxis: 'flow', value: 90, level: 'amarillo', label: 'Umbral amarillo' }],
+  y: [{ yAxis: 'y1', value: 90, level: 'amarillo', label: 'Umbral amarillo' }],
   x: [{ type: 'range', from: at(-26), to: at(-14), label: 'Episodio' }],
 }

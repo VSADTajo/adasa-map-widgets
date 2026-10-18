@@ -17,6 +17,11 @@ export interface PropField {
   step?: number
   /** Explicación corta de qué hace la prop (se muestra como ayuda inline). */
   description?: string
+  /**
+   * Control que solo existe en el playground (p. ej. "número de ejes"): lo
+   * convierte `toProps` en props reales, así que no se lista como prop del componente.
+   */
+  playgroundOnly?: boolean
 }
 
 /** Documentación de un evento emitido por el componente. */

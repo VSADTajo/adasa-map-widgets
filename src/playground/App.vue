@@ -75,12 +75,13 @@ function logEvent(name: string, payload?: unknown): void {
 const liveListeners = computed(() => entry.value.bindings?.(propValues, logEvent) ?? {})
 
 const previewProps = computed(() => ({
-  ...propValues,
+  ...(entry.value.toProps ? entry.value.toProps(propValues) : propValues),
   ...liveListeners.value,
 }))
 
 const code = computed(
   () =>
+    entry.value.toSnippet?.(propValues) ??
     entry.value.codeOverride ??
     buildSnippet(
       entry.value.name,

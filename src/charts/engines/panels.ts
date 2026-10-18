@@ -83,34 +83,6 @@ export function placeTooltip(
   tooltip.style.top = `${top}px`
 }
 
-/** Botón "Restablecer zoom" para los motores sin barra de herramientas propia. */
-export function createResetZoomButton(
-  element: HTMLElement,
-  spec: ResolvedChartSpec,
-  onClick: () => void,
-): HTMLButtonElement {
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.textContent = spec.texts.resetZoom
-  Object.assign(button.style, {
-    position: 'absolute',
-    top: '4px',
-    right: '8px',
-    zIndex: '1',
-    display: 'none',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    border: `1px solid ${spec.theme.border}`,
-    background: spec.theme.surface,
-    color: spec.theme.text,
-    font: `12px ${spec.theme.fontFamily}`,
-    cursor: 'pointer',
-  } satisfies Partial<CSSStyleDeclaration>)
-  button.addEventListener('click', onClick)
-  element.appendChild(button)
-  return button
-}
-
 /**
  * Marco de los motores con un lienzo por panel: la leyenda (si hay) y el
  * contenedor de los paneles, colocados según `spec.legend.position`.
