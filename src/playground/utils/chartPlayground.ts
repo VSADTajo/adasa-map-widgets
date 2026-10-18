@@ -99,9 +99,16 @@ export const CHART_SERIES_FIELDS: PropField[] = [
 
 const PLAYGROUND_ONLY = new Set(CHART_SERIES_FIELDS.map((field) => field.key))
 
-/** Quita los controles que solo existen en el playground. */
-function componentProps(values: Values): Values {
-  return Object.fromEntries(Object.entries(values).filter(([key]) => !PLAYGROUND_ONLY.has(key)))
+/** Textos que, vacíos en el formulario, significan "sin prop" (se usa el valor generado). */
+const OPTIONAL_TEXTS = new Set(['fileName', 'ariaLabel', 'description'])
+
+/** Quita los controles que solo existen en el playground y los textos opcionales vacíos. */
+function componentProps(values: Values, playgroundOnly: Set<string> = PLAYGROUND_ONLY): Values {
+  return Object.fromEntries(
+    Object.entries(values).filter(
+      ([key, value]) => !playgroundOnly.has(key) && !(OPTIONAL_TEXTS.has(key) && value === ''),
+    ),
+  )
 }
 
 function chartModel(values: Values): { series: ChartSeries[]; yAxes: ChartYAxis[] } {
@@ -134,6 +141,11 @@ function commonAttributes(values: Values): string[] {
   if (values.tooltip === false) attributes.push(':tooltip="false"')
   if (values.zoom) attributes.push('zoom')
   if (values.toolbar) attributes.push('toolbar')
+  if (values.fileName) attributes.push(`file-name="${values.fileName}"`)
+  if (values.patterns) attributes.push('patterns')
+  if (values.dataTable === false) attributes.push(':data-table="false"')
+  if (values.ariaLabel) attributes.push(`aria-label="${values.ariaLabel}"`)
+  if (values.description) attributes.push(`description="${values.description}"`)
   if (values.animation === false) attributes.push(':animation="false"')
   if (values.theme) attributes.push(`theme="${values.theme}"`)
   attributes.push(`:height="${values.height}"`)
@@ -219,9 +231,7 @@ function customizeVariable(variable: HydroVariable, values: Values): HydroVariab
 }
 
 export function hydrographToProps(values: Values): Values {
-  const props = Object.fromEntries(
-    Object.entries(values).filter(([key]) => !HYDROGRAPH_ONLY.has(key)),
-  )
+  const props = componentProps(values, HYDROGRAPH_ONLY)
   return {
     ...props,
     discharge: customizeVariable(exampleDischarge, values),

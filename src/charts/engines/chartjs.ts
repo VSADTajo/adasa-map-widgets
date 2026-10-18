@@ -1,5 +1,6 @@
 import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
 import { withAlpha } from '@/charts/core/resolveSpec'
+import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
 import {
@@ -19,6 +20,7 @@ import {
   renderLegend,
   styleTooltip,
 } from './panels'
+import { composeImage } from './exportImage'
 
 type Config = Record<string, unknown> & {
   data: { datasets: Dataset[] }
@@ -30,6 +32,19 @@ const X_LABELS_SPACE = 28
 const BAND_LOW = '__low'
 const DASH = { solid: [], dashed: [6, 4], dotted: [2, 3] } as const
 const STEP = { start: 'before', middle: 'middle', end: 'after' } as const
+
+/**
+ * Relleno de una serie: su color con su opacidad, o el patrón (con la
+ * opacidad ya en la tesela) si hay `patterns`. La tesela va al doble de
+ * resolución y se reduce a la mitad, para que sea nítida.
+ */
+function fill(series: ResolvedSeries): string | CanvasPattern {
+  const tile = series.pattern ? patternTile(series.pattern.kind, series.pattern, 2) : null
+  const pattern = tile?.getContext('2d')?.createPattern(tile, 'repeat')
+  if (!pattern) return withAlpha(series.color, series.opacity)
+  pattern.setTransform(new DOMMatrix().scale(0.5))
+  return pattern
+}
 
 function datasetsFor(series: ResolvedSeries): Dataset[] {
   const common = { asId: series.id, label: series.name, yAxisID: series.yAxis }
@@ -55,7 +70,7 @@ function datasetsFor(series: ResolvedSeries): Dataset[] {
         borderWidth: 0,
         pointRadius: 0,
         borderColor: series.color,
-        backgroundColor: withAlpha(series.color, series.opacity),
+        backgroundColor: fill(series),
         // Rellena hasta el dataset anterior: la curva inferior de la banda.
         fill: '-1',
         spanGaps: false,
@@ -68,7 +83,7 @@ function datasetsFor(series: ResolvedSeries): Dataset[] {
         ...common,
         type: 'bar',
         data: toXY(series.points),
-        backgroundColor: withAlpha(series.color, series.opacity),
+        backgroundColor: fill(series),
         borderColor: series.color,
         borderWidth: 0,
         stack: series.stack,
@@ -84,8 +99,7 @@ function datasetsFor(series: ResolvedSeries): Dataset[] {
       type: series.type === 'scatter' ? 'scatter' : 'line',
       data: toXY(series.points),
       borderColor: series.color,
-      backgroundColor:
-        series.type === 'area' ? withAlpha(series.color, series.opacity) : series.color,
+      backgroundColor: series.type === 'area' ? fill(series) : series.color,
       borderWidth: series.type === 'scatter' ? 0 : series.lineWidth,
       borderDash: [...DASH[series.lineStyle]],
       pointRadius: series.showPoints ? (series.type === 'scatter' ? 4 : 3) : 0,
@@ -551,20 +565,16 @@ export const chartjsEngine: ChartEngine = {
         charts = []
         element.replaceChildren()
       },
-      async exportImage() {
-        // Varios paneles: se componen en un único PNG, uno debajo de otro.
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.max(...charts.map((chart) => chart.canvas.width))
-        canvas.height = charts.reduce((sum, chart) => sum + chart.canvas.height, 0)
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = spec.theme.surface
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        let top = 0
-        for (const chart of charts) {
-          ctx.drawImage(chart.canvas, 0, top, chart.canvas.width, chart.canvas.height)
-          top += chart.canvas.height
-        }
-        return canvas.toDataURL('image/png')
+      async exportImage(format) {
+        // Un lienzo por panel: se componen uno debajo de otro. Chart.js solo dibuja
+        // en canvas, así que en SVG cada panel va como imagen (ver ADR 0001).
+        const parts = charts.map((chart) => ({
+          kind: 'png' as const,
+          src: chart.canvas.toDataURL('image/png'),
+          width: chart.width,
+          height: chart.height,
+        }))
+        return composeImage(parts, format, spec, hidden)
       },
     }
   },

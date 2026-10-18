@@ -230,9 +230,46 @@ const CHART_INTERACTION_FIELDS: PropField[] = [
     key: 'toolbar',
     label: 'Barra de herramientas',
     type: 'boolean',
+    default: true,
+    description:
+      'Descargar PNG, SVG y CSV, pantalla completa y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom. Lo mismo se puede hacer desde fuera con exportImage(), exportData() y toggleFullscreen().',
+  },
+  {
+    key: 'fileName',
+    label: 'Nombre de los archivos',
+    type: 'string',
+    default: '',
+    description: 'Sin extensión. Vacío: "grafica".',
+  },
+  {
+    key: 'patterns',
+    label: 'Tramas (daltonismo)',
+    type: 'boolean',
     default: false,
     description:
-      'Descargar PNG y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom.',
+      'Una trama distinta en cada relleno (barras, áreas, bandas), además del color, también en la leyenda y en las imágenes exportadas.',
+  },
+  {
+    key: 'dataTable',
+    label: 'Tabla para lectores de pantalla',
+    type: 'boolean',
+    default: true,
+    description:
+      'Tabla oculta con todos los datos. Con el foco en la gráfica, las flechas recorren los valores (prueba con Tab y →).',
+  },
+  {
+    key: 'ariaLabel',
+    label: 'Nombre accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera ("Gráfica de líneas y barras: Caudal, Nivel, Lluvia").',
+  },
+  {
+    key: 'description',
+    label: 'Descripción accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera con el rango del eje X, mínimos y máximos y umbrales.',
   },
   { key: 'animation', label: 'Animación', type: 'boolean', default: true },
 ]

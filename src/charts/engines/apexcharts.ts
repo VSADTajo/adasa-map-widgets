@@ -1,4 +1,5 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
+import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
@@ -11,6 +12,7 @@ import {
   type ChartEngine,
 } from './types'
 import { createCrosshair, createFrame, panelContainers, panelHeights, renderLegend } from './panels'
+import { composeImage } from './exportImage'
 
 type Options = Record<string, unknown>
 
@@ -52,6 +54,9 @@ export function toApexOptions(
 
   return spec.panels.map((panel) => {
     const panelSeries = spec.series.filter((s) => s.panelIndex === panel.index)
+    const patterns = panelSeries.map((s) =>
+      s.pattern ? patternDataUrl(s.pattern.kind, s.pattern, 2) : null,
+    )
     const axes = spec.yAxes.filter((axis) => axis.panelIndex === panel.index)
     const sideCount = (side: 'left' | 'right') =>
       axes.filter((axis) => axis.position === side).length
@@ -228,7 +233,16 @@ export function toApexOptions(
         dashArray: panelSeries.map((s) => DASH[s.lineStyle]),
         curve: panelSeries.map((s) => (s.step ? 'stepline' : 'straight')),
       },
-      fill: { type: 'solid', opacity: panelSeries.map((s) => s.opacity) },
+      // Con `patterns`, los rellenos son la tesela del patrón (con la opacidad ya en ella).
+      fill: {
+        type: patterns.map((tile) => (tile ? 'image' : 'solid')),
+        opacity: panelSeries.map((s, i) => (patterns[i] ? 1 : s.opacity)),
+        image: {
+          src: patterns.map((tile) => tile ?? ''),
+          width: PATTERN_SIZE,
+          height: PATTERN_SIZE,
+        },
+      },
       markers: { size: panelSeries.map((s) => (s.showPoints ? 4 : 0)), hover: { size: 4 } },
       dataLabels: { enabled: false },
       plotOptions: { bar: { columnWidth: '80%' } },
@@ -358,6 +372,14 @@ export const apexchartsEngine: ChartEngine = {
     /** Nombres de serie ocultos desde la leyenda (se conservan al redibujar). */
     const hidden = new Set<string>()
     const frame = createFrame(element)
+
+    function resetZoom(): void {
+      const { min, max } = spec.xAxis
+      charts.forEach((chart) => {
+        if (typeof min === 'number' && typeof max === 'number') chart.zoomX(min, max)
+        else chart.resetSeries(true, true)
+      })
+    }
 
     /** Oculta o muestra todas las series con el nombre visible `name` (en Apex se llaman por su id). */
     function setVisibility(name: string, visible: boolean): void {
@@ -495,13 +517,7 @@ export const apexchartsEngine: ChartEngine = {
             void chart.updateOptions({ chart: { height: heights[index] } }, false, false),
         )
       },
-      resetZoom() {
-        const { min, max } = spec.xAxis
-        charts.forEach((chart) => {
-          if (typeof min === 'number' && typeof max === 'number') chart.zoomX(min, max)
-          else chart.resetSeries(true, true)
-        })
-      },
+      resetZoom,
       showCursor(x) {
         setLegendValues(x)
         const first = charts[0] as unknown as
@@ -525,7 +541,7 @@ export const apexchartsEngine: ChartEngine = {
       },
       zoomTo(range) {
         if (!range) {
-          this.resetZoom()
+          resetZoom()
           return
         }
         charts.forEach((chart) => chart.zoomX(range.start as number, range.end as number))
@@ -535,34 +551,20 @@ export const apexchartsEngine: ChartEngine = {
         charts = []
         element.replaceChildren()
       },
-      async exportImage() {
-        const uris = await Promise.all(
-          charts.map((chart) => chart.dataURI() as Promise<{ imgURI: string }>),
+      async exportImage(format) {
+        // Un SVG por panel: se componen uno debajo de otro, con la leyenda encima.
+        type Exportable = ApexInstance & { w: { globals: { svgWidth: number; svgHeight: number } } }
+        const parts = await Promise.all(
+          charts.map(async (chart) => {
+            const { svgWidth: width, svgHeight: height } = (chart as Exportable).w.globals
+            if (format === 'svg') {
+              return { kind: 'svg' as const, src: await chart.getSvgString(), width, height }
+            }
+            const { imgURI } = (await chart.dataURI({ scale: 2 })) as { imgURI: string }
+            return { kind: 'png' as const, src: imgURI, width, height }
+          }),
         )
-        if (uris.length === 1) return uris[0]!.imgURI
-        // Varios paneles: se componen en un único PNG, uno debajo de otro.
-        const images = await Promise.all(
-          uris.map(
-            ({ imgURI }) =>
-              new Promise<HTMLImageElement>((resolve) => {
-                const image = new Image()
-                image.onload = () => resolve(image)
-                image.src = imgURI
-              }),
-          ),
-        )
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.max(...images.map((image) => image.width))
-        canvas.height = images.reduce((sum, image) => sum + image.height, 0)
-        const ctx = canvas.getContext('2d')!
-        ctx.fillStyle = spec.theme.surface
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        let top = 0
-        for (const image of images) {
-          ctx.drawImage(image, 0, top)
-          top += image.height
-        }
-        return canvas.toDataURL('image/png')
+        return composeImage(parts, format, spec, hidden)
       },
     }
   },

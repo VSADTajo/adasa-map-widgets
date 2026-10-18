@@ -1,5 +1,6 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipRows } from '@/charts/core/tooltip'
+import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
 import { layoutPanels } from './types'
 
 /**
@@ -89,6 +90,9 @@ export function placeTooltip(
  */
 export function createFrame(element: HTMLElement): { legend: HTMLElement; host: HTMLElement } {
   element.replaceChildren()
+  // Flex desde ya (renderLegend ajusta luego la dirección): si no, el contenedor
+  // de los paneles mide 0 de alto al crear el motor, y ECharts avisa de ello.
+  Object.assign(element.style, { display: 'flex', flexDirection: 'column' })
   const legend = document.createElement('div')
   legend.dataset.asLegend = ''
   const host = document.createElement('div')
@@ -109,7 +113,12 @@ function legendMarker(series: ResolvedChartSpec['series'][number]): string {
       series.lineStyle === 'dashed' ? '4 3' : series.lineStyle === 'dotted' ? '1.5 2.5' : ''
     return `<svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${series.color}" stroke-width="2.5" stroke-dasharray="${dash}"/></svg>`
   }
-  return `<span aria-hidden="true" style="display:inline-block;width:14px;height:9px;border-radius:2px;background:${series.color};opacity:${Math.max(series.opacity, 0.5)}"></span>`
+  // Con `patterns`, la muestra lleva la misma trama que el relleno.
+  const tile = series.pattern ? patternDataUrl(series.pattern.kind, series.pattern, 2) : null
+  const background = tile
+    ? `background:url(${tile}) 0 0/${PATTERN_SIZE}px ${PATTERN_SIZE}px;outline:1px solid ${series.color};outline-offset:-1px`
+    : `background:${series.color};opacity:${Math.max(series.opacity, 0.5)}`
+  return `<span aria-hidden="true" style="display:inline-block;width:14px;height:9px;border-radius:2px;${background}"></span>`
 }
 
 /** Valor de cada entrada de la leyenda en el instante `x` (las series con el mismo nombre, unidas con " · "). */

@@ -54,7 +54,7 @@ const widthStyle = computed(() => {
 const emit = defineEmits<TimelineEmits>()
 
 const isUserSliding = ref(false)
-let intervalId: ReturnType<typeof window.setInterval> | null = null
+let intervalId: number | null = null
 
 const currentTime = computed<Date | undefined>(() => props.timeline[props.currentTimeIndex])
 

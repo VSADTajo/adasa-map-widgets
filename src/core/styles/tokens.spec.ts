@@ -1,48 +1,8 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { contrastRatio, parseColor } from '@/core/utils/contrast'
+import { contrastRatio } from '@/core/utils/contrast'
+import { composite, MODES, surface, token } from './tokens.fixtures'
 
-// Con fs y no con `?raw`: Vitest vacía los .css importados aunque sea en crudo.
-const css = readFileSync(new URL('./tokens.css', import.meta.url), 'utf-8')
-
-type Mode = 'light' | 'dark'
-
-/** `--as-x: valor;` de tokens.css, sin comentarios. */
-const declarations = new Map(
-  [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/--as-([\w-]+):\s*([^;]+);/g)].map((m) => [
-    m[1]!,
-    m[2]!.trim(),
-  ]),
-)
-
-/** Valor de un token de color en un modo, resolviendo `light-dark(a, b)`. */
-function token(name: string, mode: Mode): string {
-  const value = declarations.get(name)
-  if (!value) throw new Error(`No existe --as-${name}`)
-  if (!value.startsWith('light-dark(')) return value
-  // Separa por la coma de primer nivel: los valores pueden ser `rgba(a, b, c, d)`.
-  const args = value.slice('light-dark('.length, -1)
-  let depth = 0
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '(') depth++
-    else if (args[i] === ')') depth--
-    else if (args[i] === ',' && depth === 0) {
-      return (mode === 'light' ? args.slice(0, i) : args.slice(i + 1)).trim()
-    }
-  }
-  throw new Error(`light-dark() mal formado en --as-${name}`)
-}
-
-/** Color resultante de pintar `color` (hex o rgba con alfa) encima de `backdrop` (opaco). */
-function composite(color: string, backdrop: string): string {
-  const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\s*\)/.exec(color)?.[1] ?? 1)
-  const [fg, bg] = [parseColor(color), parseColor(backdrop)]
-  return `rgb(${fg.map((c, i) => Math.round(alpha * c + (1 - alpha) * bg[i]!)).join(', ')})`
-}
-
-const MODES: Mode[] = ['light', 'dark']
-const surface = (mode: Mode) => token('color-surface', mode)
 const ALERTS = ['normal', 'amarillo', 'naranja', 'rojo']
 
 describe('tokens.css: contraste WCAG 2.1 AA contra --as-color-surface', () => {
@@ -53,6 +13,12 @@ describe('tokens.css: contraste WCAG 2.1 AA contra --as-color-surface', () => {
         expect(contrastRatio(token(name, mode), surface(mode))).toBeGreaterThanOrEqual(4.5)
       },
     )
+
+    it('el texto llega a 4.5:1 sobre --as-color-surface-muted (botones al pasar el ratón)', () => {
+      expect(
+        contrastRatio(token('color-text', mode), token('color-surface-muted', mode)),
+      ).toBeGreaterThanOrEqual(4.5)
+    })
 
     it.each(Array.from({ length: 8 }, (_, i) => `data-cat-${i + 1}`))(
       'la marca categórica --as-%s llega a 3:1',

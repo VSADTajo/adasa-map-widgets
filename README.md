@@ -49,7 +49,8 @@ Todo se ajusta por props:
 - umbrales e intervalos como anotaciones (`annotations`), coloreados por nivel de aviso;
 - línea "ahora" (`now`);
 - nombre y color de cada serie (`series[i].name` / `.color`; también `'var(--as-data-cat-N)'`) y en qué eje va (`series[i].yAxis`);
-- barra de herramientas (`toolbar`): descargar PNG y restablecer zoom, igual en los tres motores;
+- barra de herramientas (`toolbar`), igual en los tres motores: descargar PNG, SVG y CSV, restablecer zoom y pantalla completa;
+- tramas en los rellenos (`patterns`) para no depender del color;
 - leyenda arriba, abajo o a un lado (`legend="bottom"`), con los valores bajo el cursor si se activa `legend-values` (con `:tooltip="false"`, en vez del tooltip);
 - `tooltip`, `legend`, `zoom`, `height` y `animation`;
 - `nativeOptions`, como vía de escape a las opciones propias del motor.
@@ -70,6 +71,41 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
   :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
 />
 ```
+
+### Exportar
+
+Con `toolbar`, la gráfica muestra los botones PNG, SVG, CSV y pantalla completa (y "Restablecer zoom" si hay `zoom`). Un objeto elige cuáles: `:toolbar="{ svg: false, fullscreen: false }"`. Los archivos se llaman como diga `file-name` (por defecto, `grafica`).
+
+Lo mismo se puede hacer desde fuera, con una `ref` (tipo `ChartExposed`). Sirve igual para `ASChart` y para `ASHydrographChart`:
+
+```ts
+const chart = ref<ChartExposed>()
+const png = await chart.value!.exportImage() // data URL; también 'svg'
+const csv = chart.value!.exportData() // texto CSV
+await chart.value!.download('csv') // descarga el archivo
+await chart.value!.toggleFullscreen()
+```
+
+- Las imágenes llevan la leyenda encima y respetan las series ocultas desde ella. El SVG es vectorial en ECharts y ApexCharts. Chart.js solo dibuja en canvas, así que su SVG contiene la imagen de cada panel.
+- El CSV trae todas las series: una columna por serie, o dos en las bandas (inferior y superior), con la unidad en la cabecera. Usa los separadores del idioma, para que Excel lo abra con doble clic: en español, `;` entre columnas y coma decimal.
+  - Las fechas van en hora local, como `2026-10-18 06:00`.
+  - Al descargarlo se añade el BOM UTF-8, para que Excel no estropee las tildes ni `m³/s`.
+  - Un texto que empiece por `=`, `+`, `-` o `@` se escapa, para que Excel no lo ejecute como fórmula.
+  - `exportData({ separator, decimalSeparator })` cambia los separadores.
+
+### Accesibilidad
+
+Sin configurar nada:
+
+- **Nombre y descripción generados**. El nombre recoge el tipo y las series: "Gráfica de líneas y barras: Caudal, Lluvia". La descripción da el rango del eje X, el mínimo y el máximo de cada serie (con el instante del máximo) y los umbrales con nombre. `aria-label` y `description` los sustituyen.
+- **Teclado**. El área de datos recibe el foco con Tab:
+  - Las flechas ← → recorren los valores, Re Pág / Av Pág saltan de 10 en 10 e Inicio / Fin van al primero y al último.
+  - Intro elige ese instante (emite `time-select`, como un clic) y Esc quita el cursor.
+  - Cada paso se anuncia al lector de pantalla ("18/10/2026, 06:00: Caudal 69,2 m³/s, Lluvia 0,8 mm") y mueve también el cursor de las gráficas de su `sync-group`.
+- **Tabla de datos alternativa**: oculta a la vista, pero accesible a los lectores de pantalla. Con más de 500 filas se recorta (el CSV las lleva todas). Se desactiva con `:data-table="false"`.
+- **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle`. Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
+
+El contraste se comprueba en los dos temas: las tramas, contra su relleno (`patterns.spec.ts`), y los textos de la barra, contra la superficie y el fondo de los botones al pasar el ratón (`tokens.spec.ts`).
 
 ### Enlazar gráficas, mapa y controles de tiempo
 

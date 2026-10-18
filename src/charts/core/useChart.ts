@@ -13,8 +13,15 @@ import { useLocale } from '@/core/composables/useLocale'
 import { readTokens } from '@/core/utils/readTokens'
 import type { ThemeTokens } from '@/core/types/theme'
 import { ENGINE_PACKAGES, loadChartEngine, type ChartEngineInstance } from '@/charts/engines'
-import type { ChartEmits, ChartProps, ChartX } from '@/charts/types/chart'
+import type {
+  ChartCsvOptions,
+  ChartEmits,
+  ChartImageFormat,
+  ChartProps,
+  ChartX,
+} from '@/charts/types/chart'
 import { resolveSpec } from './resolveSpec'
+import { chartToCsv } from './data'
 import { joinSyncGroup } from './sync'
 
 type Emit = <K extends keyof ChartEmits>(event: K, ...args: ChartEmits[K]) => void
@@ -91,13 +98,7 @@ export function useChart(
         spec.value,
         {
           onPointClick: (event) => emit('point-click', event),
-          onXClick: (x) => {
-            emit('x-click', { x })
-            if (x instanceof Date) {
-              emit('time-select', { time: x })
-              emit('update:currentTime', x)
-            }
-          },
+          onXClick: selectX,
           onRangeChange: (event) => {
             emit('range-change', event)
             if (!remote) sync?.zoom({ start: normalize(event.start), end: normalize(event.end) })
@@ -123,6 +124,24 @@ export function useChart(
       })
       console.error('[ASChart]', error)
     }
+  }
+
+  /** Elige el valor `x` del eje X: como un clic en la gráfica (también desde el teclado). */
+  function selectX(x: ChartX): void {
+    emit('x-click', { x })
+    if (x instanceof Date) {
+      emit('time-select', { time: x })
+      emit('update:currentTime', x)
+    }
+  }
+
+  /**
+   * Cursor en `x` (valor normalizado) o fuera (`null`), movido desde fuera del
+   * motor (el teclado): se muestra en esta gráfica y en las de su grupo.
+   */
+  function moveCursor(x: number | string | null): void {
+    applyRemote(() => instance.value?.showCursor(x))
+    sync?.cursor(x)
   }
 
   let observer: ResizeObserver | undefined
@@ -163,11 +182,19 @@ export function useChart(
   watch(theme, () => nextTick(refreshTokens))
 
   return {
+    spec,
     theme,
     loadError,
     /** Vuelve a leer los tokens (si el tema de la página cambió por una vía que no es provideTheme). */
     refresh: refreshTokens,
-    exportImage: () => instance.value?.exportImage() ?? Promise.resolve(''),
+    exportImage: (format: ChartImageFormat = 'png') =>
+      instance.value?.exportImage(format) ?? Promise.resolve(''),
+    exportData: (options?: ChartCsvOptions) =>
+      spec.value ? chartToCsv(spec.value, locale.t, options) : '',
+    moveCursor,
+    /** Elige un valor normalizado del eje X (ms en ejes temporales). */
+    selectX: (x: number | string) =>
+      selectX(spec.value?.xAxis.type === 'time' && typeof x === 'number' ? new Date(x) : x),
     resetZoom: () => {
       instance.value?.resetZoom()
       sync?.zoom(null)

@@ -1,4 +1,4 @@
-import type { ChartLibrary, ChartX } from '@/charts/types/chart'
+import type { ChartImageFormat, ChartLibrary, ChartX } from '@/charts/types/chart'
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 
 /** Eventos que cada motor traduce a los de `ASChart`. */
@@ -17,8 +17,8 @@ export interface ChartEngineInstance {
   /** Ajusta al tamaño actual del contenedor. */
   resize: () => void
   dispose: () => void
-  /** PNG de la gráfica, como data URL. */
-  exportImage: () => Promise<string>
+  /** La gráfica con su leyenda, como data URL PNG o SVG (ver `composeImage`). */
+  exportImage: (format: ChartImageFormat) => Promise<string>
   /** Vuelve al rango X completo tras un zoom. */
   resetZoom: () => void
   /**

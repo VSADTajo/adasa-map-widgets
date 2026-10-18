@@ -159,10 +159,57 @@ export interface ChartLegendConfig {
 
 /** Acciones de la barra de herramientas de la gráfica. */
 export interface ChartToolbarConfig {
-  /** Botón "Descargar PNG". @default true */
-  download?: boolean
+  /** Descargar la gráfica como imagen PNG. @default true */
+  png?: boolean
+  /** Descargar la gráfica como SVG (vectorial en ECharts y ApexCharts; ver ADR 0001). @default true */
+  svg?: boolean
+  /** Descargar los datos en CSV. @default true */
+  csv?: boolean
   /** Botón "Restablecer zoom" (solo si hay `zoom`). @default true */
   resetZoom?: boolean
+  /** Botón de pantalla completa (si el navegador lo permite). @default true */
+  fullscreen?: boolean
+  /** @deprecated Usa `png`. Se mantiene por compatibilidad: `download: false` oculta el PNG. */
+  download?: boolean
+}
+
+/** Formato de `exportImage()`. */
+export type ChartImageFormat = 'png' | 'svg'
+
+/** Opciones de `exportData()`. */
+export interface ChartCsvOptions {
+  /** Separador de columnas. @default `';'` si el idioma usa coma decimal (español); si no, `','` */
+  separator?: string
+  /** Separador decimal. @default el del idioma activo (`','` en español) */
+  decimalSeparator?: '.' | ','
+}
+
+/**
+ * Métodos que `ASChart` y `ASHydrographChart` exponen (con `ref`), para
+ * usarlos desde fuera, p. ej. con botones propios en vez de la barra de herramientas.
+ *
+ * @example
+ * ```ts
+ * const chart = ref<ChartExposed>()
+ * const png = await chart.value!.exportImage()          // data URL
+ * const csv = chart.value!.exportData()                  // texto CSV
+ * ```
+ */
+export interface ChartExposed {
+  /** La gráfica (con su leyenda) como data URL: PNG por defecto, o SVG. */
+  exportImage: (format?: ChartImageFormat) => Promise<string>
+  /** Todos los datos en CSV (una columna por serie), con los separadores del idioma. */
+  exportData: (options?: ChartCsvOptions) => string
+  /** Descarga la imagen o el CSV como archivo (`fileName` + extensión). */
+  download: (format: ChartImageFormat | 'csv') => Promise<void>
+  /** Entra o sale de pantalla completa. */
+  toggleFullscreen: () => Promise<void>
+  /** Vuelve al rango X completo tras un zoom. */
+  resetZoom: () => void
+  /** Objeto(s) nativo(s) del motor (instancia de ECharts, Chart.js o ApexCharts). */
+  getInstance: () => unknown
+  /** Vuelve a leer los colores del tema, si cambió por una vía distinta de `provideTheme`. */
+  refresh: () => void
 }
 
 export interface ChartZoomConfig {
@@ -217,11 +264,19 @@ export interface ChartProps {
   zoom?: boolean | ChartZoomConfig
   /**
    * Barra de herramientas encima de la gráfica (igual en los tres motores):
-   * `true` muestra "Descargar PNG" y, con zoom, "Restablecer zoom"; `false`
-   * la oculta; un objeto elige las acciones.
+   * `true` muestra descargar PNG, SVG y CSV, pantalla completa y, con zoom,
+   * "Restablecer zoom"; `false` la oculta; un objeto elige las acciones.
    * @default solo "Restablecer zoom", y solo si hay `zoom`
    */
   toolbar?: boolean | ChartToolbarConfig
+  /** Nombre (sin extensión) de los archivos descargados. @default 'grafica' (traducido) */
+  fileName?: string
+  /**
+   * Tramas en los rellenos (barras, áreas y bandas), además del color, para
+   * distinguir series sin depender del color: daltonismo e impresión en B/N.
+   * Las líneas se distinguen por la leyenda y su estilo (`lineStyle`). @default false
+   */
+  patterns?: boolean
   /** Alto total (px, o CSS si es string). @default 320 */
   height?: number | string
   /** @default true */
@@ -237,8 +292,22 @@ export interface ChartProps {
    * de la página (la gráfica no fuerza ninguno).
    */
   theme?: 'light' | 'dark'
-  /** Descripción para lectores de pantalla. Por defecto se genera a partir de las series. */
+  /**
+   * Nombre accesible de la gráfica. Por defecto se genera con el tipo y las
+   * series: "Gráfica de líneas y barras: Caudal, Precipitación".
+   */
   ariaLabel?: string
+  /**
+   * Descripción para lectores de pantalla. Por defecto se genera: rango del
+   * eje X, mínimo y máximo de cada serie y umbrales con nombre.
+   */
+  description?: string
+  /**
+   * Tabla con todos los datos, oculta a la vista pero accesible a los
+   * lectores de pantalla (alternativa a la gráfica). Con muchos puntos solo
+   * incluye las primeras filas; el CSV siempre los lleva todos. @default true
+   */
+  dataTable?: boolean
   /**
    * Vía de escape: recibe las opciones nativas ya generadas para el motor
    * (opción de ECharts, configuración de Chart.js u opciones de ApexCharts) y
