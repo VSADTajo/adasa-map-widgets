@@ -17,6 +17,7 @@ Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/ad
 src/
 ├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
 ├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
+├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart), engines/ (echarts, chartjs, apexcharts), types/
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
 │   ├── components/   # ASMap + widgets ASMap*
@@ -28,7 +29,7 @@ src/
 └── vite-env.d.ts
 ```
 
-Cada dominio (`core`, `map` y los futuros `charts`, `table`, `forms`, `detail`, `layout`) tiene la misma forma interna y un `index.ts` como única API pública.
+Cada dominio (`core`, `map`, `charts` y los futuros `table`, `forms`, `detail`, `layout`) tiene la misma forma interna y un `index.ts` como única API pública.
 
 **Fronteras entre dominios**:
 
@@ -98,6 +99,19 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
   - ca/eu/gl los define el proyecto con `provideLocale(code, { locales: { ca: { intl, messages, dateFns } } })`. Las claves que falten caen al español.
 - No se usa vue-i18n: la librería necesita pocos textos con interpolación simple, y no debe obligar a cada proyecto a instalar y configurar un plugin.
 
+## Gráficas
+
+Decisión y diferencias entre motores en [ADR 0001](docs/adr/0001-motores-graficas.md).
+
+- **Flujo**: `ASChart` (props) → `resolveSpec` (más tokens e idioma) → `ResolvedChartSpec` → una traducción pura por motor (`toEChartsOption`, `toChartJsConfigs`, `toApexOptions`). Los motores se cargan con `import()` dinámico; nunca se importan de forma estática.
+- **Toda decisión común va en `resolveSpec`**, no en un motor: colores, ejes, formatos, rango X, valores que un eje debe incluir...
+- **Una capacidad nueva se implementa en los tres motores**. Si uno no puede ofrecerla, se documenta en la tabla del ADR.
+  - Los tests de `engines/engines.spec.ts` comprueban que los tres traducen lo mismo.
+  - La comprobación visual se hace con capturas de los tres motores en claro y oscuro.
+- **Componentes de dominio** (como `ASHydrographChart`) = una función pura `build*()` que devuelve props de `ASChart`, más un componente que la renderiza. Así funcionan con los tres motores sin código propio.
+- **Colores de series**: por defecto, la paleta categórica en orden. Para fijar un color del tema que respete claro/oscuro, usa `'var(--as-data-cat-N)'`.
+- ApexCharts **nunca** es el motor por defecto, y cualquier mención a él recuerda que necesita licencia comercial.
+
 ## Playground
 
 `npm run dev` (http://localhost:5173). **Todo componente, prop o evento nuevo debe verse en el playground, no basta con el código fuente:**
@@ -125,7 +139,7 @@ Vitest + `@vue/test-utils` + jsdom (`vitest.config.ts`).
 - Un componente sin `.spec.ts` al lado salta a la vista en el explorador. Una carpeta `tests/` aparte se desincroniza del código sin que nadie lo note.
 - Los imports del test son relativos y cortos (`./ASMapButtonToggle.vue`).
 
-Los `*.spec.ts` se excluyen del build (`tsconfig.build.json` y `dts` en `vite.config.ts`), pero sí pasan por `npm run type-check` y ESLint.
+Los `*.spec.ts` se excluyen del build (`tsconfig.build.json` y `dts` en `vite.config.ts`), pero sí pasan por `npm run type-check` y ESLint. Lo mismo vale para los datos compartidos entre tests, que van en `*.fixtures.ts` (p. ej. `src/charts/core/chart.fixtures.ts`).
 
 **Plantillas** a copiar:
 
