@@ -49,6 +49,10 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | Barra de herramientas | Común (ASChart): Descargar PNG y Restablecer zoom | Común (ASChart) | Común (ASChart); el zoom por arrastre sigue activo sin el toolbar nativo |
 | `x-click`          | Instante exacto bajo el cursor              | Instante exacto bajo el cursor                                    | Calculado a partir de la posición del ratón                  |
 | Exportar PNG       | Nativo                                      | Se componen los paneles en una imagen                             | Se componen los paneles en una imagen                        |
+| `syncGroup` (cursor remoto) | Cruceta y tooltip                  | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda; **el tooltip no se puede abrir desde código** |
+| Alineación entre gráficas sueltas | Exacta (`containShape: false`) | Exacta                                                        | Con barras, Apex añade margen al eje X: queda algo desplazado respecto a una de líneas |
+
+`syncGroup` (`core/sync.ts`) no depende de ningún motor: cada gráfica avisa al grupo de su cursor y su zoom con valores de X normalizados (ms en ejes temporales), y aplica los que le llegan con `showCursor`/`zoomTo` de su motor. Lo que llega del grupo no se reenvía, y un fallo en una gráfica no rompe a las demás.
 
 ## Consecuencias
 

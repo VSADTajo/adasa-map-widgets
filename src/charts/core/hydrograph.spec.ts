@@ -98,6 +98,12 @@ describe('buildHydrograph', () => {
     expect(band.data[1]).toEqual([at(1), 15, 26])
   })
 
+  it('pasa currentTime y syncGroup a ASChart', () => {
+    const built = build({ currentTime: at(1), syncGroup: 'cuenca' })
+    expect(built.currentTime).toEqual(at(1))
+    expect(built.syncGroup).toBe('cuenca')
+  })
+
   it('bands limita qué bandas se dibujan', () => {
     const ids = build({ bands: ['p25-p75'] }).series.map((s) => s.id)
     expect(ids).toContain('discharge-eps-p25-p75')

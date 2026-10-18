@@ -52,6 +52,8 @@ export interface HydrographProps extends Pick<
   | 'legendValues'
   | 'zoom'
   | 'toolbar'
+  | 'currentTime'
+  | 'syncGroup'
   | 'height'
   | 'animation'
   | 'loading'

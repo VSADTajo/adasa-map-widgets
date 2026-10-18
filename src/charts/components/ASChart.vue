@@ -33,6 +33,8 @@ const props = withDefaults(defineProps<ChartProps>(), {
   panels: undefined,
   annotations: undefined,
   now: false,
+  currentTime: undefined,
+  syncGroup: undefined,
   tooltip: true,
   legend: undefined,
   legendValues: false,

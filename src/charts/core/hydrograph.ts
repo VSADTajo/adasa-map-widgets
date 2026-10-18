@@ -222,6 +222,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     legendValues: props.legendValues,
     zoom: props.zoom,
     toolbar: props.toolbar,
+    currentTime: props.currentTime,
+    syncGroup: props.syncGroup,
     height: props.height,
     animation: props.animation,
     loading: props.loading,

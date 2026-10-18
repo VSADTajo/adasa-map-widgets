@@ -137,6 +137,7 @@ function commonAttributes(values: Values): string[] {
   if (values.animation === false) attributes.push(':animation="false"')
   if (values.theme) attributes.push(`theme="${values.theme}"`)
   attributes.push(`:height="${values.height}"`)
+  if (values.currentTime) attributes.push('v-model:current-time="instante"')
   return attributes
 }
 

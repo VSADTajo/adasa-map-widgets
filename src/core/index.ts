@@ -36,6 +36,7 @@ export {
   type FormatUnitOptions,
 } from './utils/format'
 export { readTokens } from './utils/readTokens'
+export { nearestTimeIndex } from './utils/time'
 
 export type {
   ThemeMode,

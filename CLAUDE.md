@@ -17,7 +17,7 @@ Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/ad
 src/
 ├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
 ├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
-├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart), engines/ (echarts, chartjs, apexcharts), types/
+├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync), engines/ (echarts, chartjs, apexcharts), types/
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
 │   ├── components/   # ASMap + widgets ASMap*

@@ -77,6 +77,10 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
     axisLine: { lineStyle: { color: theme.axis } },
     axisTick: { show: panel.index === lastPanel, lineStyle: { color: theme.axis } },
     splitLine: { show: false },
+    // No ensanchar el eje para que quepan las barras de los extremos: el rango X
+    // tiene que ser el de los datos, igual en todos los paneles, gráficas de un
+    // syncGroup y motores (en Chart.js las barras de los extremos también se cortan).
+    containShape: false,
     // Cruceta vertical también sin tooltip (para los valores en la leyenda).
     axisPointer: {
       show: Boolean(spec.tooltip || (spec.legend && spec.legend.values)),
@@ -432,8 +436,12 @@ export const echartsEngine: ChartEngine = {
     chart.on('updateAxisPointer', (event) => {
       const info = (event as { axesInfo?: { value: number | string }[] }).axesInfo?.[0]
       setLegendValues(info ? info.value : null)
+      handlers.onHover(info ? toChartX(info.value, spec) : null)
     })
-    chart.getZr().on('globalout', () => setLegendValues(null))
+    chart.getZr().on('globalout', () => {
+      setLegendValues(null)
+      handlers.onHover(null)
+    })
 
     chart.on('click', (params) => {
       const id = String(params.seriesId ?? '')
@@ -452,7 +460,8 @@ export const echartsEngine: ChartEngine = {
       const pixel = [event.offsetX, event.offsetY]
       const panel = spec.panels.find((p) => chart.containPixel({ gridIndex: p.index }, pixel))
       if (!panel) return
-      const [x] = chart.convertFromPixel({ xAxisIndex: panel.index }, pixel) as [number]
+      // Con `xAxisIndex`, convertFromPixel recibe y devuelve un solo valor (no un par).
+      const x = chart.convertFromPixel({ xAxisIndex: panel.index }, pixel[0]!) as number
       handlers.onXClick(toChartX(spec.xAxis.type === 'category' ? x : Math.round(x), spec))
     })
     chart.on('datazoom', () => {
@@ -482,6 +491,24 @@ export const echartsEngine: ChartEngine = {
       },
       resetZoom() {
         chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })
+      },
+      showCursor(x) {
+        setLegendValues(x)
+        if (x === null) {
+          chart.dispatchAction({ type: 'hideTip' })
+          chart.dispatchAction({ type: 'updateAxisPointer', currTrigger: 'leave' })
+          return
+        }
+        // Como si el cursor estuviera en ese instante, a media altura del primer panel.
+        // Con `xAxisIndex`, convertToPixel recibe y devuelve un solo valor (no un par).
+        const px = chart.convertToPixel({ xAxisIndex: 0 }, x) as number
+        const grid = (chart.getOption().grid as { top: number; height: number }[])[0]!
+        chart.dispatchAction({ type: 'showTip', x: px, y: grid.top + grid.height / 2 })
+      },
+      zoomTo(range) {
+        if (!range) chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })
+        else
+          chart.dispatchAction({ type: 'dataZoom', startValue: range.start, endValue: range.end })
       },
       dispose() {
         chart.dispose()

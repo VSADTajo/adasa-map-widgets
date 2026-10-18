@@ -13,8 +13,9 @@ import { useLocale } from '@/core/composables/useLocale'
 import { readTokens } from '@/core/utils/readTokens'
 import type { ThemeTokens } from '@/core/types/theme'
 import { ENGINE_PACKAGES, loadChartEngine, type ChartEngineInstance } from '@/charts/engines'
-import type { ChartEmits, ChartProps } from '@/charts/types/chart'
+import type { ChartEmits, ChartProps, ChartX } from '@/charts/types/chart'
 import { resolveSpec } from './resolveSpec'
+import { joinSyncGroup } from './sync'
 
 type Emit = <K extends keyof ChartEmits>(event: K, ...args: ChartEmits[K]) => void
 
@@ -41,6 +42,35 @@ export function useChart(
 
   const spec = computed(() => (tokens.value ? resolveSpec(props, tokens.value, locale) : null))
 
+  // ── Grupo de sincronización ──
+  // Lo que llega de otra gráfica del grupo se aplica con `remote` activo: el
+  // motor puede reaccionar emitiendo a su vez hover/zoom, y eso no debe
+  // reenviarse al grupo (rebotaría sin fin).
+  let remote = false
+  const applyRemote = (action: () => void) => {
+    remote = true
+    try {
+      action()
+    } finally {
+      // Algunos motores emiten sus eventos en el siguiente frame.
+      requestAnimationFrame(() => (remote = false))
+    }
+  }
+  const normalize = (x: ChartX): number | string => (x instanceof Date ? x.getTime() : x)
+  let sync: ReturnType<typeof joinSyncGroup> | null = null
+  function joinGroup(group: string | undefined): void {
+    sync?.leave()
+    sync = group
+      ? joinSyncGroup(group, {
+          showCursor: (x) => applyRemote(() => instance.value?.showCursor(x)),
+          zoomTo: (range) =>
+            applyRemote(() =>
+              range ? instance.value?.zoomTo(range) : instance.value?.resetZoom(),
+            ),
+        })
+      : null
+  }
+
   function refreshTokens(): void {
     if (root.value) tokens.value = readTokens(root.value)
   }
@@ -61,8 +91,20 @@ export function useChart(
         spec.value,
         {
           onPointClick: (event) => emit('point-click', event),
-          onXClick: (x) => emit('x-click', { x }),
-          onRangeChange: (event) => emit('range-change', event),
+          onXClick: (x) => {
+            emit('x-click', { x })
+            if (x instanceof Date) {
+              emit('time-select', { time: x })
+              emit('update:currentTime', x)
+            }
+          },
+          onRangeChange: (event) => {
+            emit('range-change', event)
+            if (!remote) sync?.zoom({ start: normalize(event.start), end: normalize(event.end) })
+          },
+          onHover: (x) => {
+            if (!remote) sync?.cursor(x === null ? null : normalize(x))
+          },
         },
         props.nativeOptions,
       )
@@ -87,6 +129,7 @@ export function useChart(
   let frame = 0
   onMounted(() => {
     refreshTokens()
+    joinGroup(props.syncGroup)
     void mount()
     if (canvas.value && typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(() => {
@@ -98,6 +141,7 @@ export function useChart(
   })
   onBeforeUnmount(() => {
     mountId++
+    sync?.leave()
     observer?.disconnect()
     cancelAnimationFrame(frame)
     instance.value?.dispose()
@@ -107,6 +151,10 @@ export function useChart(
   watch(
     () => props.chartLibrary,
     () => void mount(),
+  )
+  watch(
+    () => props.syncGroup,
+    (group) => joinGroup(group),
   )
   watch(spec, (next) => {
     if (next) instance.value?.update(next)
@@ -120,7 +168,10 @@ export function useChart(
     /** Vuelve a leer los tokens (si el tema de la página cambió por una vía que no es provideTheme). */
     refresh: refreshTokens,
     exportImage: () => instance.value?.exportImage() ?? Promise.resolve(''),
-    resetZoom: () => instance.value?.resetZoom(),
+    resetZoom: () => {
+      instance.value?.resetZoom()
+      sync?.zoom(null)
+    },
     getInstance: () => instance.value?.native,
   }
 }

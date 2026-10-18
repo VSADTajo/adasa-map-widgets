@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import MapCanvas from './MapCanvas.vue'
+import FeatureSeriesPanel from './FeatureSeriesPanel.vue'
+import { nearestTimeIndex } from '@/core/utils/time'
 import WidgetPanel from './WidgetPanel.vue'
 import type { LogEntry } from './EventLog.vue'
 import { widgetRegistry, getWidgetEntry } from '../utils/widgetRegistry'
@@ -8,7 +10,12 @@ import { LAYER_TYPE_LABELS, layerExamples } from '../utils/layerExamples'
 import { basemapExamples } from '../utils/basemapExamples'
 import type { MapLibraryOption, WidgetPlacement } from '@/playground/types'
 import type { WidgetPosition } from '@/core/types/common'
-import type { LayerCapabilities, LayerConfig, LayerLoadedEvent } from '@/map/types/layers'
+import type {
+  FeatureSelectedEvent,
+  LayerCapabilities,
+  LayerConfig,
+  LayerLoadedEvent,
+} from '@/map/types/layers'
 import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
 
 /**
@@ -24,6 +31,30 @@ import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
  * probar el sistema de capas de `ASMap` (`useLayerManager`) en el mismo sitio.
  */
 const mapLibrary = ref<MapLibraryOption>('leaflet')
+
+// ── Serie temporal de la feature seleccionada (ver FeatureSeriesPanel) ──
+const chartLibrary = ref<'echarts' | 'chartjs' | 'apexcharts'>('echarts')
+const selectedFeature = ref<FeatureSelectedEvent | null>(null)
+/** Los mismos instantes que usan los controles de tiempo colocados, para poder enlazarlos. */
+const timeline = (getWidgetEntry('time-controls')?.staticProps?.().timeline ?? []) as Date[]
+/** Los primeros controles de tiempo colocados (si hay): su instante se enlaza con la gráfica. */
+const timeControls = computed(() =>
+  placements.value.find((placement) => placement.widgetType === 'time-controls'),
+)
+const currentTime = computed(() => {
+  const index = timeControls.value?.props.currentTimeIndex
+  return typeof index === 'number' ? timeline[index] : undefined
+})
+function onFeatureSelected(event: FeatureSelectedEvent): void {
+  selectedFeature.value = event
+  onLogEvent('ASMap', 'feature-selected', { layerId: event.layerId, properties: event.properties })
+}
+/** Clic en la gráfica → mover los controles de tiempo al instante más cercano. */
+function onChartTimeSelect(time: Date): void {
+  onLogEvent('ASChart', 'time-select', time)
+  if (timeControls.value)
+    timeControls.value.props.currentTimeIndex = nearestTimeIndex(timeline, time)
+}
 const placements = ref<WidgetPlacement[]>([])
 const selectedId = ref<string | null>(null)
 const eventLog = ref<LogEntry[]>([])
@@ -151,6 +182,18 @@ function onLogEvent(widgetLabel: string, name: string, payload: unknown): void {
       </section>
 
       <section class="widget-playground__section">
+        <h2 class="widget-playground__heading">Motor de gráficas</h2>
+        <label class="widget-playground__field">
+          <span>Gráfica de la feature seleccionada</span>
+          <select v-model="chartLibrary">
+            <option value="echarts">ECharts</option>
+            <option value="chartjs">Chart.js</option>
+            <option value="apexcharts">ApexCharts</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="widget-playground__section">
         <h2 class="widget-playground__heading">Añadir widget</h2>
 
         <label class="widget-playground__field">
@@ -222,21 +265,31 @@ function onLogEvent(widgetLabel: string, name: string, payload: unknown): void {
       </section>
     </aside>
 
-    <main class="widget-playground__canvas">
-      <MapCanvas
-        :map-library="mapLibrary"
-        :placements="placements"
-        :selected-id="selectedId"
-        :layers="activeLayers"
-        :basemaps="basemapExamples"
-        :basemap="activeBasemap"
-        @select="selectWidget"
-        @log-event="onLogEvent"
-        @layer-loaded="onLayerLoaded"
-        @layer-error="onLayerError"
-        @layer-unloaded="onLayerUnloaded"
-        @capability-detected="onCapabilityDetected"
-        @update:basemap="onBasemapChanged"
+    <main class="widget-playground__main">
+      <div class="widget-playground__canvas">
+        <MapCanvas
+          :map-library="mapLibrary"
+          :placements="placements"
+          :selected-id="selectedId"
+          :layers="activeLayers"
+          :basemaps="basemapExamples"
+          :basemap="activeBasemap"
+          @select="selectWidget"
+          @log-event="onLogEvent"
+          @layer-loaded="onLayerLoaded"
+          @layer-error="onLayerError"
+          @layer-unloaded="onLayerUnloaded"
+          @capability-detected="onCapabilityDetected"
+          @update:basemap="onBasemapChanged"
+          @feature-selected="onFeatureSelected"
+        />
+      </div>
+      <FeatureSeriesPanel
+        :feature="selectedFeature"
+        :timeline="timeline"
+        :current-time="currentTime"
+        :chart-library="chartLibrary"
+        @time-select="onChartTimeSelect"
       />
     </main>
 
@@ -270,7 +323,16 @@ function onLogEvent(widgetLabel: string, name: string, payload: unknown): void {
   overflow-y: auto;
 }
 
+.widget-playground__main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
 .widget-playground__canvas {
+  flex: 1 0 400px;
   border: 1px solid var(--pg-border);
   border-radius: 12px;
   overflow: hidden;
