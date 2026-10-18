@@ -35,6 +35,7 @@ const props = withDefaults(defineProps<ChartProps>(), {
   now: false,
   tooltip: true,
   legend: undefined,
+  legendValues: false,
   zoom: false,
   height: 320,
   animation: true,

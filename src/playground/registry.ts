@@ -196,7 +196,22 @@ const CHART_THEME_FIELD: PropField = {
 }
 const CHART_INTERACTION_FIELDS: PropField[] = [
   { key: 'tooltip', label: 'Tooltip', type: 'boolean', default: true },
-  { key: 'legend', label: 'Leyenda', type: 'boolean', default: true },
+  {
+    key: 'legend',
+    label: 'Posición de la leyenda',
+    type: 'select',
+    options: ['top', 'bottom', 'left', 'right'],
+    default: 'top',
+    description: 'Para ocultarla, :legend="false".',
+  },
+  {
+    key: 'legendValues',
+    label: 'Valores en la leyenda',
+    type: 'boolean',
+    default: false,
+    description:
+      'Muestra en la leyenda el valor de cada serie bajo el cursor. Desactiva el tooltip para verlos solo ahí.',
+  },
   {
     key: 'zoom',
     label: 'Zoom',
@@ -889,6 +904,23 @@ export const registry: RegistryEntry[] = [
         options: ['flow', 'level'],
         default: 'flow',
         description: 'Unidad y título por defecto: caudal (m³/s) o nivel (m).',
+      },
+      {
+        key: 'precipitationLayout',
+        label: 'Precipitación',
+        type: 'select',
+        options: ['panel', 'overlay'],
+        default: 'panel',
+        description:
+          '"panel": en su propio panel encima del caudal (alineados); "overlay": superpuesta al caudal, con su eje a la derecha.',
+      },
+      {
+        key: 'precipitationInverted',
+        label: 'Lluvia colgando desde arriba',
+        type: 'boolean',
+        default: true,
+        description:
+          'Eje de precipitación invertido. Desactívalo para que las barras crezcan desde abajo.',
       },
       {
         key: 'precipitationWeight',

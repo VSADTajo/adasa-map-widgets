@@ -33,7 +33,7 @@ Ningún widget de control importa una librería de mapas: solo `ASMap` y el sist
 ## Gráficas (`@vsadtajo/adasa-ui/charts`)
 
 - **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
-- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
 
 **Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
 
@@ -48,6 +48,7 @@ Todo se ajusta por props:
 - paneles apilados con el eje X compartido (`panels`);
 - umbrales e intervalos como anotaciones (`annotations`), coloreados por nivel de aviso;
 - línea "ahora" (`now`);
+- leyenda arriba, abajo o a un lado (`legend="bottom"`), con los valores bajo el cursor si se activa `legend-values` (con `:tooltip="false"`, en vez del tooltip);
 - `tooltip`, `legend`, `zoom`, `height` y `animation`;
 - `nativeOptions`, como vía de escape a las opciones propias del motor.
 

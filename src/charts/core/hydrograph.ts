@@ -12,6 +12,7 @@ import type {
   HydroForecast,
   HydroPoint,
   HydrographProps,
+  HydroVariable,
 } from '@/charts/types/HydrographProps'
 
 /** Opacidad del relleno de cada banda: la más ancha (más incierta), más tenue. */
@@ -23,6 +24,20 @@ const BAND_PERCENTILES: Record<HydroBand, ['p10' | 'p25', 'p75' | 'p90']> = {
 
 const PRECIPITATION_AXIS = 'precipitation'
 const DISCHARGE_AXIS = 'discharge'
+
+/** Máximo del eje de precipitación superpuesta: las barras ocupan ~el 40 % del alto. */
+function overlayMax(precipitation: HydroVariable): number | undefined {
+  const values = [
+    ...(precipitation.observed ?? []),
+    ...(precipitation.forecasts ?? []).flatMap((f) => f.values ?? []),
+  ]
+    .map(([, value]) => value)
+    .filter((value): value is number => value !== null)
+  if (!values.length) return undefined
+  const max = Math.max(...values) * 2.5
+  const step = 10 ** Math.floor(Math.log10(max)) / 2
+  return Math.ceil(max / step) * step
+}
 
 /** Une el percentil inferior y el superior por instante en una banda. */
 function bandPoints(low: HydroPoint[], high: HydroPoint[]): ChartRangePoint[] {
@@ -60,24 +75,32 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
   const observedColor = 'var(--as-data-cat-1)'
   const observedName = t('hydrograph.observed')
 
+  const overlay = props.precipitationLayout === 'overlay'
+  const inverted = props.precipitationInverted ?? true
   const precipitationWeight = Math.min(Math.max(props.precipitationWeight ?? 0.35, 0.1), 0.9)
-  const panels: ChartPanel[] = hasPrecipitation
-    ? [
-        { id: PRECIPITATION_AXIS, weight: precipitationWeight },
-        { id: DISCHARGE_AXIS, weight: 1 - precipitationWeight },
-      ]
-    : [{ id: DISCHARGE_AXIS }]
+  const panels: ChartPanel[] =
+    hasPrecipitation && !overlay
+      ? [
+          { id: PRECIPITATION_AXIS, weight: precipitationWeight },
+          { id: DISCHARGE_AXIS, weight: 1 - precipitationWeight },
+        ]
+      : [{ id: DISCHARGE_AXIS }]
 
   const yAxes: ChartYAxis[] = [
     ...(hasPrecipitation
       ? [
           {
             id: PRECIPITATION_AXIS,
-            panel: PRECIPITATION_AXIS,
-            position: 'left' as const,
+            // Superpuesta: mismo panel que el caudal, con su eje a la derecha.
+            panel: overlay ? DISCHARGE_AXIS : PRECIPITATION_AXIS,
+            position: overlay ? ('right' as const) : ('left' as const),
             label: precipitation!.label ?? t('hydrograph.precipitation'),
             unit: precipitation!.unit ?? 'mm',
-            inverse: true,
+            inverse: inverted,
+            // Superpuesta, se estira el eje para que las barras ocupen solo
+            // ~el 40 % del alto y no tapen el caudal.
+            max: overlay ? overlayMax(precipitation!) : undefined,
+            grid: overlay ? false : undefined,
           },
         ]
       : []),
@@ -185,6 +208,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     now: props.now === false ? false : (props.now ?? true),
     tooltip: props.tooltip,
     legend: props.legend,
+    legendValues: props.legendValues,
     zoom: props.zoom,
     height: props.height,
     animation: props.animation,

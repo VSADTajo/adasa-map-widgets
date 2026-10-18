@@ -1,4 +1,5 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
+import { tooltipRows } from '@/charts/core/tooltip'
 import { layoutPanels } from './types'
 
 /**
@@ -139,10 +140,30 @@ function legendMarker(series: ResolvedChartSpec['series'][number]): string {
   return `<span aria-hidden="true" style="display:inline-block;width:14px;height:9px;border-radius:2px;background:${series.color};opacity:${Math.max(series.opacity, 0.5)}"></span>`
 }
 
+/** Valor de cada entrada de la leyenda en el instante `x` (las series con el mismo nombre, unidas con " · "). */
+export function legendValues(
+  spec: ResolvedChartSpec,
+  x: number | string,
+  hidden: Set<string>,
+): Map<string, string> {
+  const values = new Map<string, string[]>()
+  const legendIds = new Set(
+    spec.series.filter((s) => s.legend && !hidden.has(s.name)).map((s) => s.id),
+  )
+  for (const row of tooltipRows(spec, x)) {
+    if (!legendIds.has(row.seriesId)) continue
+    values.set(row.name, [...(values.get(row.name) ?? []), row.text])
+  }
+  return new Map([...values].map(([name, texts]) => [name, texts.join(' · ')]))
+}
+
 /**
- * Leyenda HTML común (la misma en Chart.js y ApexCharts, y para todos los
- * paneles a la vez): un elemento por nombre de serie; pulsar uno oculta o
- * muestra todas las series con ese nombre, en todos los paneles.
+ * Leyenda HTML común a los tres motores (y a todos los paneles a la vez):
+ * un elemento por nombre de serie; pulsar uno oculta o muestra todas las
+ * series con ese nombre, en todos los paneles.
+ *
+ * Devuelve una función para mostrar los valores de las series en el
+ * instante `x` (con `legendValues`), o borrarlos con `null`.
  */
 export function renderLegend(
   element: HTMLElement,
@@ -150,7 +171,7 @@ export function renderLegend(
   spec: ResolvedChartSpec,
   hidden: Set<string>,
   onToggle: (name: string) => void,
-): void {
+): (x: number | string | null) => void {
   const position = spec.legend ? spec.legend.position : null
   const vertical = position === 'left' || position === 'right'
   Object.assign(element.style, {
@@ -166,23 +187,26 @@ export function renderLegend(
   legend.replaceChildren()
   if (!position) {
     legend.style.display = 'none'
-    return
+    return () => {}
   }
+  const withValues = spec.legend !== false && spec.legend.values
   Object.assign(legend.style, {
     display: 'flex',
     flexDirection: vertical ? 'column' : 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: vertical ? 'flex-start' : 'center',
-    gap: vertical ? '4px' : '4px 14px',
+    gap: vertical ? '4px' : '4px 16px',
     padding: '4px 8px',
     flex: 'none',
-    width: vertical ? '120px' : 'auto',
+    width: vertical ? (withValues ? '170px' : '120px') : 'auto',
     fontFamily: spec.theme.fontFamily,
     fontSize: `${spec.theme.fontSize}px`,
     color: spec.theme.text,
   } satisfies Partial<CSSStyleDeclaration>)
 
+  const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+  const valueSpans = new Map<string, HTMLElement>()
   const seen = new Set<string>()
   for (const series of spec.series) {
     if (!series.legend || seen.has(series.name)) continue
@@ -190,7 +214,7 @@ export function renderLegend(
     const item = document.createElement('button')
     item.type = 'button'
     item.setAttribute('aria-pressed', String(!hidden.has(series.name)))
-    item.innerHTML = `${legendMarker(series)}<span>${series.name.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}</span>`
+    item.innerHTML = `${legendMarker(series)}<span>${escape(series.name)}</span>`
     Object.assign(item.style, {
       display: 'inline-flex',
       alignItems: 'center',
@@ -203,7 +227,50 @@ export function renderLegend(
       cursor: 'pointer',
       opacity: hidden.has(series.name) ? '0.4' : '1',
     } satisfies Partial<CSSStyleDeclaration>)
+    if (withValues) {
+      const value = document.createElement('span')
+      Object.assign(value.style, {
+        fontWeight: '600',
+        fontVariantNumeric: 'tabular-nums',
+        minWidth: '4ch',
+      } satisfies Partial<CSSStyleDeclaration>)
+      item.appendChild(value)
+      valueSpans.set(series.name, value)
+    }
     item.addEventListener('click', () => onToggle(series.name))
     legend.appendChild(item)
+  }
+
+  return (x) => {
+    if (!withValues) return
+    const values = x === null ? new Map<string, string>() : legendValues(spec, x, hidden)
+    for (const [name, span] of valueSpans) span.textContent = values.get(name) ?? ''
+  }
+}
+
+/**
+ * Cruceta vertical HTML sobre todos los paneles, para los motores que no la
+ * dibujan sin su tooltip (ApexCharts, con los valores en la leyenda).
+ */
+export function createCrosshair(
+  host: HTMLElement,
+  spec: ResolvedChartSpec,
+): (left: number | null) => void {
+  const line = document.createElement('div')
+  line.dataset.asCrosshair = ''
+  Object.assign(line.style, {
+    position: 'absolute',
+    top: '0',
+    bottom: '0',
+    width: '1px',
+    background: spec.theme.axis,
+    pointerEvents: 'none',
+    display: 'none',
+    zIndex: '1',
+  } satisfies Partial<CSSStyleDeclaration>)
+  host.appendChild(line)
+  return (left) => {
+    line.style.display = left === null ? 'none' : 'block'
+    if (left !== null) line.style.left = `${left}px`
   }
 }

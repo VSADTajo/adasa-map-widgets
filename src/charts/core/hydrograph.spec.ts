@@ -131,3 +131,36 @@ describe('buildHydrograph', () => {
     })
   })
 })
+
+describe('buildHydrograph · disposición de la precipitación', () => {
+  it('overlay: un solo panel, con la precipitación en un eje a la derecha', () => {
+    const chart = build({ precipitationLayout: 'overlay' })
+    expect(chart.panels).toEqual([{ id: 'discharge' }])
+    expect(chart.yAxes![0]).toMatchObject({
+      id: 'precipitation',
+      panel: 'discharge',
+      position: 'right',
+      inverse: true,
+      grid: false,
+    })
+  })
+
+  it('overlay: estira el eje de lluvia para que las barras ocupen ~el 40 % superior', () => {
+    // Máximo de lluvia en los datos: 4 mm → 4 × 2,5 = 10.
+    expect(build({ precipitationLayout: 'overlay' }).yAxes![0]!.max).toBe(10)
+  })
+
+  it('precipitationInverted: false hace que las barras crezcan desde abajo', () => {
+    expect(build({ precipitationInverted: false }).yAxes![0]!.inverse).toBe(false)
+    expect(
+      build({ precipitationLayout: 'overlay', precipitationInverted: false }).yAxes![0]!.inverse,
+    ).toBe(false)
+  })
+
+  it('pasa la posición de la leyenda y los valores en la leyenda', () => {
+    expect(build({ legend: 'bottom', legendValues: true })).toMatchObject({
+      legend: 'bottom',
+      legendValues: true,
+    })
+  })
+})

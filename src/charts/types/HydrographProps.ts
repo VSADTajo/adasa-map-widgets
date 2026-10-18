@@ -45,6 +45,7 @@ export interface HydrographProps extends Pick<
   ChartProps,
   | 'tooltip'
   | 'legend'
+  | 'legendValues'
   | 'zoom'
   | 'height'
   | 'animation'
@@ -63,7 +64,17 @@ export interface HydrographProps extends Pick<
   magnitude?: 'flow' | 'level'
   /** Precipitación: panel superior, en barras con el eje invertido. Sin ella, un solo panel. */
   precipitation?: HydroVariable
-  /** Alto relativo del panel de precipitación (0–1). @default 0.35 */
+  /**
+   * Dónde va la precipitación:
+   * - `'panel'`: en su propio panel, encima del caudal, con el eje de tiempo compartido (alineados).
+   * - `'overlay'`: en el mismo gráfico que el caudal, con su eje a la derecha
+   *   (el hietograma clásico colgando desde arriba).
+   * @default 'panel'
+   */
+  precipitationLayout?: 'panel' | 'overlay'
+  /** Barras de precipitación colgando desde arriba (eje invertido). `false`: creciendo desde abajo. @default true */
+  precipitationInverted?: boolean
+  /** Alto relativo del panel de precipitación (0–1), con `precipitationLayout: 'panel'`. @default 0.35 */
   precipitationWeight?: number
   /** Umbrales de aviso del punto de control, sobre el eje de caudal/nivel. */
   thresholds?: HydroThreshold[]

@@ -142,12 +142,27 @@ describe('toApexOptions', () => {
   it('el umbral y "Ahora" son anotaciones; la previsión, discontinua', () => {
     expect(options[1].annotations.yaxis[0]).toMatchObject({ y: 25, borderColor: '#strong-rojo' })
     expect(options.map((o) => o.annotations.xaxis[0].x)).toEqual([T0.getTime(), T0.getTime()])
-    const dashed = options[1].series.findIndex((s: Any) => s.name === 'EPS' && s.type === 'line')
+    const dashed = options[1].series.findIndex((s: Any) => s.name === 'discharge-eps')
     expect(options[1].stroke.dashArray[dashed]).toBeGreaterThan(0)
   })
 
   it('amplía el eje hasta el umbral redondeando a un valor "bonito"', () => {
     expect(options[1].yaxis[0].max).toBe(30)
+  })
+
+  it('un eje por serie (Apex asigna por posición): visible solo el primero de cada eje, misma escala', () => {
+    const panel = options[1]
+    expect(panel.yaxis).toHaveLength(panel.series.length)
+    expect(panel.yaxis.map((y: Any) => y.seriesName)).toEqual(panel.series.map((s: Any) => s.name))
+    expect(panel.yaxis.filter((y: Any) => y.show)).toHaveLength(1)
+    expect(new Set(panel.yaxis.map((y: Any) => y.max)).size).toBe(1)
+  })
+
+  it('usa el id como nombre interno: "Observado" aparece en dos paneles sin confundirse', () => {
+    const names = options.flatMap((o) => o.series.map((s: Any) => s.name))
+    expect(names).toContain('precipitation-observed')
+    expect(names).toContain('discharge-observed')
+    expect(new Set(names).size).toBe(names.length)
   })
 })
 

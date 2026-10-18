@@ -33,6 +33,7 @@ props de ASChart ──resolveSpec()──▶ ResolvedChartSpec ──toEChartsO
 - `resolveSpec` decide **todo lo común**: colores (tokens), posición de los ejes, formatos (es-ES por defecto), rango X compartido, valores que cada eje debe incluir (umbrales), "ahora"…
 - Cada motor solo **traduce** la especificación con una función pura, testeada sin navegador (`engines.spec.ts` comprueba que los tres producen lo mismo).
 - El tooltip se construye desde la especificación (`core/tooltip.ts`), así que muestra las mismas filas en los tres motores.
+- La leyenda es HTML y común a los tres (`engines/panels.ts`): misma apariencia, misma posición (`legend="top|bottom|left|right"`), un clic oculta la serie en todos los paneles y, con `legendValues`, muestra los valores bajo el cursor.
 - Componentes de dominio como `ASHydrographChart` son configuración de `ASChart` (`buildHydrograph`), así que funcionan con los tres motores sin código propio.
 
 ## Diferencias entre motores
@@ -43,7 +44,7 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | ------------------ | ------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------ |
 | Varios paneles     | Un lienzo con varios `grid`                 | Un lienzo por panel, alineados y con la cruceta sincronizada      | Un gráfico por panel, sincronizados con `chart.group`        |
 | Tooltip compartido | Uno, con las series de todos los paneles    | Uno (HTML propio), con las series de todos los paneles            | Uno por panel, con las series de ese panel                   |
-| Leyenda            | Nativa                                      | HTML común a todos los paneles                                    | HTML común a todos los paneles                               |
+| Leyenda            | HTML común (igual en los tres)              | HTML común (igual en los tres)                                    | HTML común (igual en los tres)                               |
 | Zoom               | Rueda, arrastre y barra (`zoom.slider`)     | Rueda / pellizco, Mayús + arrastre para desplazar y botón "Restablecer zoom"; **sin barra** | Selección con el ratón y barra de herramientas; **sin barra de zoom** |
 | `x-click`          | Instante exacto bajo el cursor              | Instante exacto bajo el cursor                                    | Calculado a partir de la posición del ratón                  |
 | Exportar PNG       | Nativo                                      | Se componen los paneles en una imagen                             | Se componen los paneles en una imagen                        |

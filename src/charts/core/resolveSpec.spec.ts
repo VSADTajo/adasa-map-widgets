@@ -144,7 +144,28 @@ describe('resolveSpec', () => {
   describe('interacción', () => {
     it('leyenda por defecto solo con 2 o más series', () => {
       expect(resolve({ series: [line('a')] }).legend).toBe(false)
-      expect(resolve({ series: [line('a'), line('b')] }).legend).toEqual({ position: 'top' })
+      expect(resolve({ series: [line('a'), line('b')] }).legend).toEqual({
+        position: 'top',
+        values: false,
+      })
+    })
+
+    it('acepta la posición de la leyenda directamente', () => {
+      expect(resolve({ series: [line('a'), line('b')], legend: 'bottom' }).legend).toEqual({
+        position: 'bottom',
+        values: false,
+      })
+      expect(resolve({ series: [line('a')], legend: { position: 'right' } }).legend).toMatchObject({
+        position: 'right',
+      })
+      expect(resolve({ series: [line('a'), line('b')], legend: false }).legend).toBe(false)
+    })
+
+    it('con valores en la leyenda, la muestra aunque haya una sola serie', () => {
+      expect(resolve({ series: [line('a')], legendValues: true }).legend).toEqual({
+        position: 'top',
+        values: true,
+      })
     })
 
     it('tooltip compartido por defecto, desactivable', () => {

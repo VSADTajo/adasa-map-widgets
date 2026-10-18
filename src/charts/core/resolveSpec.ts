@@ -33,7 +33,7 @@ export interface ResolvedChartSpec {
   series: ResolvedSeries[]
   annotations: { x: ResolvedXAnnotation[]; y: ResolvedYAnnotation[] }
   tooltip: false | { mode: 'shared' | 'item' }
-  legend: false | { position: 'top' | 'bottom' | 'left' | 'right' }
+  legend: false | { position: 'top' | 'bottom' | 'left' | 'right'; values: boolean }
   zoom: false | { slider: boolean }
   animation: boolean
   /** Ejes por lado del panel que más tiene: los motores con un lienzo por panel reservan ese hueco en todos para alinear el eje X. */
@@ -390,7 +390,8 @@ export function resolveSpec(
   }
 
   const legendSeries = series.filter((s) => s.legend)
-  const legendOption = props.legend ?? legendSeries.length >= 2
+  // Con valores en la leyenda, la leyenda se muestra aunque haya una sola serie.
+  const legendOption = props.legend ?? (legendSeries.length >= 2 || Boolean(props.legendValues))
   const formatX = (x: number | string, format: Parameters<SpecLocale['formatDate']>[1]) =>
     xType === 'time' && typeof x === 'number'
       ? locale.formatDate(x, format)
@@ -419,7 +420,13 @@ export function resolveSpec(
     legend:
       legendOption === false
         ? false
-        : { position: (typeof legendOption === 'object' && legendOption.position) || 'top' },
+        : {
+            position:
+              typeof legendOption === 'string'
+                ? legendOption
+                : (typeof legendOption === 'object' && legendOption.position) || 'top',
+            values: props.legendValues ?? false,
+          },
     zoom:
       props.zoom === undefined || props.zoom === false
         ? false

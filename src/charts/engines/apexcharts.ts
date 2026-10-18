@@ -3,7 +3,7 @@ import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
 import { niceRound, Y_AXIS_WIDTH, type ChartEngine } from './types'
-import { createFrame, panelContainers, panelHeights, renderLegend } from './panels'
+import { createCrosshair, createFrame, panelContainers, panelHeights, renderLegend } from './panels'
 
 type Options = Record<string, unknown>
 
@@ -50,10 +50,12 @@ export function toApexOptions(
       axes.filter((axis) => axis.position === side).length
     const hasRange = panelSeries.some((s) => s.type === 'range')
 
+    // Apex empareja series y ejes por nombre: se usa el id (único); los nombres
+    // visibles los pintan la leyenda HTML y el tooltip propios.
     const series = panelSeries.map((s) =>
       s.type === 'range'
         ? {
-            name: s.name,
+            name: s.id,
             type: 'rangeArea',
             data: s.ranges.map(([x, low, high]) => ({
               x,
@@ -61,7 +63,7 @@ export function toApexOptions(
             })),
           }
         : {
-            name: s.name,
+            name: s.id,
             type:
               s.type === 'bar'
                 ? 'bar'
@@ -76,10 +78,10 @@ export function toApexOptions(
 
     // Apex no tiene "suggestedMax": con umbrales, el eje se amplía a mano hasta
     // incluirlos, redondeando a un valor "bonito" (como en ECharts).
-    const extent = (axisId: string, edge: 'min' | 'max') => {
+    // Escala de cada eje, explícita y "bonita": la comparten todas las series del
+    // eje (ver más abajo), así que tiene que ser la misma en todas sus entradas.
+    const extent = (axisId: string): { min?: number; max?: number } => {
       const axis = axes.find((a) => a.id === axisId)!
-      if (edge === 'min' && axis.beginAtZero) return 0
-      if (!axis.include.length) return undefined
       const values = panelSeries
         .filter((s) => s.yAxis === axisId)
         .flatMap((s) =>
@@ -87,39 +89,55 @@ export function toApexOptions(
         )
         .filter((v): v is number => v !== null)
         .concat(axis.include)
-      return edge === 'max'
-        ? niceRound(Math.max(...values), 'up')
-        : niceRound(Math.min(...values), 'down')
+      if (axis.beginAtZero) values.push(0)
+      if (!values.length) return {}
+      return {
+        min: axis.min ?? niceRound(Math.min(...values), 'down'),
+        max: axis.max ?? niceRound(Math.max(...values), 'up'),
+      }
     }
 
-    const yaxis = axes.map((axis) => ({
-      seriesName: panelSeries.filter((s) => s.yAxis === axis.id).map((s) => s.name),
-      opposite: axis.position === 'right',
-      reversed: axis.inverse,
-      logarithmic: axis.scale === 'log',
-      min: axis.min ?? extent(axis.id, 'min'),
-      max: axis.max ?? extent(axis.id, 'max'),
-      forceNiceScale: true,
-      // Solo con el rango fijado a mano (umbrales); si no, Apex elige las marcas.
-      tickAmount: axis.include.length ? 5 : undefined,
-      title: {
-        text: axis.title,
-        style: { color: theme.textMuted, fontFamily: theme.fontFamily, fontWeight: 400 },
-      },
-      labels: {
-        // Ancho mínimo común para alinear paneles (sin máximo: Apex recorta el eje izquierdo si hay uno a la derecha).
-        minWidth: Y_AXIS_WIDTH - 20,
-        style: labelStyle,
-        formatter: (value: number) => (typeof value === 'number' ? axis.formatTick(value) : value),
-      },
-      axisBorder: { show: true, color: theme.axis },
-      axisTicks: { show: true, color: theme.axis },
-    }))
-    const axisIndexInPanel = (axisId: string) =>
-      Math.max(
-        axes.findIndex((a) => a.id === axisId),
-        0,
-      )
+    /**
+     * Apex asigna los ejes Y por posición: el eje i es el de la serie i (con
+     * `seriesName` agrupando, mezcla ejes cuando hay varios en un mismo
+     * gráfico). Se crea una entrada por serie; solo la primera de cada eje se
+     * ve, y todas comparten escala.
+     */
+    const firstSeriesOfAxis = new Map<string, number>()
+    panelSeries.forEach((s, index) => {
+      if (!firstSeriesOfAxis.has(s.yAxis)) firstSeriesOfAxis.set(s.yAxis, index)
+    })
+    const yaxis = panelSeries.map((s, index) => {
+      const axis = axes.find((a) => a.id === s.yAxis)!
+      const visible = firstSeriesOfAxis.get(s.yAxis) === index
+      return {
+        seriesName: s.id,
+        show: visible,
+        opposite: axis.position === 'right',
+        reversed: axis.inverse,
+        logarithmic: axis.scale === 'log',
+        ...extent(axis.id),
+        forceNiceScale: false,
+        // Una marca cada ~45 px como mucho: en paneles bajos, 5 marcas se amontonan.
+        tickAmount: Math.max(2, Math.min(5, Math.floor((heights[panel.index] ?? 200) / 45))),
+        title: {
+          text: visible ? axis.title : undefined,
+          style: { color: theme.textMuted, fontFamily: theme.fontFamily, fontWeight: 400 },
+        },
+        labels: {
+          show: visible,
+          // Ancho mínimo común para alinear paneles (sin máximo: Apex recorta el eje izquierdo si hay uno a la derecha).
+          minWidth: visible ? Y_AXIS_WIDTH - 20 : 0,
+          style: labelStyle,
+          formatter: (value: number) =>
+            typeof value === 'number' ? axis.formatTick(value) : value,
+        },
+        axisBorder: { show: visible, color: theme.axis },
+        axisTicks: { show: visible, color: theme.axis },
+      }
+    })
+    /** Índice en `yaxis` del eje `axisId` (la entrada de su primera serie). */
+    const axisIndexInPanel = (axisId: string) => firstSeriesOfAxis.get(axisId) ?? 0
 
     const xAnnotations = spec.annotations.x.map((a) => ({
       x: a.kind === 'range' ? a.from : a.value,
@@ -329,19 +347,25 @@ export const apexchartsEngine: ChartEngine = {
     const hidden = new Set<string>()
     const frame = createFrame(element)
 
+    /** Oculta o muestra todas las series con el nombre visible `name` (en Apex se llaman por su id). */
     function setVisibility(name: string, visible: boolean): void {
+      const ids = spec.series.filter((s) => s.name === name).map((s) => s.id)
       for (const chart of charts) {
         const names =
           (chart as unknown as { w: { globals: { seriesNames: string[] } } }).w.globals
             .seriesNames ?? []
-        if (!names.includes(name)) continue
-        if (visible) chart.showSeries(name)
-        else chart.hideSeries(name)
+        for (const id of ids.filter((id) => names.includes(id))) {
+          if (visible) chart.showSeries(id)
+          else chart.hideSeries(id)
+        }
       }
     }
 
+    let setLegendValues: (x: number | string | null) => void = () => {}
+    let setCrosshair: (left: number | null) => void = () => {}
+
     function drawLegend(): void {
-      renderLegend(element, frame.legend, spec, hidden, (name) => {
+      setLegendValues = renderLegend(element, frame.legend, spec, hidden, (name) => {
         const nowHidden = !hidden.has(name)
         if (nowHidden) hidden.add(name)
         else hidden.delete(name)
@@ -357,6 +381,12 @@ export const apexchartsEngine: ChartEngine = {
       drawLegend()
       const heights = panelHeights(spec, frame.host.clientHeight || 320, X_LABELS_SPACE)
       const containers = panelContainers(frame.host, heights)
+      // Sin tooltip, Apex no dibuja cruceta: se pone una HTML sobre todos los paneles.
+      frame.host.querySelectorAll('[data-as-crosshair]').forEach((node) => node.remove())
+      setCrosshair = () => {}
+      if (!spec.tooltip && spec.legend && spec.legend.values) {
+        setCrosshair = createCrosshair(frame.host, spec)
+      }
       const optionsList = toApexOptions(spec, heights, group)
       charts = optionsList.map((options, index) => {
         const container = containers[index]!
@@ -395,6 +425,27 @@ export const apexchartsEngine: ChartEngine = {
             const offset = event.clientX - box.left - translateX
             if (offset < 0 || offset > gridWidth || spec.xAxis.type === 'category') return
             handlers.onXClick(toChartX(Math.round(minX + (offset / gridWidth) * (maxX - minX))))
+          },
+          mouseMove: (
+            event: MouseEvent,
+            ctx: {
+              w: { globals: { minX: number; maxX: number; translateX: number; gridWidth: number } }
+            },
+          ) => {
+            if (!(spec.legend && spec.legend.values) || spec.xAxis.type === 'category') return
+            const { minX, maxX, translateX, gridWidth } = ctx.w.globals
+            const offset = event.clientX - host.getBoundingClientRect().left - translateX
+            if (offset < 0 || offset > gridWidth) {
+              setLegendValues(null)
+              setCrosshair(null)
+              return
+            }
+            setLegendValues(minX + (offset / gridWidth) * (maxX - minX))
+            setCrosshair(event.clientX - frame.host.getBoundingClientRect().left)
+          },
+          mouseLeave: () => {
+            setLegendValues(null)
+            setCrosshair(null)
           },
           zoomed: (_ctx: unknown, range: { xaxis: { min?: number; max?: number } }) => {
             if (range.xaxis.min === undefined || range.xaxis.max === undefined) return

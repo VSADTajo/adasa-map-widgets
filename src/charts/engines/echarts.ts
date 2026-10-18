@@ -2,13 +2,11 @@ import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
 import { layoutPanels, niceRound, Y_AXIS_WIDTH, type ChartEngine } from './types'
+import { createFrame, renderLegend } from './panels'
 
 type Option = Record<string, unknown>
 type EChartsInstance = import('echarts/core').ECharts
 
-const LEGEND_SPACE = 28
-/** Ancho reservado para una leyenda vertical (a izquierda o derecha). */
-const SIDE_LEGEND_SPACE = 120
 const X_LABELS_SPACE = 26
 const SLIDER_SPACE = 34
 const PANEL_GAP = 18
@@ -32,22 +30,13 @@ const ANNOTATION_PREFIX = '__annotations'
  */
 export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option {
   const { theme } = spec
-  const legendTop = spec.legend && spec.legend.position === 'top'
-  const legendBottom = spec.legend && spec.legend.position === 'bottom'
-  const top = EDGE + (legendTop ? LEGEND_SPACE : 0) + 10
-  const bottom =
-    EDGE +
-    X_LABELS_SPACE +
-    (spec.zoom && spec.zoom.slider ? SLIDER_SPACE : 0) +
-    (legendBottom ? LEGEND_SPACE : 0)
-  const sideLegend = spec.legend ? spec.legend.position : null
-  const left =
-    EDGE + spec.maxAxesPerSide.left * Y_AXIS_WIDTH + (sideLegend === 'left' ? SIDE_LEGEND_SPACE : 0)
+  // La leyenda es HTML y va fuera del lienzo (ver renderLegend): aquí solo
+  // se reserva el sitio de las etiquetas de los ejes, la barra de zoom y "Ahora".
+  const top = EDGE + 18
+  const bottom = EDGE + X_LABELS_SPACE + (spec.zoom && spec.zoom.slider ? SLIDER_SPACE : 0)
+  const left = EDGE + spec.maxAxesPerSide.left * Y_AXIS_WIDTH
   const right =
-    EDGE +
-    spec.maxAxesPerSide.right * Y_AXIS_WIDTH +
-    (spec.maxAxesPerSide.right ? 0 : 8) +
-    (sideLegend === 'right' ? SIDE_LEGEND_SPACE : 0)
+    EDGE + spec.maxAxesPerSide.right * Y_AXIS_WIDTH + (spec.maxAxesPerSide.right ? 0 : 8)
   const layouts = layoutPanels(
     spec.panels.map((panel) => panel.fraction),
     height - top - bottom,
@@ -81,7 +70,14 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
     axisLine: { lineStyle: { color: theme.axis } },
     axisTick: { show: panel.index === lastPanel, lineStyle: { color: theme.axis } },
     splitLine: { show: false },
-    axisPointer: { label: { show: false } },
+    // Cruceta vertical también sin tooltip (para los valores en la leyenda).
+    axisPointer: {
+      show: Boolean(spec.tooltip || (spec.legend && spec.legend.values)),
+      type: 'line',
+      triggerTooltip: Boolean(spec.tooltip),
+      label: { show: false },
+      lineStyle: { color: theme.axis },
+    },
   }))
 
   const yAxis = spec.yAxes.map((axis) => {
@@ -284,18 +280,13 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
     yAxis,
     series,
     axisPointer: { link: [{ xAxisIndex: 'all' }], lineStyle: { color: theme.axis } },
-    legend: spec.legend
-      ? {
-          show: true,
-          type: 'scroll',
-          ...LEGEND_PLACEMENT[spec.legend.position],
-          // Un nombre puede repetirse en varios paneles (p. ej. "Observado"): una sola entrada.
-          data: [...new Set(spec.series.filter((s) => s.legend).map((s) => s.name))],
-          textStyle: { color: theme.text, fontFamily: theme.fontFamily },
-          itemWidth: 16,
-          itemHeight: 8,
-        }
-      : { show: false },
+    // Leyenda invisible: la que se ve es la HTML común a los tres motores; esta
+    // solo existe para poder ocultar/mostrar series por nombre (legendSelect).
+    legend: {
+      show: false,
+      // Un nombre puede repetirse en varios paneles (p. ej. "Observado"): una sola entrada.
+      data: [...new Set(spec.series.filter((s) => s.legend).map((s) => s.name))],
+    },
     tooltip: spec.tooltip
       ? {
           show: true,
@@ -327,7 +318,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
                   type: 'slider',
                   xAxisIndex: allXAxes,
                   filterMode: 'none',
-                  bottom: EDGE + (legendBottom ? LEGEND_SPACE : 0),
+                  bottom: EDGE,
                   height: 18,
                   left,
                   right,
@@ -350,13 +341,6 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
       : { show: false },
   }
   return option
-}
-
-const LEGEND_PLACEMENT: Record<'top' | 'bottom' | 'left' | 'right', Option> = {
-  top: { top: 4, left: 'center' },
-  bottom: { bottom: 4, left: 'center' },
-  left: { left: 4, top: 'middle', orient: 'vertical' },
-  right: { right: 4, top: 'middle', orient: 'vertical' },
 }
 
 function annotationSeries(
@@ -413,8 +397,25 @@ export const echartsEngine: ChartEngine = {
     ])
 
     let spec = initialSpec
-    const chart: EChartsInstance = core.init(element, null, { renderer: 'canvas' })
+    /** Nombres de serie ocultos desde la leyenda (se conservan al redibujar). */
+    const hidden = new Set<string>()
+    const frame = createFrame(element)
+    let setLegendValues: (x: number | string | null) => void = () => {}
+    const chart: EChartsInstance = core.init(frame.host, null, { renderer: 'canvas' })
+
+    function drawLegend(): void {
+      setLegendValues = renderLegend(element, frame.legend, spec, hidden, (name) => {
+        const nowHidden = !hidden.has(name)
+        if (nowHidden) hidden.add(name)
+        else hidden.delete(name)
+        chart.dispatchAction({ type: nowHidden ? 'legendUnSelect' : 'legendSelect', name })
+        drawLegend()
+      })
+    }
+
     const render = () => {
+      drawLegend()
+      chart.resize()
       const option = toEChartsOption(spec, chart.getHeight())
       chart.setOption(
         (nativeOptions ? nativeOptions(option, 'echarts') : option) as Parameters<
@@ -422,8 +423,15 @@ export const echartsEngine: ChartEngine = {
         >[0],
         { notMerge: true },
       )
+      hidden.forEach((name) => chart.dispatchAction({ type: 'legendUnSelect', name }))
     }
     render()
+
+    chart.on('updateAxisPointer', (event) => {
+      const info = (event as { axesInfo?: { value: number | string }[] }).axesInfo?.[0]
+      setLegendValues(info ? info.value : null)
+    })
+    chart.getZr().on('globalout', () => setLegendValues(null))
 
     chart.on('click', (params) => {
       const id = String(params.seriesId ?? '')
@@ -470,7 +478,10 @@ export const echartsEngine: ChartEngine = {
         chart.resize()
         render()
       },
-      dispose: () => chart.dispose(),
+      dispose() {
+        chart.dispose()
+        element.replaceChildren()
+      },
       exportImage: async () =>
         chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: spec.theme.surface }),
     }

@@ -256,7 +256,8 @@ export function toChartJsConfigs(spec: ResolvedChartSpec): Config[] {
         interaction:
           spec.tooltip && spec.tooltip.mode === 'item'
             ? { mode: 'nearest', intersect: true }
-            : { mode: 'index', intersect: false, axis: 'x' },
+            : // Por instante (no por posición en el array): las series pueden tener distinto muestreo.
+              { mode: 'x', intersect: false },
         layout: {
           padding: {
             left: (spec.maxAxesPerSide.left - sideCount('left')) * Y_AXIS_WIDTH + 4,
@@ -326,7 +327,7 @@ export const chartjsEngine: ChartEngine = {
     const crosshair = {
       id: 'asCrosshair',
       afterDatasetsDraw(chart: ChartInstance) {
-        if (hover.x === null || !spec.tooltip) return
+        if (hover.x === null || !tracksHover()) return
         const scale = chart.scales.x!
         const px = scale.getPixelForValue(hover.x as number)
         const area = chart.chartArea
@@ -364,8 +365,12 @@ export const chartjsEngine: ChartEngine = {
       }
     }
 
+    let setLegendValues: (x: number | string | null) => void = () => {}
+    /** ¿Hay que seguir el cursor? (tooltip o valores en la leyenda). */
+    const tracksHover = () => Boolean(spec.tooltip || (spec.legend && spec.legend.values))
+
     function drawLegend(): void {
-      renderLegend(element, frame.legend, spec, hidden, (name) => {
+      setLegendValues = renderLegend(element, frame.legend, spec, hidden, (name) => {
         if (hidden.has(name)) hidden.delete(name)
         else hidden.add(name)
         drawLegend()
@@ -392,7 +397,7 @@ export const chartjsEngine: ChartEngine = {
           _elements: unknown,
           chart: ChartInstance,
         ) => {
-          if (!spec.tooltip || event.x === null || event.y === null) return
+          if (!tracksHover() || event.x === null || event.y === null) return
           const area = chart.chartArea
           const inside =
             event.x >= area.left &&
@@ -401,7 +406,8 @@ export const chartjsEngine: ChartEngine = {
             event.y <= area.bottom
           hover.x = inside ? xValueAt(chart, event.x) : null
           charts.forEach((c) => c.draw())
-          if (hover.x === null) {
+          setLegendValues(hover.x)
+          if (hover.x === null || !spec.tooltip) {
             tooltip.style.display = 'none'
             return
           }
@@ -469,6 +475,7 @@ export const chartjsEngine: ChartEngine = {
         }
         canvas.addEventListener('mouseleave', () => {
           hover.x = null
+          setLegendValues(null)
           tooltip.style.display = 'none'
           charts.forEach((c) => c.draw())
         })

@@ -149,9 +149,12 @@ export interface ChartTooltipConfig {
   mode?: 'shared' | 'item'
 }
 
+/** Lado de la gráfica donde va la leyenda. */
+export type ChartLegendPosition = 'top' | 'bottom' | 'left' | 'right'
+
 export interface ChartLegendConfig {
   /** @default 'top' */
-  position?: 'top' | 'bottom' | 'left' | 'right'
+  position?: ChartLegendPosition
 }
 
 export interface ChartZoomConfig {
@@ -179,8 +182,17 @@ export interface ChartProps {
   now?: Date | boolean
   /** Tooltip al pasar el cursor. @default true (modo `'shared'`) */
   tooltip?: boolean | ChartTooltipConfig
-  /** Leyenda. @default true si hay 2 o más series en la leyenda */
-  legend?: boolean | ChartLegendConfig
+  /**
+   * Leyenda: `false` la oculta; una posición (`'top'`, `'bottom'`, `'left'`,
+   * `'right'`) la coloca. @default `'top'` si hay 2 o más series en la leyenda
+   */
+  legend?: boolean | ChartLegendPosition | ChartLegendConfig
+  /**
+   * Muestra en la leyenda el valor de cada serie en el instante bajo el
+   * cursor. Combínalo con `:tooltip="false"` para ver los valores en la
+   * leyenda en vez de en el tooltip. @default false
+   */
+  legendValues?: boolean
   /** Zoom horizontal (rueda, arrastre y barra). @default false */
   zoom?: boolean | ChartZoomConfig
   /** Alto total (px, o CSS si es string). @default 320 */
