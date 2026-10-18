@@ -105,7 +105,10 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 - **Registro único**: `src/playground/registry.ts` (`RegistryEntry`), con `id`, `name`, `category`, `description`, `propsSchema` (props editables, tipos en `propTypes.ts`) y `events` (`EventDoc`). Si hace falta, también `staticProps` (datos complejos de ejemplo) y `bindings` (listeners que sincronizan el estado y registran en el log de eventos).
 - **Compositor sobre mapa**: si el widget se puede colocar sobre el mapa, añade `composer: { label, omitProps?, staticProps? }` a su entrada. `utils/widgetRegistry.ts` se deriva de ahí: no lo edites a mano.
 - Usa `THEME_FIELD` (en `registry.ts`) para la prop `theme`. Su opción vacía significa "sin prop": el widget hereda el tema global del playground.
-- Una categoría nueva se añade a `ComponentDoc['category']` en `propTypes.ts` y al Sidebar.
+- **Categorías**: están en `COMPONENT_CATEGORIES` (`propTypes.ts`), una por dominio: `mapping`, `controls`, `layers`, `charts`, `tables`, `detail`, `layout` y `forms`. Cada una tiene su título y su tipo de vista previa. El Sidebar las lista todas; las vacías muestran "Próximamente".
+  - `preview: 'map'`: escenario de los widgets de mapa.
+  - `preview: 'canvas'`: lienzo neutro a todo el ancho, redimensionable y con presets Móvil/Tableta/Escritorio, para comprobar el responsive de gráficas, tablas, etc.
+- **Tema e idioma del playground** son globales, en la barra superior: `provideTheme` y `provideLocale` en `App.vue`.
 - Los datos de ejemplo son sintéticos y autónomos (sin backend), en `src/playground/utils/`.
 
 ## Tests

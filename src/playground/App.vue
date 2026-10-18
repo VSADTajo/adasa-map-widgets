@@ -8,13 +8,15 @@ import EventLog, { type LogEntry } from './components/EventLog.vue'
 import WidgetPlayground from './components/WidgetPlayground.vue'
 import TokensPage from './components/TokensPage.vue'
 import { registry, getEntry } from './registry'
-import { buildSnippet } from './propTypes'
+import { buildSnippet, getCategory } from './propTypes'
+import PreviewCanvas from './components/PreviewCanvas.vue'
 import { provideTheme } from '@/core/composables/useTheme'
 import { provideLocale, type LocaleCode } from '@/core/composables/useLocale'
 import type { ThemeMode } from '@/core/types/theme'
 
 const { mode, resolvedMode, setMode } = provideTheme('auto')
 const modes: ThemeMode[] = ['light', 'dark', 'auto']
+const MODE_LABELS: Record<ThemeMode, string> = { light: 'Claro', dark: 'Oscuro', auto: 'Auto' }
 
 // Idioma de los textos y formatos de todos los componentes del playground.
 const { locale, setLocale } = provideLocale('es')
@@ -32,6 +34,7 @@ watch(viewMode, (view) => history.replaceState(null, '', `#${view}`))
 
 const activeId = ref<string>(registry[0]!.id)
 const entry = computed(() => getEntry(activeId.value) ?? registry[0]!)
+const category = computed(() => getCategory(entry.value.category))
 
 /**
  * Valores de props del preview. Las claves declaradas en `propsSchema` son
@@ -115,6 +118,35 @@ const code = computed(
       >
         Tokens de diseño
       </button>
+      <!-- Tema e idioma globales: aplican a la galería, al compositor y a los tokens. -->
+      <div class="pg-app__settings">
+        <div class="pg-theme-toggle" role="group" aria-label="Idioma">
+          <button
+            v-for="lang in locales"
+            :key="lang"
+            type="button"
+            class="pg-theme-toggle__button"
+            :class="{ 'pg-theme-toggle__button--active': locale === lang }"
+            :aria-pressed="locale === lang"
+            @click="setLocale(lang)"
+          >
+            {{ lang.toUpperCase() }}
+          </button>
+        </div>
+        <div class="pg-theme-toggle" role="group" aria-label="Tema">
+          <button
+            v-for="m in modes"
+            :key="m"
+            type="button"
+            class="pg-theme-toggle__button"
+            :class="{ 'pg-theme-toggle__button--active': mode === m }"
+            :aria-pressed="mode === m"
+            @click="setMode(m)"
+          >
+            {{ MODE_LABELS[m] }}
+          </button>
+        </div>
+      </div>
     </nav>
 
     <div class="pg-app__body">
@@ -125,42 +157,25 @@ const code = computed(
           <header class="pg-main__header">
             <div>
               <h1 class="pg-main__title">{{ entry.name }}</h1>
-              <p class="pg-main__category">{{ entry.category }}</p>
-            </div>
-            <div class="pg-main__controls">
-              <div class="pg-theme-toggle" role="group" aria-label="Idioma">
-                <button
-                  v-for="lang in locales"
-                  :key="lang"
-                  type="button"
-                  class="pg-theme-toggle__button"
-                  :class="{ 'pg-theme-toggle__button--active': locale === lang }"
-                  :aria-pressed="locale === lang"
-                  @click="setLocale(lang)"
-                >
-                  {{ lang }}
-                </button>
-              </div>
-              <div class="pg-theme-toggle" role="group" aria-label="Tema">
-                <button
-                  v-for="m in modes"
-                  :key="m"
-                  type="button"
-                  class="pg-theme-toggle__button"
-                  :class="{ 'pg-theme-toggle__button--active': mode === m }"
-                  :aria-pressed="mode === m"
-                  @click="setMode(m)"
-                >
-                  {{ m }}
-                </button>
-              </div>
+              <p class="pg-main__category">{{ category.label }}</p>
             </div>
           </header>
 
           <div class="pg-main__grid">
-            <section class="pg-card pg-card--preview" aria-label="Vista previa en vivo">
+            <section
+              class="pg-card pg-card--preview"
+              :class="{ 'pg-card--wide': category.preview === 'canvas' }"
+              aria-label="Vista previa en vivo"
+            >
               <h2 class="pg-card__heading">Vista previa</h2>
-              <div class="pg-preview__stage">
+              <PreviewCanvas v-if="category.preview === 'canvas'" :key="activeId">
+                <component :is="entry.component" v-bind="previewProps">
+                  <template v-if="entry.slotDefault !== undefined" #default>{{
+                    slotContent
+                  }}</template>
+                </component>
+              </PreviewCanvas>
+              <div v-else class="pg-preview__stage">
                 <!--
                   `:key="activeId"` fuerza a Vue a desmontar/remontar en vez de
                   parchear en sitio: varias entradas (todas las de "as-map" y
@@ -267,9 +282,10 @@ const code = computed(
   overflow-y: auto;
 }
 
-.pg-main__controls {
+.pg-app__settings {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .pg-main__header {
@@ -400,5 +416,10 @@ const code = computed(
   .pg-card--preview {
     grid-row: auto;
   }
+}
+
+/* El lienzo de componentes no-mapa ocupa todo el ancho para poder probar escritorio. */
+.pg-card--wide {
+  grid-column: 1 / -1;
 }
 </style>
