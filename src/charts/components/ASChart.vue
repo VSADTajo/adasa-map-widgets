@@ -347,25 +347,31 @@ defineExpose(exposed)
     <p v-if="description" :id="`${id}-description`" class="as-chart__sr">{{ description }}</p>
     <p :id="`${id}-keys`" class="as-chart__sr">{{ t('chart.keyboardHelp') }}</p>
     <div class="as-chart__sr" aria-live="polite" aria-atomic="true">{{ announcement }}</div>
-    <table v-if="table && !message" class="as-chart__sr">
-      <caption>
-        {{
-          table.caption
-        }}
-        <template v-if="table.truncated"> {{ table.truncated }}</template>
-      </caption>
-      <thead>
-        <tr>
-          <th v-for="header in table.headers" :key="header" scope="col">{{ header }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in table.rows" :key="row.key">
-          <th scope="row">{{ row.x }}</th>
-          <td v-for="(value, index) in row.values" :key="index">{{ value }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!--
+      La tabla va dentro de un div oculto: una <table> crece hasta su contenido
+      aunque se le dé 1 px y overflow: hidden, y desbordaría el contenedor.
+    -->
+    <div v-if="table && !message" class="as-chart__sr">
+      <table>
+        <caption>
+          {{
+            table.caption
+          }}
+          <template v-if="table.truncated"> {{ table.truncated }}</template>
+        </caption>
+        <thead>
+          <tr>
+            <th v-for="header in table.headers" :key="header" scope="col">{{ header }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in table.rows" :key="row.key">
+            <th scope="row">{{ row.x }}</th>
+            <td v-for="(value, index) in row.values" :key="index">{{ value }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

@@ -355,7 +355,7 @@ describe('ASChart · accesibilidad', () => {
   it('incluye una tabla de datos oculta para lectores de pantalla (salvo con dataTable: false)', async () => {
     const wrapper = mount(ASChart, { props: { series } })
     await flushPromises()
-    const table = wrapper.find('table.as-chart__sr')
+    const table = wrapper.find('.as-chart__sr table')
     expect(table.find('caption').text()).toBe('Datos: Gráfica de líneas: Caudal')
     expect(table.findAll('th[scope="col"]').map((th) => th.text())).toEqual([
       'Fecha y hora',
