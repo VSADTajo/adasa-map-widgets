@@ -1,6 +1,8 @@
 import type { ThemeTokens } from '@/core/types/theme'
 import type { LocaleContext } from '@/core/composables/useLocale'
 import { parseColor } from '@/core/utils/contrast'
+import { withAlpha } from './color'
+import { PATTERN_KINDS, patternColors, type ChartPatternKind } from './patterns'
 import type {
   ChartLibrary,
   ChartLineStyle,
@@ -105,6 +107,11 @@ export interface ResolvedSeries {
   yAxis: string
   yAxisIndex: number
   panelIndex: number
+  /**
+   * Trama del relleno (con `patterns`, solo en barras, áreas y bandas): tipo
+   * y colores de la tesela, comunes a los tres motores y a la leyenda.
+   */
+  pattern?: { kind: ChartPatternKind; background: string; stroke: string }
   /** `[x, y]` (o `[x, low, high]` en `range`), con X normalizado: ms en ejes temporales. */
   points: [number | string, number | null][]
   ranges: [number | string, number | null, number | null][]
@@ -143,15 +150,7 @@ export type SpecLocale = Pick<
 
 const MAX_Y_AXES = 4
 
-/** `color` con opacidad `alpha`, como `rgba()`. Acepta hex o `rgb()`. */
-export function withAlpha(color: string, alpha: number): string {
-  try {
-    const [r, g, b] = parseColor(color)
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`
-  } catch {
-    return color
-  }
-}
+export { withAlpha }
 
 /**
  * Sustituye las referencias a la paleta de los tokens por su color real en
@@ -282,6 +281,7 @@ export function resolveSpec(
   const fillOpacity = (opacity: number) =>
     darkSurface && opacity < 1 ? Math.min(opacity * 1.6, 1) : opacity
   let paletteIndex = 0
+  let patternIndex = 0
   const series: ResolvedSeries[] = props.series.map((input) => {
     const yAxisIndex = axisIndexOf(input.yAxis)
     const axis = yAxes[yAxisIndex]!
@@ -290,6 +290,15 @@ export function resolveSpec(
       : (tokens.data.categorical[paletteIndex++ % tokens.data.categorical.length] ??
         tokens.colorPrimary)
     const isRange = input.type === 'range'
+    const opacity = fillOpacity(input.opacity ?? DEFAULT_OPACITY[input.type])
+    const filled = input.type === 'bar' || input.type === 'area' || isRange
+    const pattern =
+      props.patterns && filled
+        ? {
+            kind: PATTERN_KINDS[patternIndex++ % PATTERN_KINDS.length]!,
+            ...patternColors(color, opacity, tokens.colorSurface),
+          }
+        : undefined
     return {
       id: input.id,
       name: input.name,
@@ -299,7 +308,8 @@ export function resolveSpec(
       lineWidth: input.lineWidth ?? 2,
       step: input.step ?? false,
       showPoints: input.showPoints ?? input.type === 'scatter',
-      opacity: fillOpacity(input.opacity ?? DEFAULT_OPACITY[input.type]),
+      opacity,
+      pattern,
       stack: input.stack,
       legend: input.legend ?? true,
       tooltip: input.tooltip ?? true,

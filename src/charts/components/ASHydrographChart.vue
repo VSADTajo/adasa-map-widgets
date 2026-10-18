@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
 import { buildHydrograph } from '@/charts/core/hydrograph'
-import type { ChartEmits } from '@/charts/types/chart'
+import type { ChartEmits, ChartExposed } from '@/charts/types/chart'
 import type { HydrographProps } from '@/charts/types/HydrographProps'
 import ASChart from './ASChart.vue'
 
@@ -41,6 +41,10 @@ const props = withDefaults(defineProps<HydrographProps>(), {
   seriesOverrides: undefined,
   yAxisOverrides: undefined,
   toolbar: undefined,
+  fileName: undefined,
+  patterns: false,
+  description: undefined,
+  dataTable: true,
   currentTime: undefined,
   syncGroup: undefined,
   tooltip: true,
@@ -63,14 +67,17 @@ const { t } = useLocale()
 const chartProps = computed(() => buildHydrograph(props, t))
 const chart = ref<InstanceType<typeof ASChart> | null>(null)
 
-defineExpose({
-  /** PNG del hidrograma como data URL. */
-  exportImage: () => chart.value?.exportImage() ?? Promise.resolve(''),
-  /** Objeto(s) nativo(s) del motor. */
-  getInstance: () => chart.value?.getInstance(),
-  /** Vuelve al rango de tiempo completo tras un zoom. */
+/** Los mismos métodos que `ASChart` (exportar imagen y datos, pantalla completa...). */
+const exposed: ChartExposed = {
+  exportImage: (format) => chart.value?.exportImage(format) ?? Promise.resolve(''),
+  exportData: (options) => chart.value?.exportData(options) ?? '',
+  download: (format) => chart.value?.download(format) ?? Promise.resolve(),
+  toggleFullscreen: () => chart.value?.toggleFullscreen() ?? Promise.resolve(),
   resetZoom: () => chart.value?.resetZoom(),
-})
+  getInstance: () => chart.value?.getInstance(),
+  refresh: () => chart.value?.refresh(),
+}
+defineExpose(exposed)
 </script>
 
 <template>

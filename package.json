@@ -51,7 +51,7 @@
   ],
   "scripts": {
     "dev": "vite --config vite.config.playground.ts",
-    "build": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts",
+    "build": "npm run type-check && vite build --config vite.config.ts",
     "check:entries": "node scripts/check-entries.mjs",
     "build:playground": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.playground.ts",
     "preview:playground": "vite preview --config vite.config.playground.ts --outDir dist-playground",
@@ -59,7 +59,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "type-check": "vue-tsc --noEmit -p tsconfig.json",
+    "type-check": "vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

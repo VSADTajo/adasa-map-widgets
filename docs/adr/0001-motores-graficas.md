@@ -48,7 +48,10 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | Zoom               | Rueda, arrastre y barra (`zoom.slider`)     | Rueda / pellizco, Mayús + arrastre para desplazar y botón "Restablecer zoom"; **sin barra** | Selección con el ratón y barra de herramientas; **sin barra de zoom** |
 | Barra de herramientas | Común (ASChart): Descargar PNG y Restablecer zoom | Común (ASChart) | Común (ASChart); el zoom por arrastre sigue activo sin el toolbar nativo |
 | `x-click`          | Instante exacto bajo el cursor              | Instante exacto bajo el cursor                                    | Calculado a partir de la posición del ratón                  |
-| Exportar PNG       | Nativo                                      | Se componen los paneles en una imagen                             | Se componen los paneles en una imagen                        |
+| Exportar PNG       | Nativo, con la leyenda HTML compuesta encima | Se componen los paneles, con la leyenda encima                   | Se componen los paneles, con la leyenda encima               |
+| Exportar SVG       | **Vectorial**: la misma opción se redibuja con el renderizador SVG (modo SSR) | **Raster**: Chart.js solo dibuja en canvas, así que el SVG contiene la imagen de cada panel | **Vectorial**: el SVG nativo de cada panel |
+| Tramas (`patterns`) | Tesela común como patrón de imagen         | Tesela común como `CanvasPattern`                                 | Tesela común como relleno `image`                             |
+| Cursor desde el teclado | Cruceta y tooltip                      | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda (el tooltip no se puede abrir desde código); el anuncio al lector de pantalla es el mismo |
 | `syncGroup` (cursor remoto) | Cruceta y tooltip                  | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda; **el tooltip no se puede abrir desde código** |
 | Alineación entre gráficas sueltas | Exacta (`containShape: false`) | Exacta                                                        | Con barras, Apex añade margen al eje X: queda algo desplazado respecto a una de líneas |
 

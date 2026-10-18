@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { provideLocale } from '@/core/composables/useLocale'
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
-import type { ChartProps } from '@/charts/types/chart'
+import type { ChartExposed, ChartProps } from '@/charts/types/chart'
 import ASChart from './ASChart.vue'
 
 /**
@@ -17,6 +17,9 @@ const engine = vi.hoisted(() => ({
   resetZoom: vi.fn(),
   showCursor: vi.fn(),
   zoomTo: vi.fn(),
+  exportImage: vi.fn(async (format: string) =>
+    format === 'svg' ? 'data:image/svg+xml,x' : 'data:image/png;base64,x',
+  ),
   fail: false,
 }))
 
@@ -37,7 +40,7 @@ vi.mock('@/charts/engines', () => ({
           resetZoom: engine.resetZoom,
           showCursor: engine.showCursor,
           zoomTo: engine.zoomTo,
-          exportImage: async () => 'data:image/png;base64,x',
+          exportImage: engine.exportImage,
         }
       },
     }
@@ -63,6 +66,7 @@ beforeEach(() => {
   engine.resetZoom.mockReset()
   engine.showCursor.mockReset()
   engine.zoomTo.mockReset()
+  engine.exportImage.mockClear()
   engine.fail = false
 })
 afterEach(() => vi.restoreAllMocks())
@@ -178,7 +182,9 @@ describe('ASChart', () => {
   })
 
   it('genera la etiqueta accesible con los nombres de las series', () => {
-    expect(mount(ASChart, { props: { series } }).attributes('aria-label')).toBe('Gráfica: Caudal')
+    expect(mount(ASChart, { props: { series } }).attributes('aria-label')).toBe(
+      'Gráfica de líneas: Caudal',
+    )
   })
 
   it('sin tema, no fuerza ninguno; con la prop, aplica su clase', () => {
@@ -203,28 +209,49 @@ describe('ASChart · barra de herramientas', () => {
   const tools = (wrapper: ReturnType<typeof mount>) =>
     wrapper.findAll('.as-chart__tool').map((button) => button.text())
 
+  /** Captura las descargas (el clic en el enlace temporal) sin navegar. */
+  function captureDownloads() {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    return () => click.mock.contexts.map((link) => link as HTMLAnchorElement)
+  }
+
+  /** Bytes de un Blob (el de jsdom no tiene `arrayBuffer()`). */
+  const readBlob = (blob: Blob) =>
+    new Promise<ArrayBuffer>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as ArrayBuffer)
+      reader.readAsArrayBuffer(blob)
+    })
+
   it('por defecto no hay barra; con zoom, solo "Restablecer zoom"', () => {
-    expect(mount(ASChart, { props: { series } }).find('[role="toolbar"]').exists()).toBe(false)
+    expect(mount(ASChart, { props: { series } }).find('.as-chart__toolbar').exists()).toBe(false)
     expect(tools(mount(ASChart, { props: { series, zoom: true } }))).toEqual(['Restablecer zoom'])
   })
 
-  it('toolbar muestra "Descargar PNG" (y "Restablecer zoom" si hay zoom)', () => {
-    expect(tools(mount(ASChart, { props: { series, toolbar: true } }))).toEqual(['Descargar PNG'])
-    expect(tools(mount(ASChart, { props: { series, toolbar: true, zoom: true } }))).toEqual([
-      'Restablecer zoom',
-      'Descargar PNG',
-    ])
+  it('toolbar muestra PNG, SVG y CSV (y "Restablecer zoom" con zoom), con nombres accesibles', () => {
+    const wrapper = mount(ASChart, { props: { series, toolbar: true, zoom: true } })
+    expect(tools(wrapper)).toEqual(['Restablecer zoom', 'PNG', 'SVG', 'CSV'])
+    expect(
+      wrapper.findAll('.as-chart__tool').map((button) => button.attributes('aria-label')),
+    ).toEqual([undefined, 'Descargar imagen PNG', 'Descargar imagen SVG', 'Descargar datos CSV'])
   })
 
   it('toolbar: false la oculta aunque haya zoom; un objeto elige las acciones', () => {
     expect(
       mount(ASChart, { props: { series, toolbar: false, zoom: true } })
-        .find('[role="toolbar"]')
+        .find('.as-chart__toolbar')
         .exists(),
     ).toBe(false)
-    expect(
-      tools(mount(ASChart, { props: { series, zoom: true, toolbar: { resetZoom: false } } })),
-    ).toEqual(['Descargar PNG'])
+    const custom = { resetZoom: false, svg: false }
+    expect(tools(mount(ASChart, { props: { series, zoom: true, toolbar: custom } }))).toEqual([
+      'PNG',
+      'CSV',
+    ])
+    // `download` (obsoleto) sigue controlando el PNG.
+    expect(tools(mount(ASChart, { props: { series, toolbar: { download: false } } }))).toEqual([
+      'SVG',
+      'CSV',
+    ])
   })
 
   it('"Restablecer zoom" llama al motor', async () => {
@@ -234,14 +261,155 @@ describe('ASChart · barra de herramientas', () => {
     expect(engine.resetZoom).toHaveBeenCalledOnce()
   })
 
-  it('"Descargar PNG" descarga la imagen del motor como grafica.png', async () => {
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  it('PNG y SVG descargan la imagen del motor como grafica.png / grafica.svg', async () => {
+    const downloads = captureDownloads()
     const wrapper = mount(ASChart, { props: { series, toolbar: true } })
     await flushPromises()
-    await wrapper.find('.as-chart__tool').trigger('click')
+    const [png, svg] = wrapper.findAll('.as-chart__tool')
+    await png!.trigger('click')
+    await svg!.trigger('click')
     await flushPromises()
-    const link = click.mock.contexts[0] as HTMLAnchorElement
-    expect(link.download).toBe('grafica.png')
-    expect(link.href).toBe('data:image/png;base64,x')
+    expect(engine.exportImage.mock.calls).toEqual([['png'], ['svg']])
+    expect(downloads().map((link) => [link.download, link.href])).toEqual([
+      ['grafica.png', 'data:image/png;base64,x'],
+      ['grafica.svg', 'data:image/svg+xml,x'],
+    ])
+  })
+
+  it('CSV descarga los datos con BOM (para Excel) y el nombre de `fileName`', async () => {
+    const downloads = captureDownloads()
+    const blobs: Blob[] = []
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob)
+      return 'blob:csv'
+    })
+    URL.revokeObjectURL = vi.fn()
+    const wrapper = mount(ASChart, { props: { series, toolbar: true, fileName: 'caudal' } })
+    await flushPromises()
+    await wrapper.findAll('.as-chart__tool')[2]!.trigger('click')
+    expect(downloads()[0]!.download).toBe('caudal.csv')
+    expect(blobs[0]!.type).toBe('text/csv;charset=utf-8')
+    const bytes = new Uint8Array(await readBlob(blobs[0]!))
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf])
+    expect(new TextDecoder().decode(bytes)).toContain('Fecha y hora;Caudal\r\n2026-10-18 00:00;1')
+  })
+
+  it('pantalla completa: solo si el navegador la permite; entra y sale', async () => {
+    let fullscreenElement: Element | null = null
+    Object.defineProperty(document, 'fullscreenEnabled', { value: true, configurable: true })
+    Object.defineProperty(document, 'fullscreenElement', {
+      get: () => fullscreenElement,
+      configurable: true,
+    })
+    const setFullscreen = (element: Element | null) => {
+      fullscreenElement = element
+      document.dispatchEvent(new Event('fullscreenchange'))
+    }
+    HTMLElement.prototype.requestFullscreen = vi.fn(async () => setFullscreen(wrapper.element))
+    document.exitFullscreen = vi.fn(async () => setFullscreen(null))
+    const wrapper = mount(ASChart, { props: { series, toolbar: true } })
+    await flushPromises()
+    const button = () => wrapper.findAll('.as-chart__tool').at(-1)!
+    expect(button().text()).toBe('Pantalla completa')
+    await button().trigger('click')
+    await flushPromises()
+    expect(wrapper.classes()).toContain('as-chart--fullscreen')
+    expect(button().text()).toBe('Salir de pantalla completa')
+    await button().trigger('click')
+    await flushPromises()
+    expect(wrapper.classes()).not.toContain('as-chart--fullscreen')
+    Object.defineProperty(document, 'fullscreenEnabled', { value: undefined, configurable: true })
+  })
+
+  it('expone exportImage y exportData para usarlos desde fuera', async () => {
+    const wrapper = mount(ASChart, { props: { series } })
+    await flushPromises()
+    const exposed = wrapper.vm as unknown as ChartExposed
+    expect(await exposed.exportImage('svg')).toBe('data:image/svg+xml,x')
+    expect(exposed.exportData({ separator: ',', decimalSeparator: '.' })).toBe(
+      'Fecha y hora,Caudal\r\n2026-10-18 00:00,1\r\n2026-10-18 01:00,2',
+    )
+  })
+})
+
+describe('ASChart · accesibilidad', () => {
+  const t0 = new Date(2026, 9, 18).getTime()
+  const t1 = new Date(2026, 9, 18, 1).getTime()
+
+  it('describe la gráfica (aria-describedby) con el rango y los valores extremos', async () => {
+    const wrapper = mount(ASChart, { props: { series } })
+    await flushPromises()
+    const description = wrapper.find(`#${wrapper.attributes('aria-describedby')}`)
+    expect(description.text()).toContain('Valores desde 18/10/2026, 00:00 hasta 18/10/2026, 01:00.')
+    expect(description.text()).toContain('Caudal: mínimo 1, máximo 2')
+  })
+
+  it('`description` sustituye a la generada', async () => {
+    const wrapper = mount(ASChart, { props: { series, description: 'Caudal en Aranjuez' } })
+    await flushPromises()
+    expect(wrapper.find(`#${wrapper.attributes('aria-describedby')}`).text()).toBe(
+      'Caudal en Aranjuez',
+    )
+  })
+
+  it('incluye una tabla de datos oculta para lectores de pantalla (salvo con dataTable: false)', async () => {
+    const wrapper = mount(ASChart, { props: { series } })
+    await flushPromises()
+    const table = wrapper.find('.as-chart__sr table')
+    expect(table.find('caption').text()).toBe('Datos: Gráfica de líneas: Caudal')
+    expect(table.findAll('th[scope="col"]').map((th) => th.text())).toEqual([
+      'Fecha y hora',
+      'Caudal',
+    ])
+    const cells = table
+      .findAll('tbody tr')
+      .map((tr) => tr.findAll('th, td').map((cell) => cell.text()))
+    expect(cells).toEqual([
+      ['18/10/2026, 00:00', '1'],
+      ['18/10/2026, 01:00', '2'],
+    ])
+    const without = mount(ASChart, { props: { series, dataTable: false } })
+    await flushPromises()
+    expect(without.find('table').exists()).toBe(false)
+  })
+
+  it('el área de datos se recorre con el teclado y anuncia los valores', async () => {
+    const wrapper = mount(ASChart, { props: { series } })
+    await flushPromises()
+    const area = wrapper.find('[role="application"]')
+    expect(area.attributes('tabindex')).toBe('0')
+    const live = wrapper.find('[aria-live="polite"]')
+
+    await area.trigger('keydown', { key: 'ArrowRight' })
+    expect(engine.showCursor).toHaveBeenLastCalledWith(t0)
+    expect(live.text()).toBe('18/10/2026, 00:00: Caudal 1')
+
+    await area.trigger('keydown', { key: 'End' })
+    expect(engine.showCursor).toHaveBeenLastCalledWith(t1)
+
+    await area.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.emitted('time-select')).toEqual([[{ time: new Date(t1) }]])
+
+    await area.trigger('keydown', { key: 'Escape' })
+    expect(engine.showCursor).toHaveBeenLastCalledWith(null)
+    expect(live.text()).toBe('')
+  })
+
+  it('el cursor movido con el teclado llega al resto del syncGroup', async () => {
+    const wrappers = [
+      mount(ASChart, { props: { series, syncGroup: 'teclado' } }),
+      mount(ASChart, { props: { series, syncGroup: 'teclado' } }),
+    ]
+    await flushPromises()
+    await wrappers[0]!.find('[role="application"]').trigger('keydown', { key: 'Home' })
+    // Una vez en la propia gráfica y otra en la del grupo.
+    expect(engine.showCursor.mock.calls).toEqual([[t0], [t0]])
+    for (const wrapper of wrappers) wrapper.unmount()
+  })
+
+  it('sin datos, el área no es enfocable', async () => {
+    const wrapper = mount(ASChart, { props: { series: [{ ...series[0]!, data: [] }] } })
+    await flushPromises()
+    expect(wrapper.find('[role="application"]').exists()).toBe(false)
   })
 })

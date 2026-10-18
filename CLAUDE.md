@@ -17,7 +17,7 @@ Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/ad
 src/
 ├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
 ├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
-├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync), engines/ (echarts, chartjs, apexcharts), types/
+├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync, data, describe, patterns), engines/ (echarts, chartjs, apexcharts), types/
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
 │   ├── components/   # ASMap + widgets ASMap*
@@ -110,6 +110,11 @@ Decisión y diferencias entre motores en [ADR 0001](docs/adr/0001-motores-grafic
   - La comprobación visual se hace con capturas de los tres motores en claro y oscuro.
 - **Componentes de dominio** (como `ASHydrographChart`) = una función pura `build*()` que devuelve props de `ASChart`, más un componente que la renderiza. Así funcionan con los tres motores sin código propio.
 - **Colores de series**: por defecto, la paleta categórica en orden. Para fijar un color del tema que respete claro/oscuro, usa `'var(--as-data-cat-N)'`.
+- **Exportación y accesibilidad son comunes**, no de cada motor:
+  - El motor solo entrega sus paneles como imagen; `engines/exportImage.ts` los compone con la leyenda.
+  - La tabla de datos y el CSV salen de `core/data.ts`; el nombre, la descripción y los anuncios del teclado, de `core/describe.ts`; las tramas, de `core/patterns.ts`.
+  - Toda serie nueva tiene que salir en el CSV y en la tabla.
+  - Un relleno nuevo tiene que admitir `pattern`.
 - ApexCharts **nunca** es el motor por defecto, y cualquier mención a él recuerda que necesita licencia comercial.
 
 ## Playground

@@ -1,4 +1,5 @@
-import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
+import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
+import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
 import {
@@ -10,6 +11,7 @@ import {
   type ChartEngine,
 } from './types'
 import { createFrame, renderLegend } from './panels'
+import { composeImage } from './exportImage'
 
 type Option = Record<string, unknown>
 type EChartsInstance = import('echarts/core').ECharts
@@ -157,7 +159,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
           x,
           low === null || high === null ? null : high - low,
         ]),
-        areaStyle: { color: s.color, opacity: s.opacity },
+        areaStyle: fill(s),
         itemStyle: { color: s.color },
       })
       continue
@@ -177,7 +179,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
         stack: s.stack,
         data: s.points,
         barMaxWidth: 14,
-        itemStyle: { color: s.color, opacity: s.opacity, borderRadius: 0 },
+        itemStyle: { ...fill(s), borderRadius: 0 },
       })
     } else if (s.type === 'scatter') {
       series.push({
@@ -194,7 +196,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
         type: 'line',
         stack: s.stack,
         data: s.points,
-        areaStyle: s.type === 'area' ? { color: s.color, opacity: s.opacity } : undefined,
+        areaStyle: s.type === 'area' ? fill(s) : undefined,
       })
     }
   }
@@ -349,6 +351,41 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
   return option
 }
 
+/**
+ * Relleno de una serie: su color con su opacidad, o la tesela del patrón
+ * (que ya lleva la opacidad) si hay `patterns`. La tesela se dibuja al doble
+ * de resolución y se reduce a la mitad, para que sea nítida.
+ */
+function fill(s: ResolvedSeries): { color: unknown; opacity: number } {
+  const tile = s.pattern ? patternTile(s.pattern.kind, s.pattern, 2) : null
+  return tile
+    ? { color: { image: tile, repeat: 'repeat', scaleX: 0.5, scaleY: 0.5 }, opacity: 1 }
+    : { color: s.color, opacity: s.opacity }
+}
+
+/**
+ * Copia de la opción con las teselas de los patrones como data URL y su
+ * tamaño: el renderizador SVG no sabe medir un canvas y dejaría el
+ * `<pattern>` sin ancho ni alto (SVG inválido).
+ */
+function withPatternUrls<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(withPatternUrls) as T
+  if (!value || typeof value !== 'object' || value instanceof HTMLElement) return value
+  const object = value as Record<string, unknown>
+  if (object.image instanceof HTMLCanvasElement) {
+    const { image } = object
+    return {
+      ...object,
+      image: image.toDataURL('image/png'),
+      imageWidth: image.width,
+      imageHeight: image.height,
+    } as T
+  }
+  return Object.fromEntries(
+    Object.entries(object).map(([key, entry]) => [key, withPatternUrls(entry)]),
+  ) as T
+}
+
 function annotationSeries(
   id: string,
   xAxisIndex: number,
@@ -400,6 +437,8 @@ export const echartsEngine: ChartEngine = {
       components.AxisPointerComponent,
       components.ToolboxComponent,
       renderers.CanvasRenderer,
+      // Solo para exportar a SVG (con una instancia aparte, en modo SSR).
+      renderers.SVGRenderer,
     ])
 
     let spec = initialSpec
@@ -514,8 +553,21 @@ export const echartsEngine: ChartEngine = {
         chart.dispose()
         element.replaceChildren()
       },
-      exportImage: async () =>
-        chart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: spec.theme.surface }),
+      async exportImage(format) {
+        const width = chart.getWidth()
+        const height = chart.getHeight()
+        if (format === 'svg') {
+          // El lienzo es canvas: para un SVG vectorial se redibuja la misma opción
+          // (con el zoom y las series ocultas actuales) con el renderizador SVG.
+          const svg = core.init(null, null, { renderer: 'svg', ssr: true, width, height })
+          svg.setOption({ ...withPatternUrls(chart.getOption()), animation: false })
+          const markup = svg.renderToSVGString()
+          svg.dispose()
+          return composeImage([{ kind: 'svg', src: markup, width, height }], 'svg', spec, hidden)
+        }
+        const src = chart.getDataURL({ type: 'png', pixelRatio: 2 })
+        return composeImage([{ kind: 'png', src, width, height }], 'png', spec, hidden)
+      },
     }
   },
 }

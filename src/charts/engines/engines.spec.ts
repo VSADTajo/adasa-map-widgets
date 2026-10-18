@@ -93,7 +93,7 @@ describe('toEChartsOption', () => {
 })
 
 describe('toChartJsConfigs', () => {
-  const configs = toChartJsConfigs(spec) as Any[]
+  const configs = toChartJsConfigs(spec) as unknown as [Any, Any]
 
   it('un lienzo por panel; solo el último muestra las etiquetas del eje X', () => {
     expect(configs).toHaveLength(2)
@@ -129,7 +129,7 @@ describe('toChartJsConfigs', () => {
 })
 
 describe('toApexOptions', () => {
-  const options = toApexOptions(spec, [140, 260], 'g') as Any[]
+  const options = toApexOptions(spec, [140, 260], 'g') as [Any, Any]
 
   it('un gráfico por panel, sincronizados en el mismo grupo', () => {
     expect(options.map((o) => o.chart.group)).toEqual(['g', 'g'])

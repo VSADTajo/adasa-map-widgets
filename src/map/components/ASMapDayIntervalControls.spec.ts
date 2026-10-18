@@ -11,6 +11,7 @@ const BASE_DATE = new Date(2026, 9, 18)
 const props: DayIntervalProps = {
   baseDate: BASE_DATE,
   days: 4,
+  selectedIntervalStart: null,
   alerts: [{ start: new Date(2026, 9, 18, 6), end: new Date(2026, 9, 18, 12), level: 'naranja' }],
 }
 
