@@ -1,50 +1,66 @@
 # CLAUDE.md
 
-Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/adasa-map-widgets`), privada en GitHub Packages. Nació para web mapping y va a crecer con gráficas, tablas, paneles de detalle, layout y formularios. Todo el código, JSDoc, README y commits van **en español**.
+Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/adasa-ui`), privada en GitHub Packages. Nació para web mapping y va a crecer con gráficas, tablas, paneles de detalle, layout y formularios. Todo el código, JSDoc, README y commits van **en español**.
 
 ## Arquitectura
 
 - **Componentes controlados**: reciben datos ya resueltos por props y emiten eventos (`update:*` para `v-model`, `*-changed`/`*-selected` para lo demás). Nunca leen ni escriben un store (ni Pinia ni Vuex) ni hacen peticiones por su cuenta, salvo funciones que aporte el proyecto por prop.
 - **Sin framework de UI** (nada de Vuetify ni similares): `<button>` nativos estilizados, iconos como SVG inline, estilos `scoped` y autocontenidos.
-- **Dependencias pesadas como `peerDependencies` opcionales** (`peerDependenciesMeta.optional`), cargadas con `import()` dinámico y declaradas `external` en `vite.config.ts`. Hoy solo `ASMap` las usa (Leaflet, MapLibre...). La única dependencia directa es `date-fns`.
-- **Agnóstica del motor**: solo `ASMap` y `src/layers/` tocan Leaflet o MapLibre. El resto de widgets nunca importan una librería de mapas.
-- **Prefijos**: `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado: `ASMap`, `ASMapLegend`...) y `AS*` para el resto (`ASLineChart`, `ASTable`, `ASAppHeader`...). Nombre del paquete, prefijos CSS, estructura por dominio y entry points: ver [ADR 0000](docs/adr/0000-estructura-paquete.md). El paquete pasa a `@vsadtajo/adasa-ui`, el CSS a `as-*`/`--as-*` y `src/` se organiza en `core/`, `map/`, `charts/`... Hasta que T0.3 lo implemente, el código sigue con `amw-*` y la estructura actual. No mezcles ambos.
+- **Dependencias pesadas como `peerDependencies` opcionales** (`peerDependenciesMeta.optional`). `vite.config.ts` deriva `external` de `dependencies` + `peerDependencies`: nunca se empaquetan. Las de mapas se cargan con `import()` dinámico. La única dependencia directa es `date-fns`.
+- **Agnóstica del motor**: solo `ASMap` y `src/map/layers/` tocan Leaflet o MapLibre. El resto de widgets nunca importan una librería de mapas.
+- **Prefijos**: `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado: `ASMap`, `ASMapLegend`...) y `AS*` para el resto (`ASLineChart`, `ASTable`, `ASAppHeader`...). Clases CSS `as-*` y variables `--as-*`. Decisiones de nombre, prefijos, dominios y entry points en [ADR 0000](docs/adr/0000-estructura-paquete.md).
 - Alias `@/` = `src/`.
 
 ### Estructura
 
 ```
 src/
-├── components/<categoría>/   # mapping/ (ASMap), controls/ (ASMap*). Cada carpeta con su index.ts
-├── types/                    # <Nombre>Props.ts por componente + tipos de dominio (layers, legend, map, theme...)
-├── composables/              # useTheme, useMapAdapter, useLayerManager, useClickOutside
-├── layers/  legend/          # Adapters por tipo de capa / de leyenda
-├── utils/                    # Funciones puras (p. ej. mapScale.ts)
-├── styles/tokens.css         # Variables --amw-*
-├── playground/               # App de documentación interactiva (no se publica)
-└── index.ts                  # Punto de entrada: re-exporta components, composables, layers, legend y types
+├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
+├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
+├── map/              # Entry `/map`
+│   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
+│   ├── components/   # ASMap + widgets ASMap*
+│   ├── composables/  # useMapAdapter, useLayerManager
+│   ├── layers/  legend/   # Adapters por tipo de capa / de leyenda
+│   ├── types/        # <Nombre>Props.ts + map, layers, legend
+│   └── utils/        # mapScale.ts
+├── playground/       # App de documentación interactiva (no se publica). Sus tipos en playground/types.ts
+└── vite-env.d.ts
 ```
+
+Cada dominio (`core`, `map` y los futuros `charts`, `table`, `forms`, `detail`, `layout`) tiene la misma forma interna y un `index.ts` como única API pública.
+
+**Fronteras entre dominios**:
+- Los imports entre dominios van siempre por `@/<dominio>/...`.
+- Qué dominio puede importar de cuál está en `DOMAIN_DEPENDENCIES` de `eslint.config.js` (`core` de ninguno; `map` solo de `core`...), y ESLint falla si se cruza.
+- Tras el build, `npm run check:entries` (`scripts/check-entries.mjs`) comprueba lo mismo en `dist/`, más los paquetes externos permitidos a cada entry.
+
+**Dominio nuevo**:
+1. Crear `src/<dominio>/index.ts`.
+2. Añadir el entry en `entries` de `vite.config.ts` y en `include` de `dts` y `tsconfig.build.json`.
+3. Añadir el subpath en `exports` y `typesVersions` de package.json.
+4. Añadir la regla en `RULES` de `check-entries.mjs` y en `DOMAIN_DEPENDENCIES`.
 
 ### Anatomía de un componente
 
-1. **Tipos** en `src/types/<Nombre>Props.ts`: `interface <Nombre>Props` + `interface <Nombre>Emits` (sintaxis de tuplas: `'update:modelValue': [value: string]`) y los tipos auxiliares (`<Nombre>Position`, `<Nombre>Option`...).
+1. **Tipos** en `src/<dominio>/types/<Nombre>Props.ts`: `interface <Nombre>Props` + `interface <Nombre>Emits` (sintaxis de tuplas: `'update:modelValue': [value: string]`) y los tipos auxiliares (`<Nombre>Position`, `<Nombre>Option`...).
    - JSDoc en español en la interfaz y en **cada** prop/evento. Usa `@default` en toda prop opcional con valor por defecto.
    - Cada prop tiene que ser coherente con `withDefaults`.
-2. **Componente** en `src/components/<categoría>/<Nombre>.vue` con `<script setup lang="ts">`:
+2. **Componente** en `src/<dominio>/components/<Nombre>.vue` con `<script setup lang="ts">`:
    - `withDefaults(defineProps<XProps>(), {...})` y `defineEmits<XEmits>()`.
    - Un bloque JSDoc tras los imports que explique qué hace, que es controlado y un `@example` con el uso en plantilla.
-   - Clases CSS con prefijo `amw-` en estilo BEM (`amw-button-toggle--top-left`).
-3. **Exports**: en el `index.ts` de su categoría (`export { default as X } from './X.vue'`) y sus tipos en `src/types/index.ts` (`export type {...}`).
-4. Accesibilidad: roles y `aria-*` correctos, manejo con teclado y foco visible (`--amw-focus-ring`).
+   - Clases CSS con prefijo `as-` en estilo BEM (`as-button-toggle--top-left`).
+3. **Exports**: en `src/<dominio>/index.ts`, tanto el componente (`export { default as X } from './components/X.vue'`) como sus tipos (`export type {...} from './types/XProps'`).
+4. Accesibilidad: roles y `aria-*` correctos, manejo con teclado y foco visible (`--as-focus-ring`).
 
 Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (number = px, string tal cual), `theme` y, si aplica, `accentColor`.
 
 ## Theming
 
-- Tokens como variables CSS `--amw-*` en `src/styles/tokens.css` (`:root` = claro; `.amw-dark` y `.amw-theme-auto` = oscuro). Su import es opcional: **todo `var()` lleva fallback inline**, p. ej. `var(--amw-radius, 10px)`, para que el componente funcione sin `tokens.css`.
-- El tipo `ThemeTokens` (`src/types/theme.ts`) documenta los tokens. Si añades un token, actualiza los dos.
-- **`provideTheme(mode)`** (`src/composables/useTheme.ts`): el proyecto lo llama una vez en la raíz (`light | dark | auto`) y todos los widgets lo heredan.
-- **Prop `theme`** (`'dark' | 'light'`, opcional, **sin default en `withDefaults`**): tiene prioridad sobre el tema global. Todo componente la resuelve con `const resolvedTheme = useResolvedTheme(() => props.theme)`, que aplica la prop, luego `provideTheme` y por último `'dark'`. Se aplica como clase modificadora (`amw-<widget>--${resolvedTheme}`). En el JSDoc del tipo, documenta la herencia en vez de `@default 'dark'`.
+- Tokens como variables CSS `--as-*` en `src/core/styles/tokens.css` (`:root` = claro; `.as-dark` y `.as-theme-auto` = oscuro). Su import es opcional: **todo `var()` lleva fallback inline**, p. ej. `var(--as-radius, 10px)`, para que el componente funcione sin `tokens.css`.
+- El tipo `ThemeTokens` (`src/core/types/theme.ts`) documenta los tokens. Si añades un token, actualiza los dos.
+- **`provideTheme(mode)`** (`src/core/composables/useTheme.ts`): el proyecto lo llama una vez en la raíz (`light | dark | auto`) y todos los widgets lo heredan.
+- **Prop `theme`** (`'dark' | 'light'`, opcional, **sin default en `withDefaults`**): tiene prioridad sobre el tema global. Todo componente la resuelve con `const resolvedTheme = useResolvedTheme(() => props.theme)`, que aplica la prop, luego `provideTheme` y por último `'dark'`. Se aplica como clase modificadora (`as-<widget>--${resolvedTheme}`). En el JSDoc del tipo, documenta la herencia en vez de `@default 'dark'`.
 - `useTheme()` es para quien necesite leer o cambiar el contexto. Si no lo hay, crea uno local en `auto`, así que los widgets no lo usan para resolver su tema.
 - `accentColor`: color CSS libre para tintar el elemento activo de un widget.
 
@@ -83,9 +99,9 @@ Mientras sea 0.x, los cambios incompatibles se avisan igualmente en el changeset
 
 Una tarea no está terminada hasta que se cumple todo esto:
 
-- [ ] `npm run lint`, `npm run type-check`, `npm run build` y `npm run build:playground` en verde (y `npm run test` cuando exista).
-- [ ] Tipos en `src/types/` con JSDoc en español, `@default` y `@example`.
-- [ ] Export público en el `index.ts` de su categoría y en `src/types/index.ts` (llega a `src/index.ts`).
+- [ ] `npm run lint`, `npm run type-check`, `npm run build`, `npm run check:entries` y `npm run build:playground` en verde (y `npm run test` cuando exista).
+- [ ] Tipos en `src/<dominio>/types/` con JSDoc en español, `@default` y `@example`.
+- [ ] Export público en `src/<dominio>/index.ts` (componente y tipos).
 - [ ] Entrada en `src/playground/registry.ts` (con `composer` si va sobre el mapa) con todas sus props y eventos nuevos.
 - [ ] Funciona en tema claro y oscuro (por prop y heredado de `provideTheme`) y se puede manejar con teclado.
 - [ ] README actualizado (lista de componentes y la sección que corresponda).

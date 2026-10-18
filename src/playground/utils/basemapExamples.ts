@@ -1,4 +1,4 @@
-import type { BasemapOption } from '@/components/mapping/ASMap.vue'
+import type { BasemapOption } from '@/map/components/ASMap.vue'
 
 /**
  * Basemaps de ejemplo reales (proveedores públicos, sin API key) para

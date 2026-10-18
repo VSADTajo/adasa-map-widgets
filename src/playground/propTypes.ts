@@ -28,7 +28,7 @@ export interface EventDoc {
 
 /**
  * Documenta un campo de `options` de un {@link LayerType} (ver
- * `src/types/layers.ts`). A diferencia de {@link PropField}, no es editable
+ * `src/map/types/layers.ts`). A diferencia de {@link PropField}, no es editable
  * desde un formulario genérico: `options` varía por tipo de capa y admite
  * formas complejas (objetos, funciones...) que no encajan en el editor de
  * props. Solo se usa para la tabla de documentación de la categoría 'layers'.

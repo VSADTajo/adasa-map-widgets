@@ -1,23 +1,23 @@
 import type { Component } from 'vue'
-import ASMap from '@/components/mapping/ASMap.vue'
-import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
-import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
-import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
-import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
-import ASMapScale from '@/components/controls/ASMapScale.vue'
-import ASMapLegend from '@/components/controls/ASMapLegend.vue'
-import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
+import ASMap from '@/map/components/ASMap.vue'
+import ASMapTimeControls from '@/map/components/ASMapTimeControls.vue'
+import ASMapTimeRangeControls from '@/map/components/ASMapTimeRangeControls.vue'
+import ASMapDayIntervalControls from '@/map/components/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/map/components/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/map/components/ASMapScale.vue'
+import ASMapLegend from '@/map/components/ASMapLegend.vue'
+import ASMapButtonToggle from '@/map/components/ASMapButtonToggle.vue'
 import type { ComponentDoc, EventDoc, LayerOptionField, PropField } from './propTypes'
-import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import type { DayIntervalAlert } from '@/map/types/DayIntervalProps'
 import type {
   FeatureSelectedEvent,
   LayerCapabilities,
   LayerConfig,
   LayerKind,
   LayerLoadedEvent,
-} from '@/types/layers'
-import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
-import { detectCapabilities, LAYER_KIND } from '@/layers'
+} from '@/map/types/layers'
+import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
+import { detectCapabilities, LAYER_KIND } from '@/map/layers'
 import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
 
@@ -40,7 +40,7 @@ export interface RegistryEntry extends ComponentDoc {
    * no las props de `ASMap` (que solo lo recibe tal cual en su prop `layers`).
    */
   codeOverride?: string
-  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/types/layers.ts`). */
+  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/map/types/layers.ts`). */
   layerOptionsSchema?: LayerOptionField[]
   /** Capacidades detectadas para el ejemplo de esta capa (ver `detectCapabilities`), solo categoría `'layers'`. */
   layerCapabilities?: LayerCapabilities
@@ -681,7 +681,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMapLegend',
     category: 'controls',
     description:
-      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
+      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/map/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
     propsSchema: [
       { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
       { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
@@ -1148,7 +1148,7 @@ export const registry: RegistryEntry[] = [
         key: 'colorScale',
         type: 'string',
         description:
-          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/layers/cog.ts`).',
+          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/map/layers/cog.ts`).',
       },
     ],
     events: [

@@ -1,4 +1,4 @@
-import type { WidgetRegistryEntry } from '@/types/playground'
+import type { WidgetRegistryEntry } from '@/playground/types'
 import { registry, type RegistryEntry } from '../registry'
 
 const DEFAULT_OMITTED_PROPS = ['position', 'offset']

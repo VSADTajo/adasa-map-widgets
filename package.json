@@ -1,7 +1,7 @@
 {
-  "name": "@vsadtajo/adasa-map-widgets",
+  "name": "@vsadtajo/adasa-ui",
   "version": "0.1.0",
-  "description": "Librería ADASA de widgets Vue 3 + TypeScript para aplicaciones de web mapping, agnóstica del motor de mapas subyacente (Leaflet, Mapbox, OpenLayers, etc).",
+  "description": "Librería corporativa ADASA de componentes Vue 3 + TypeScript: mapas (agnósticos del motor: Leaflet, MapLibre...) y, por dominios, gráficas, tablas, detalle, layout y formularios.",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
@@ -15,16 +15,28 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/adasa-map-widgets.cjs",
-  "module": "./dist/adasa-map-widgets.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/adasa-map-widgets.js",
-      "require": "./dist/adasa-map-widgets.cjs"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./map": {
+      "types": "./dist/map.d.ts",
+      "import": "./dist/map.js",
+      "require": "./dist/map.cjs"
     },
     "./style.css": "./dist/style.css"
+  },
+  "typesVersions": {
+    "*": {
+      "map": [
+        "./dist/map.d.ts"
+      ]
+    }
   },
   "sideEffects": [
     "**/*.css"
@@ -32,6 +44,7 @@
   "scripts": {
     "dev": "vite --config vite.config.playground.ts",
     "build": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.ts",
+    "check:entries": "node scripts/check-entries.mjs",
     "build:playground": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.playground.ts",
     "preview:playground": "vite preview --config vite.config.playground.ts --outDir dist-playground",
     "lint": "eslint . --max-warnings 0",

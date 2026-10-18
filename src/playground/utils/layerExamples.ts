@@ -1,5 +1,5 @@
-import type { GeoJsonFeatureCollection, LayerConfig, LayerType } from '@/types/layers'
-import { geoServerLayer } from '@/layers'
+import type { GeoJsonFeatureCollection, LayerConfig, LayerType } from '@/map/types/layers'
+import { geoServerLayer } from '@/map/layers'
 
 /** Etiqueta legible por tipo de capa, para los controles del compositor. */
 export const LAYER_TYPE_LABELS: Record<LayerType, string> = {
@@ -92,7 +92,7 @@ const madridKml = `<?xml version="1.0" encoding="UTF-8"?>
 /**
  * Un ejemplo por cada {@link LayerType}, más uno extra de GeoServer (que no
  * es un `LayerType` propio: `geoServerLayer()` lo resuelve a `'wfs'`, ver
- * `src/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
+ * `src/map/layers/geoserver.ts`). GeoJSON y KML funcionan sin red (datos locales);
  * TopoJSON usa un CDN público estable (jsdelivr); WMS/WFS/GeoServer/WMTS/COG/MVT
  * apuntan a servidores de demostración **públicos** de terceros (los mismos
  * que usan los ejemplos oficiales de Leaflet/OpenLayers, más el WMTS del IGN
@@ -172,7 +172,7 @@ export const layerExamples: LayerExample[] = [
   },
   {
     description:
-      'WMTS público (IGN España): Mapa Topográfico Nacional servido como teselas OGC. `url` es solo el endpoint base — `buildWmtsTileUrl` (en `src/layers/wmts.ts`) construye la petición `GetTile` (KVP) con `layer`/`tileMatrixSet`/`format`.',
+      'WMTS público (IGN España): Mapa Topográfico Nacional servido como teselas OGC. `url` es solo el endpoint base — `buildWmtsTileUrl` (en `src/map/layers/wmts.ts`) construye la petición `GetTile` (KVP) con `layer`/`tileMatrixSet`/`format`.',
     config: {
       id: 'demo-wmts-ign-mtn',
       name: 'WMTS: IGN Mapa Topográfico Nacional',
