@@ -177,14 +177,15 @@ formatNumber(12345.6) // "12.345,6"
 
 `npm run dev` levanta una app en `http://localhost:5173` con dos modos, conmutables desde la barra superior:
 
-**Galería de componentes** (modo por defecto): todos los componentes y tipos de capa, cada uno con:
+**Galería de componentes** (modo por defecto): todos los componentes y tipos de capa, agrupados por dominio (Mapa, Controles de mapa, Capas, Gráficas, Tablas, Detalle, Layout, Formularios), cada uno con:
 
 - **Selector de componentes** agrupado por categoría (barra lateral).
 - **Editor de props en vivo**: cambia valores y ve el widget actualizarse al instante.
 - **Documentación inline**: tabla de props (tipo/default) y eventos emitidos.
 - **Log de eventos**: observa en tiempo real los eventos que emite el widget.
 - **Código copiable**: snippet de plantilla Vue generado a partir del estado actual del editor.
-- **Selector de tema** (claro/oscuro/auto) para probar ambos temas sin salir del playground.
+- **Vista previa adaptada al tipo de componente**: los widgets de mapa, en su escenario; el resto, en un lienzo neutro redimensionable (Móvil 375 px, Tableta 768 px, Escritorio 1280 px o arrastrando la esquina) que muestra el ancho real, para probar el responsive.
+- **Selector global de tema** (claro/oscuro/auto) **e idioma** (ES/EN) en la barra superior, que aplica a todas las vistas.
 
 **Compositor sobre mapa** (`WidgetPlayground.vue`):
 
