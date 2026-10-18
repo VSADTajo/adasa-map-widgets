@@ -94,7 +94,7 @@ const offsetStyle = computed(() => {
 <style scoped>
 .as-button-toggle {
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   display: inline-flex;
   font-family: var(--as-font-family, system-ui, sans-serif);
   font-size: 0.78rem;

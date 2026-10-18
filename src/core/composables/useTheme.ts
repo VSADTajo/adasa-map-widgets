@@ -1,5 +1,21 @@
-import { computed, inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
-import type { ThemeMode } from '@/core/types/theme'
+import {
+  computed,
+  inject,
+  nextTick,
+  onMounted,
+  provide,
+  ref,
+  shallowRef,
+  toValue,
+  watch,
+  type ComputedRef,
+  type InjectionKey,
+  type MaybeRefOrGetter,
+  type Ref,
+  type ShallowRef,
+} from 'vue'
+import type { ThemeMode, ThemeTokens } from '@/core/types/theme'
+import { readTokens } from '@/core/utils/readTokens'
 
 export interface ThemeContext {
   /** Modo configurado explícitamente (`'auto'` sigue al sistema operativo). */
@@ -76,4 +92,41 @@ export function useResolvedTheme(
   const context = inject(THEME_INJECTION_KEY, null)
   // `||` y no `??`: el playground pasa `''` para "sin valor" (ver PropsEditor).
   return computed(() => theme() || context?.resolvedMode.value || fallback)
+}
+
+/**
+ * Tokens de diseño resueltos ({@link readTokens}) de un elemento, que se
+ * vuelven a leer al montar y cada vez que cambia el tema de
+ * {@link provideTheme}. Para componentes que pasan colores a librerías que no
+ * entienden variables CSS (gráficas, canvas...).
+ *
+ * `target` es el elemento cuyo tema se lee (por defecto, el documento). Si el
+ * tema cambia por otra vía (p. ej. una clase `.as-dark` puesta a mano), llama
+ * a `refresh()`.
+ *
+ * @example
+ * ```ts
+ * const container = ref<HTMLElement | null>(null)
+ * const { tokens } = useTokens(container)
+ * watch(tokens, (t) => t && chart.setOption({ color: t.data.categorical }))
+ * ```
+ */
+export function useTokens(target?: MaybeRefOrGetter<Element | null | undefined>): {
+  tokens: Readonly<ShallowRef<ThemeTokens | null>>
+  refresh: () => void
+} {
+  const context = inject(THEME_INJECTION_KEY, null)
+  const tokens = shallowRef<ThemeTokens | null>(null)
+
+  function refresh(): void {
+    if (typeof document === 'undefined') return
+    tokens.value = readTokens(toValue(target) ?? document.documentElement)
+  }
+
+  onMounted(refresh)
+  // nextTick: la clase de tema (`.as-dark`...) se aplica en el render que
+  // sigue al cambio de modo; leer antes devolvería los colores anteriores.
+  if (context) watch(context.resolvedMode, () => nextTick(refresh))
+
+  return { tokens, refresh }
 }

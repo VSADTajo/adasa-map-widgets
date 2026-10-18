@@ -288,7 +288,7 @@ const fillStyle = computed(() => {
 <style scoped>
 .as-time-range-controls {
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   width: min(760px, 94%);
   border-radius: var(--as-radius, 14px);
   padding: calc(var(--as-spacing-unit, 4px) * 3) calc(var(--as-spacing-unit, 4px) * 4);

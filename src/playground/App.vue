@@ -6,6 +6,7 @@ import CodePreview from './components/CodePreview.vue'
 import DocsPanel from './components/DocsPanel.vue'
 import EventLog, { type LogEntry } from './components/EventLog.vue'
 import WidgetPlayground from './components/WidgetPlayground.vue'
+import TokensPage from './components/TokensPage.vue'
 import { registry, getEntry } from './registry'
 import { buildSnippet } from './propTypes'
 import { provideTheme } from '@/core/composables/useTheme'
@@ -14,8 +15,15 @@ import type { ThemeMode } from '@/core/types/theme'
 const { mode, resolvedMode, setMode } = provideTheme('auto')
 const modes: ThemeMode[] = ['light', 'dark', 'auto']
 
-/** Alterna entre la galería de un solo componente y el compositor de widgets sobre un mapa. */
-const viewMode = ref<'gallery' | 'composer'>('gallery')
+/** Alterna entre la galería de un solo componente, el compositor de widgets sobre un mapa y los tokens de diseño. */
+type ViewMode = 'gallery' | 'composer' | 'tokens'
+const VIEW_MODES: ViewMode[] = ['gallery', 'composer', 'tokens']
+
+// La vista va en el hash (`#tokens`...) para poder enlazar directamente a ella.
+const viewMode = ref<ViewMode>(
+  VIEW_MODES.find((view) => window.location.hash === `#${view}`) ?? 'gallery',
+)
+watch(viewMode, (view) => history.replaceState(null, '', `#${view}`))
 
 const activeId = ref<string>(registry[0]!.id)
 const entry = computed(() => getEntry(activeId.value) ?? registry[0]!)
@@ -92,6 +100,15 @@ const code = computed(
         @click="viewMode = 'composer'"
       >
         Compositor sobre mapa
+      </button>
+      <button
+        type="button"
+        class="pg-view-switch__button"
+        :class="{ 'pg-view-switch__button--active': viewMode === 'tokens' }"
+        :aria-pressed="viewMode === 'tokens'"
+        @click="viewMode = 'tokens'"
+      >
+        Tokens de diseño
       </button>
     </nav>
 
@@ -172,7 +189,8 @@ const code = computed(
         </main>
       </template>
 
-      <WidgetPlayground v-else class="pg-app__composer" />
+      <WidgetPlayground v-else-if="viewMode === 'composer'" class="pg-app__composer" />
+      <TokensPage v-else class="pg-app__tokens" />
     </div>
   </div>
 </template>
@@ -212,6 +230,10 @@ const code = computed(
   display: grid;
   grid-template-columns: 220px 1fr;
   min-height: 0;
+}
+
+.pg-app__tokens {
+  grid-column: 1 / -1;
 }
 
 .pg-app__composer {

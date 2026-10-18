@@ -146,7 +146,7 @@ const offsetStyle = computed(() => {
 <style scoped>
 .as-legend {
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   min-width: 180px;
   max-width: 260px;
   font-family: var(--as-font-family, system-ui, sans-serif);

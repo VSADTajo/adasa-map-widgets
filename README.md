@@ -83,7 +83,20 @@ const playing = ref(false)
 
 ## Sistema de temas
 
-Todos los componentes se estilizan con variables CSS (`--as-*`) definidas en [`src/core/styles/tokens.css`](src/core/styles/tokens.css), con valores de respaldo inline en cada componente, así que funcionan aunque no importes el CSS. Para personalizar, sobreescribe las variables en tu propio CSS:
+Todos los componentes se estilizan con variables CSS (`--as-*`) definidas en [`src/core/styles/tokens.css`](src/core/styles/tokens.css), con valores de respaldo inline en cada componente, así que funcionan aunque no importes el CSS. La página **Tokens de diseño** del playground (`npm run dev` → `#tokens`) los muestra todos en ambos temas, con su contraste.
+
+| Grupo | Tokens |
+| --- | --- |
+| Interfaz | `--as-color-{primary,surface,surface-muted,text,text-muted,border,danger}` |
+| Tipografía | `--as-font-family`, `--as-font-family-mono`, `--as-font-size-{xs…3xl}`, `--as-font-weight-*`, `--as-line-height-*` |
+| Espaciado y forma | `--as-space-{1…16}` (múltiplos de `--as-spacing-unit`), `--as-radius-{sm,md,lg,full}`, `--as-shadow-{sm,md,lg}` |
+| Capas | `--as-z-{base,map-control,dropdown,sticky,drawer,modal,toast,tooltip}` |
+| Datos | `--as-data-cat-{1…8}` (series), `--as-data-seq-{100…700}` (magnitud), `--as-data-div-*` (polaridad), `--as-data-grid`, `--as-data-axis` |
+| Avisos | `--as-alert-{normal,amarillo,naranja,rojo}` y sus variantes `-text` / `-strong` |
+
+Todos los colores cumplen WCAG AA contra la superficie en claro y en oscuro (textos ≥ 4.5:1, marcas ≥ 3:1), y la paleta categórica está validada para daltonismo. Hay un test que lo comprueba.
+
+Para personalizar, sobreescribe las variables en tu propio CSS:
 
 ```css
 :root {
@@ -98,6 +111,16 @@ Para cambiar entre claro y oscuro, llama a `provideTheme` una vez en la raíz de
 import { provideTheme } from '@vsadtajo/adasa-ui'
 
 const { setMode } = provideTheme('auto') // 'light' | 'dark' | 'auto' (sigue al sistema)
+```
+
+Las librerías que no entienden `var(--x)` (motores de gráficas, canvas) reciben los valores ya resueltos con `readTokens()`, o con `useTokens()` para que se actualicen al cambiar el tema:
+
+```ts
+import { useTokens } from '@vsadtajo/adasa-ui'
+
+const container = ref<HTMLElement | null>(null)
+const { tokens } = useTokens(container)
+watch(tokens, (t) => t && chart.setOption({ color: t.data.categorical }))
 ```
 
 Cada widget acepta además una prop `theme` (`'dark' | 'light'`) que tiene prioridad sobre el tema global. Si no hay `provideTheme` ni prop, se usa `'dark'`. Los que lo admiten aceptan también `accentColor`, para tintar el widget con un color puntual (p. ej. el resultado de tu propia escala de color).

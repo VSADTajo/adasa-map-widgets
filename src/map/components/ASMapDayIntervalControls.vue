@@ -30,8 +30,18 @@ import type { DayIntervalEmits, DayIntervalProps } from '@/map/types/DayInterval
 const props = withDefaults(defineProps<DayIntervalProps>(), {
   alerts: () => [],
   levels: () => ['amarillo', 'naranja', 'rojo'],
-  levelColors: () => ({ amarillo: '#ffd54f', naranja: '#fb8c00', rojo: '#e53935' }),
-  levelTextColors: () => ({ amarillo: '#2f2f2f' }),
+  // Tokens de aviso de core (tokens.css), con su valor como fallback para
+  // funcionar sin importar el CSS.
+  levelColors: () => ({
+    amarillo: 'var(--as-alert-amarillo, #ffd54f)',
+    naranja: 'var(--as-alert-naranja, #fb8c00)',
+    rojo: 'var(--as-alert-rojo, #d32f2f)',
+  }),
+  levelTextColors: () => ({
+    amarillo: 'var(--as-alert-amarillo-text, #2f2f2f)',
+    naranja: 'var(--as-alert-naranja-text, #1a1a1a)',
+    rojo: 'var(--as-alert-rojo-text, #ffffff)',
+  }),
   days: 3,
   intervalHours: 6,
   baseDate: () => new Date(),
@@ -283,7 +293,7 @@ const rowStyle = computed(() => ({
 <style scoped>
 .as-day-interval-controls {
   position: absolute;
-  z-index: 1000;
+  z-index: var(--as-z-map-control, 1000);
   width: min(760px, calc(100% - 48px));
   border-radius: var(--as-radius, 14px);
   padding: calc(var(--as-spacing-unit, 4px) * 4);

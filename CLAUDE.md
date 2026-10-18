@@ -59,8 +59,19 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 
 ## Theming
 
-- Tokens como variables CSS `--as-*` en `src/core/styles/tokens.css` (`:root` = claro; `.as-dark` y `.as-theme-auto` = oscuro). Su import es opcional: **todo `var()` lleva fallback inline**, p. ej. `var(--as-radius, 10px)`, para que el componente funcione sin `tokens.css`.
-- El tipo `ThemeTokens` (`src/core/types/theme.ts`) documenta los tokens. Si añades un token, actualiza los dos.
+- Los tokens son variables CSS `--as-*` en `src/core/styles/tokens.css`.
+  - Cada color se declara una vez con `light-dark(claro, oscuro)`, y el modo lo decide el `color-scheme`: sin clase o `.as-light` es claro, `.as-dark` oscuro y `.as-theme-auto` sigue al sistema.
+  - Grupos: color de interfaz, tipografía, espaciado (`--as-space-N`), radios, sombras, z-index (`--as-z-*`), datos (`--as-data-*`) y avisos (`--as-alert-*`).
+  - Su import es opcional: **todo `var()` lleva fallback inline**, p. ej. `var(--as-radius, 10px)`, para que el componente funcione sin `tokens.css`.
+- **Usa los tokens, no valores sueltos**: espaciados, tamaños de letra, radios y z-index salen de la escala. Los controles flotantes sobre el mapa usan `var(--as-z-map-control, 1000)`.
+- **Colores de datos** (para gráficas, leyendas, mapas temáticos):
+  - `--as-data-cat-1..8` para identidad de series, en orden y sin ciclar; una 9.ª serie va a "Otros".
+  - `--as-data-seq-100..700` para magnitud.
+  - `--as-data-div-*` para polaridad.
+  - `--as-alert-<nivel>` (`normal`/`amarillo`/`naranja`/`rojo`) está **reservado** a niveles de aviso: nunca como "serie 4" y siempre con texto o icono.
+  - Variantes de aviso: `-text` para el texto sobre el relleno y `-strong` para líneas o iconos sobre la superficie.
+- **Contraste**: `src/core/styles/tokens.spec.ts` comprueba WCAG AA de todos los tokens en ambos modos (textos ≥ 4.5:1, marcas ≥ 3:1). Un color nuevo o cambiado tiene que pasarlo; para la paleta categórica, valida además la separación para daltonismo.
+- **Desde JS** (motores de gráficas, canvas): `readTokens(el)` devuelve los valores resueltos para el tema de `el`, y `useTokens(target)` los mantiene al día cuando cambia el tema. El tipo `ThemeTokens` (`src/core/types/theme.ts`) refleja los tokens: si añades uno, actualiza el CSS, el tipo y `readTokens`.
 - **`provideTheme(mode)`** (`src/core/composables/useTheme.ts`): el proyecto lo llama una vez en la raíz (`light | dark | auto`) y todos los widgets lo heredan.
 - **Prop `theme`** (`'dark' | 'light'`, opcional, **sin default en `withDefaults`**): tiene prioridad sobre el tema global. Todo componente la resuelve con `const resolvedTheme = useResolvedTheme(() => props.theme)`, que aplica la prop, luego `provideTheme` y por último `'dark'`. Se aplica como clase modificadora (`as-<widget>--${resolvedTheme}`). En el JSDoc del tipo, documenta la herencia en vez de `@default 'dark'`.
 - `useTheme()` es para quien necesite leer o cambiar el contexto. Si no lo hay, crea uno local en `auto`, así que los widgets no lo usan para resolver su tema.
