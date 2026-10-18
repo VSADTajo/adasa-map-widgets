@@ -26,13 +26,16 @@ const locales: LocaleCode[] = ['es', 'en']
 type ViewMode = 'gallery' | 'composer' | 'tokens'
 const VIEW_MODES: ViewMode[] = ['gallery', 'composer', 'tokens']
 
-// La vista va en el hash (`#tokens`...) para poder enlazar directamente a ella.
-const viewMode = ref<ViewMode>(
-  VIEW_MODES.find((view) => window.location.hash === `#${view}`) ?? 'gallery',
+// La vista (y, en la galería, el componente) va en el hash para poder enlazar
+// directamente a ella: `#tokens`, `#composer`, `#gallery/as-hydrograph-chart`.
+const [hashView, hashEntry] = window.location.hash.slice(1).split('/')
+const viewMode = ref<ViewMode>(VIEW_MODES.find((view) => view === hashView) ?? 'gallery')
+const activeId = ref<string>(
+  registry.find((entry) => entry.id === hashEntry)?.id ?? registry[0]!.id,
 )
-watch(viewMode, (view) => history.replaceState(null, '', `#${view}`))
-
-const activeId = ref<string>(registry[0]!.id)
+watch([viewMode, activeId], ([view, id]) =>
+  history.replaceState(null, '', view === 'gallery' ? `#gallery/${id}` : `#${view}`),
+)
 const entry = computed(() => getEntry(activeId.value) ?? registry[0]!)
 const category = computed(() => getCategory(entry.value.category))
 

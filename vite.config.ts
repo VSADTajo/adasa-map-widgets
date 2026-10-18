@@ -31,6 +31,7 @@ function isExternal(id: string): boolean {
 const entries = {
   index: 'src/index.ts',
   map: 'src/map/index.ts',
+  charts: 'src/charts/index.ts',
 }
 
 /**
@@ -43,8 +44,8 @@ export default defineConfig({
     vue(),
     dts({
       tsconfigPath: './tsconfig.build.json',
-      include: ['src/index.ts', 'src/core/**/*', 'src/map/**/*'],
-      exclude: ['src/playground/**/*', 'src/**/*.spec.ts'],
+      include: ['src/index.ts', 'src/core/**/*', 'src/map/**/*', 'src/charts/**/*'],
+      exclude: ['src/playground/**/*', 'src/**/*.spec.ts', 'src/**/*.fixtures.ts'],
       rollupTypes: true,
     }),
   ],

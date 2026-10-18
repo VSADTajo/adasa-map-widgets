@@ -29,12 +29,20 @@
       "import": "./dist/map.js",
       "require": "./dist/map.cjs"
     },
+    "./charts": {
+      "types": "./dist/charts.d.ts",
+      "import": "./dist/charts.js",
+      "require": "./dist/charts.cjs"
+    },
     "./style.css": "./dist/style.css"
   },
   "typesVersions": {
     "*": {
       "map": [
         "./dist/map.d.ts"
+      ],
+      "charts": [
+        "./dist/charts.d.ts"
       ]
     }
   },
@@ -59,6 +67,12 @@
   "peerDependencies": {
     "@geomatico/maplibre-cog-protocol": "^0.9.1",
     "@tmcw/togeojson": "^7.1.0",
+    "apexcharts": "^8.0.0",
+    "chart.js": "^4.4.0",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-annotation": "^3.0.0",
+    "chartjs-plugin-zoom": "^2.0.0",
+    "echarts": "^6.0.0",
     "fflate": "^0.8.0",
     "georaster": "^1.6.0",
     "georaster-layer-for-leaflet": "^4.1.2",
@@ -73,6 +87,24 @@
       "optional": true
     },
     "@tmcw/togeojson": {
+      "optional": true
+    },
+    "apexcharts": {
+      "optional": true
+    },
+    "chart.js": {
+      "optional": true
+    },
+    "chartjs-adapter-date-fns": {
+      "optional": true
+    },
+    "chartjs-plugin-annotation": {
+      "optional": true
+    },
+    "chartjs-plugin-zoom": {
+      "optional": true
+    },
+    "echarts": {
       "optional": true
     },
     "fflate": {
@@ -115,6 +147,12 @@
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.5.1",
     "@vue/tsconfig": "^0.5.1",
+    "apexcharts": "^8.3.1",
+    "chart.js": "^4.5.1",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-annotation": "^3.1.0",
+    "chartjs-plugin-zoom": "^2.2.0",
+    "echarts": "^6.1.0",
     "eslint": "^9.9.0",
     "eslint-plugin-vue": "^10.10.0",
     "fflate": "^0.8.3",

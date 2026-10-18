@@ -13,6 +13,12 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/index.ts", "src/vite-env.d.ts", "src/core/**/*", "src/map/**/*"],
-  "exclude": ["src/playground/**/*", "src/**/*.spec.ts"]
+  "include": [
+    "src/index.ts",
+    "src/vite-env.d.ts",
+    "src/core/**/*",
+    "src/map/**/*",
+    "src/charts/**/*"
+  ],
+  "exclude": ["src/playground/**/*", "src/**/*.spec.ts", "src/**/*.fixtures.ts"]
 }
