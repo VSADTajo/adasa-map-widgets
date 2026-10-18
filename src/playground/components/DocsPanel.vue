@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { RegistryEntry } from '../registry'
 
 const props = defineProps<{ entry: RegistryEntry }>()
+
+/** Props reales del componente (sin los controles que solo existen en el playground). */
+const componentProps = computed(() =>
+  props.entry.propsSchema.filter((field) => !field.playgroundOnly),
+)
 </script>
 
 <template>
@@ -15,7 +21,7 @@ const props = defineProps<{ entry: RegistryEntry }>()
     <p v-if="props.entry.notes" class="pg-docs__note">ℹ️ {{ props.entry.notes }}</p>
 
     <h3 class="pg-docs__heading">Props</h3>
-    <table v-if="props.entry.propsSchema.length" class="pg-docs__table">
+    <table v-if="componentProps.length" class="pg-docs__table">
       <thead>
         <tr>
           <th>Prop</th>
@@ -24,7 +30,7 @@ const props = defineProps<{ entry: RegistryEntry }>()
         </tr>
       </thead>
       <tbody>
-        <tr v-for="field in props.entry.propsSchema" :key="field.key">
+        <tr v-for="field in componentProps" :key="field.key">
           <td>
             <code>{{ field.key }}</code>
           </td>

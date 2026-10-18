@@ -41,6 +41,17 @@ const RULES = {
       'fflate',
     ],
   },
+  './charts': {
+    domains: ['core', 'charts'],
+    packages: [
+      'echarts',
+      'chart.js',
+      'chartjs-plugin-annotation',
+      'chartjs-plugin-zoom',
+      'chartjs-adapter-date-fns',
+      'apexcharts',
+    ],
+  },
 }
 
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g

@@ -20,6 +20,16 @@ import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
 import { detectCapabilities, LAYER_KIND } from '@/map/layers'
 import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
+import ASChart from '@/charts/components/ASChart.vue'
+import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
+import {
+  CHART_SERIES_FIELDS,
+  HYDROGRAPH_SERIES_FIELDS,
+  chartToProps,
+  chartToSnippet,
+  hydrographToProps,
+  hydrographToSnippet,
+} from './utils/chartPlayground'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -46,6 +56,14 @@ export interface RegistryEntry extends ComponentDoc {
   layerCapabilities?: LayerCapabilities
   /** Si el cliente ve datos vectoriales o solo una imagen ya renderizada (ver `LAYER_KIND`), solo categoría `'layers'`. */
   layerKind?: LayerKind
+  /**
+   * Convierte los valores del formulario en los props reales del
+   * componente, cuando estos no son primitivos (p. ej. un control "número
+   * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
+   */
+  toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
+  toSnippet?: (values: Record<string, unknown>) => string
   /**
    * Si se define, el widget también se puede colocar en el compositor sobre
    * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
@@ -168,6 +186,86 @@ function buildLegendDemoLayers(): LayerConfig[] {
     .map((id) => getLayerExample(id)?.config)
     .filter((config): config is LayerConfig => Boolean(config))
 }
+
+/** Campos comunes a las gráficas: motor, tema y opciones de interacción. */
+const CHART_LIBRARY_FIELD: PropField = {
+  key: 'chartLibrary',
+  label: 'Motor de gráficas',
+  type: 'select',
+  options: ['echarts', 'chartjs', 'apexcharts'],
+  default: 'echarts',
+  description:
+    'Mismos props con cualquier motor. ApexCharts requiere licencia comercial para organizaciones de más de 2 M$.',
+}
+const CHART_THEME_FIELD: PropField = {
+  ...THEME_FIELD,
+  description: 'Vacío: hereda el tema global (provideTheme) o el de la página.',
+}
+const CHART_INTERACTION_FIELDS: PropField[] = [
+  { key: 'tooltip', label: 'Tooltip', type: 'boolean', default: true },
+  {
+    key: 'legend',
+    label: 'Posición de la leyenda',
+    type: 'select',
+    options: ['top', 'bottom', 'left', 'right'],
+    default: 'top',
+    description: 'Para ocultarla, :legend="false".',
+  },
+  {
+    key: 'legendValues',
+    label: 'Valores en la leyenda',
+    type: 'boolean',
+    default: false,
+    description:
+      'Muestra en la leyenda el valor de cada serie bajo el cursor. Desactiva el tooltip para verlos solo ahí.',
+  },
+  {
+    key: 'zoom',
+    label: 'Zoom',
+    type: 'boolean',
+    default: false,
+    description: 'Rueda/pellizco para acercar; barra de zoom en ECharts.',
+  },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: false,
+    description:
+      'Descargar PNG y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom.',
+  },
+  { key: 'animation', label: 'Animación', type: 'boolean', default: true },
+]
+const CHART_EVENTS: EventDoc[] = [
+  {
+    name: 'point-click',
+    payload: '{ seriesId, x, y }',
+    description: 'Click sobre un punto, barra o banda.',
+  },
+  {
+    name: 'x-click',
+    payload: '{ x }',
+    description:
+      'Click sobre el área de la gráfica: el instante bajo el cursor (p. ej. para enlazar con ASMapTimeControls).',
+  },
+  {
+    name: 'range-change',
+    payload: '{ start, end }',
+    description: 'El rango visible cambió por zoom.',
+  },
+  { name: 'ready', payload: '{ library, instance }', description: 'El motor terminó de dibujar.' },
+]
+const chartBindings = (
+  _values: Record<string, unknown>,
+  log: (name: string, payload?: unknown) => void,
+) =>
+  ({
+    onPointClick: (event: unknown) => log('point-click', event),
+    onXClick: (event: unknown) => log('x-click', event),
+    onRangeChange: (event: unknown) => log('range-change', event),
+    // La instancia nativa del motor es enorme y circular: solo se registra el motor.
+    onReady: (event: unknown) => log('ready', { library: (event as { library: string }).library }),
+  }) as LiveBindings
 
 export const registry: RegistryEntry[] = [
   {
@@ -773,6 +871,99 @@ export const registry: RegistryEntry[] = [
         log('update:modelValue', value)
       },
     }),
+  },
+  {
+    id: 'as-chart',
+    name: 'ASChart',
+    category: 'charts',
+    description:
+      'Gráfica cartesiana genérica con el mismo API para ECharts, Chart.js y ApexCharts: de 1 a 4 ejes Y, paneles apilados con el eje X compartido, umbrales e intervalos como anotaciones, línea "ahora", tooltip, leyenda y zoom. Colores, textos y formatos salen de los tokens y del idioma activo.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      { key: 'now', label: 'Línea "ahora"', type: 'boolean', default: true },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 360,
+        min: 200,
+        max: 700,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...CHART_SERIES_FIELDS,
+    ],
+    events: CHART_EVENTS,
+    toProps: chartToProps,
+    toSnippet: chartToSnippet,
+    notes:
+      'Cambia el número de ejes Y (1–4) y el nombre, el color y el eje de cada serie: el código de ejemplo se actualiza con los `series` e `yAxes` resultantes. El intervalo sombreado y el umbral son `annotations`.',
+    component: ASChart,
+    bindings: chartBindings,
+  },
+  {
+    id: 'as-hydrograph-chart',
+    name: 'ASHydrographChart',
+    category: 'charts',
+    description:
+      'Hidrograma: precipitación arriba (barras, eje invertido) y caudal o nivel abajo, con el eje temporal compartido. Observado sólido, previsto discontinuo con una línea "ahora", varias fuentes de previsión (Harmonie, EPS) con bandas de percentiles p10–p90 y p25–p75, y umbrales de aviso.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      {
+        key: 'magnitude',
+        label: 'Magnitud',
+        type: 'select',
+        options: ['flow', 'level'],
+        default: 'flow',
+        description: 'Unidad y título por defecto: caudal (m³/s) o nivel (m).',
+      },
+      {
+        key: 'precipitationLayout',
+        label: 'Precipitación',
+        type: 'select',
+        options: ['panel', 'overlay'],
+        default: 'panel',
+        description:
+          '"panel": en su propio panel encima del caudal (alineados); "overlay": superpuesta al caudal, con su eje a la derecha.',
+      },
+      {
+        key: 'precipitationInverted',
+        label: 'Lluvia colgando desde arriba',
+        type: 'boolean',
+        default: true,
+        description:
+          'Eje de precipitación invertido. Desactívalo para que las barras crezcan desde abajo.',
+      },
+      {
+        key: 'precipitationWeight',
+        label: 'Alto del panel de lluvia',
+        type: 'number',
+        default: 0.35,
+        min: 0.1,
+        max: 0.9,
+        step: 0.05,
+      },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 440,
+        min: 260,
+        max: 800,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...HYDROGRAPH_SERIES_FIELDS,
+    ],
+    events: CHART_EVENTS,
+    toProps: hydrographToProps,
+    toSnippet: hydrographToSnippet,
+    notes:
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el color de cada serie (`observedName`/`observedColor` y `name`/`color` de cada previsión). Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
+    component: ASHydrographChart,
+    bindings: chartBindings,
   },
   buildLayerEntry({
     id: 'layer-geojson',

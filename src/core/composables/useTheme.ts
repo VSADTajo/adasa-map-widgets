@@ -87,8 +87,21 @@ export function useTheme(): ThemeContext {
  */
 export function useResolvedTheme(
   theme: () => 'light' | 'dark' | undefined,
-  fallback: 'light' | 'dark' = 'dark',
-): ComputedRef<'light' | 'dark'> {
+  fallback?: 'light' | 'dark',
+): ComputedRef<'light' | 'dark'>
+/**
+ * Con `fallback: null`, sin prop ni `provideTheme` devuelve `null`: el
+ * componente no fuerza ningún tema y hereda el de la página (p. ej. las
+ * gráficas, que van sobre la superficie de la página y no flotando sobre un mapa).
+ */
+export function useResolvedTheme(
+  theme: () => 'light' | 'dark' | undefined,
+  fallback: null,
+): ComputedRef<'light' | 'dark' | null>
+export function useResolvedTheme(
+  theme: () => 'light' | 'dark' | undefined,
+  fallback: 'light' | 'dark' | null = 'dark',
+): ComputedRef<'light' | 'dark' | null> {
   const context = inject(THEME_INJECTION_KEY, null)
   // `||` y no `??`: el playground pasa `''` para "sin valor" (ver PropsEditor).
   return computed(() => theme() || context?.resolvedMode.value || fallback)

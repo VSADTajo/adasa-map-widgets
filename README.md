@@ -10,6 +10,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | ------------------------------ | ----------------------------------------------------------------------------------------------- |
 | `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
+| `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
@@ -28,6 +29,49 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 ### Por qué es agnóstica del mapa
 
 Ningún widget de control importa una librería de mapas: solo `ASMap` y el sistema de capas lo hacen, y de forma opcional (ver más abajo). El resto son componentes **controlados**: reciben sus datos (línea de tiempo, rango, avisos...) como props ya resueltas y emiten eventos (`update:*`, `*-changed`). El proyecto consumidor decide qué hacer con ellos (p. ej. actualizar los parámetros de una capa temporal en su propio store). Ninguno depende de Pinia, Vuex ni ningún store.
+
+## Gráficas (`@vsadtajo/adasa-ui/charts`)
+
+- **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y color del observado con `observedName`/`observedColor` (y `name`/`color` de cada previsión). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+
+**Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
+
+```bash
+npm install echarts                     # chart-library="echarts" (por defecto)
+npm install chart.js chartjs-plugin-annotation chartjs-plugin-zoom chartjs-adapter-date-fns   # "chartjs"
+npm install apexcharts                  # "apexcharts" ⚠️ requiere licencia comercial (ver abajo)
+```
+
+Todo se ajusta por props:
+- de 1 a 4 ejes Y (`yAxes`), con unidad, lado, eje invertido o logarítmico;
+- paneles apilados con el eje X compartido (`panels`);
+- umbrales e intervalos como anotaciones (`annotations`), coloreados por nivel de aviso;
+- línea "ahora" (`now`);
+- nombre y color de cada serie (`series[i].name` / `.color`; también `'var(--as-data-cat-N)'`) y en qué eje va (`series[i].yAxis`);
+- barra de herramientas (`toolbar`): descargar PNG y restablecer zoom, igual en los tres motores;
+- leyenda arriba, abajo o a un lado (`legend="bottom"`), con los valores bajo el cursor si se activa `legend-values` (con `:tooltip="false"`, en vez del tooltip);
+- `tooltip`, `legend`, `zoom`, `height` y `animation`;
+- `nativeOptions`, como vía de escape a las opciones propias del motor.
+
+Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro y español de España por defecto.
+
+```vue
+<ASChart
+  :series="[{ id: 'q', name: 'Caudal', type: 'line', data: caudal }]"
+  :y-axes="[{ id: 'q', label: 'Caudal', unit: 'm³/s' }]"
+  :annotations="{ y: [{ value: 120, level: 'rojo', label: 'Umbral rojo' }] }"
+  now
+/>
+
+<ASHydrographChart
+  :discharge="{ observed: caudal, forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }] }"
+  :precipitation="{ observed: lluvia }"
+  :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
+/>
+```
+
+> ⚠️ **ApexCharts** (v4 en adelante) tiene licencia dual. Es gratis solo para organizaciones de menos de 2 M$, y su licencia comercial estándar no permite redistribuirlo dentro de otro producto. Un proyecto que use `chart-library="apexcharts"` necesita su propia licencia. ECharts (Apache-2.0) y Chart.js (MIT) no tienen restricciones. Decisión, arquitectura y diferencias entre motores: [ADR 0001](docs/adr/0001-motores-graficas.md).
 
 ## Estructura
 

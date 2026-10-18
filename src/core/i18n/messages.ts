@@ -44,6 +44,25 @@ export const es = {
   'basemaps.current': 'Basemap: {name}. Cambiar basemap',
   'basemaps.none': 'ninguno',
   'basemaps.list': 'Basemaps disponibles',
+
+  'chart.now': 'Ahora',
+  'chart.resetZoom': 'Restablecer zoom',
+  'chart.download': 'Descargar PNG',
+  'chart.toolbar': 'Herramientas de la gráfica',
+  'chart.fileName': 'grafica',
+  'chart.empty': 'Sin datos',
+  'chart.loading': 'Cargando…',
+  'chart.loadError':
+    'No se pudo cargar {library}. Instala la dependencia opcional: npm i {packages}',
+  'chart.ariaLabel': 'Gráfica: {series}',
+
+  'hydrograph.discharge': 'Caudal',
+  'hydrograph.level': 'Nivel',
+  'hydrograph.precipitation': 'Precipitación',
+  'hydrograph.observed': 'Observado',
+  'hydrograph.forecast': 'Previsto',
+  'hydrograph.band': '{source} {range}',
+  'hydrograph.threshold': 'Umbral {level}',
 } as const
 
 /** Clave de un texto de la librería. */
@@ -91,4 +110,23 @@ export const en: Messages = {
   'basemaps.current': 'Basemap: {name}. Change basemap',
   'basemaps.none': 'none',
   'basemaps.list': 'Available basemaps',
+
+  'chart.now': 'Now',
+  'chart.resetZoom': 'Reset zoom',
+  'chart.download': 'Download PNG',
+  'chart.toolbar': 'Chart tools',
+  'chart.fileName': 'chart',
+  'chart.empty': 'No data',
+  'chart.loading': 'Loading…',
+  'chart.loadError':
+    '{library} could not be loaded. Install the optional dependency: npm i {packages}',
+  'chart.ariaLabel': 'Chart: {series}',
+
+  'hydrograph.discharge': 'Discharge',
+  'hydrograph.level': 'Level',
+  'hydrograph.precipitation': 'Precipitation',
+  'hydrograph.observed': 'Observed',
+  'hydrograph.forecast': 'Forecast',
+  'hydrograph.band': '{source} {range}',
+  'hydrograph.threshold': 'Threshold {level}',
 }

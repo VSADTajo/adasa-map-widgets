@@ -26,13 +26,16 @@ const locales: LocaleCode[] = ['es', 'en']
 type ViewMode = 'gallery' | 'composer' | 'tokens'
 const VIEW_MODES: ViewMode[] = ['gallery', 'composer', 'tokens']
 
-// La vista va en el hash (`#tokens`...) para poder enlazar directamente a ella.
-const viewMode = ref<ViewMode>(
-  VIEW_MODES.find((view) => window.location.hash === `#${view}`) ?? 'gallery',
+// La vista (y, en la galería, el componente) va en el hash para poder enlazar
+// directamente a ella: `#tokens`, `#composer`, `#gallery/as-hydrograph-chart`.
+const [hashView, hashEntry] = window.location.hash.slice(1).split('/')
+const viewMode = ref<ViewMode>(VIEW_MODES.find((view) => view === hashView) ?? 'gallery')
+const activeId = ref<string>(
+  registry.find((entry) => entry.id === hashEntry)?.id ?? registry[0]!.id,
 )
-watch(viewMode, (view) => history.replaceState(null, '', `#${view}`))
-
-const activeId = ref<string>(registry[0]!.id)
+watch([viewMode, activeId], ([view, id]) =>
+  history.replaceState(null, '', view === 'gallery' ? `#gallery/${id}` : `#${view}`),
+)
 const entry = computed(() => getEntry(activeId.value) ?? registry[0]!)
 const category = computed(() => getCategory(entry.value.category))
 
@@ -71,13 +74,40 @@ function logEvent(name: string, payload?: unknown): void {
 
 const liveListeners = computed(() => entry.value.bindings?.(propValues, logEvent) ?? {})
 
-const previewProps = computed(() => ({
-  ...propValues,
-  ...liveListeners.value,
-}))
+/**
+ * Motor con el que se ha dibujado de verdad la gráfica (evento `ready`): los
+ * tres motores se ven casi iguales a propósito, así que sin esto no se nota el cambio.
+ */
+const renderedWith = ref<string | null>(null)
+const ENGINE_LABELS: Record<string, string> = {
+  echarts: 'ECharts (un lienzo canvas)',
+  chartjs: 'Chart.js (un lienzo canvas por panel)',
+  apexcharts: 'ApexCharts (un SVG por panel)',
+}
+watch(activeId, () => (renderedWith.value = null))
+
+const previewProps = computed(() => {
+  const listeners = liveListeners.value as Record<
+    string,
+    ((...args: unknown[]) => void) | undefined
+  >
+  return {
+    ...(entry.value.toProps ? entry.value.toProps(propValues) : propValues),
+    ...listeners,
+    ...(category.value.key === 'charts'
+      ? {
+          onReady: (event: unknown) => {
+            renderedWith.value = (event as { library: string }).library
+            listeners.onReady?.(event)
+          },
+        }
+      : {}),
+  }
+})
 
 const code = computed(
   () =>
+    entry.value.toSnippet?.(propValues) ??
     entry.value.codeOverride ??
     buildSnippet(
       entry.value.name,
@@ -167,7 +197,12 @@ const code = computed(
               :class="{ 'pg-card--wide': category.preview === 'canvas' }"
               aria-label="Vista previa en vivo"
             >
-              <h2 class="pg-card__heading">Vista previa</h2>
+              <h2 class="pg-card__heading">
+                Vista previa
+                <span v-if="renderedWith" class="pg-engine-badge">
+                  Dibujado con {{ ENGINE_LABELS[renderedWith] ?? renderedWith }}
+                </span>
+              </h2>
               <PreviewCanvas v-if="category.preview === 'canvas'" :key="activeId">
                 <component :is="entry.component" v-bind="previewProps">
                   <template v-if="entry.slotDefault !== undefined" #default>{{
@@ -421,5 +456,16 @@ const code = computed(
 /* El lienzo de componentes no-mapa ocupa todo el ancho para poder probar escritorio. */
 .pg-card--wide {
   grid-column: 1 / -1;
+}
+.pg-engine-badge {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pg-surface-muted);
+  border: 1px solid var(--pg-border);
+  color: var(--pg-text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  vertical-align: middle;
 }
 </style>
