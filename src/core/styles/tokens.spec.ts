@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { contrastRatio } from '@/core/utils/contrast'
+import { contrastRatio, parseColor } from '@/core/utils/contrast'
 
 // Con fs y no con `?raw`: Vitest vacía los .css importados aunque sea en crudo.
 const css = readFileSync(new URL('./tokens.css', import.meta.url), 'utf-8')
@@ -20,8 +20,25 @@ const declarations = new Map(
 function token(name: string, mode: Mode): string {
   const value = declarations.get(name)
   if (!value) throw new Error(`No existe --as-${name}`)
-  const pair = /^light-dark\(\s*(.+?)\s*,\s*(.+?)\s*\)$/.exec(value)
-  return pair ? pair[mode === 'light' ? 1 : 2]! : value
+  if (!value.startsWith('light-dark(')) return value
+  // Separa por la coma de primer nivel: los valores pueden ser `rgba(a, b, c, d)`.
+  const args = value.slice('light-dark('.length, -1)
+  let depth = 0
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '(') depth++
+    else if (args[i] === ')') depth--
+    else if (args[i] === ',' && depth === 0) {
+      return (mode === 'light' ? args.slice(0, i) : args.slice(i + 1)).trim()
+    }
+  }
+  throw new Error(`light-dark() mal formado en --as-${name}`)
+}
+
+/** Color resultante de pintar `color` (hex o rgba con alfa) encima de `backdrop` (opaco). */
+function composite(color: string, backdrop: string): string {
+  const alpha = Number(/rgba\([^)]*,\s*([\d.]+)\s*\)/.exec(color)?.[1] ?? 1)
+  const [fg, bg] = [parseColor(color), parseColor(backdrop)]
+  return `rgb(${fg.map((c, i) => Math.round(alpha * c + (1 - alpha) * bg[i]!)).join(', ')})`
 }
 
 const MODES: Mode[] = ['light', 'dark']
@@ -62,6 +79,17 @@ describe('tokens.css: contraste WCAG 2.1 AA contra --as-color-surface', () => {
         contrastRatio(token(`alert-${level}-text`, mode), token(`alert-${level}`, mode)),
       ).toBeGreaterThanOrEqual(4.5)
     })
+
+    it.each(['overlay-text', 'overlay-text-muted'])(
+      'el texto --as-%s llega a 4.5:1 sobre el overlay, con el mapa más oscuro o más claro debajo',
+      (name) => {
+        for (const backdrop of ['#000000', '#ffffff']) {
+          const background = composite(token('overlay-bg', mode), backdrop)
+          const text = composite(token(name, mode), background)
+          expect(contrastRatio(text, background)).toBeGreaterThanOrEqual(4.5)
+        }
+      },
+    )
 
     it('la rampa secuencial se aleja de la superficie de forma monótona (100 → 700)', () => {
       const steps = Array.from({ length: 13 }, (_, i) => `data-seq-${100 + i * 50}`)

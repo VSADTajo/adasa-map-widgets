@@ -91,6 +91,7 @@ Todos los componentes se estilizan con variables CSS (`--as-*`) definidas en [`s
 | Tipografía | `--as-font-family`, `--as-font-family-mono`, `--as-font-size-{xs…3xl}`, `--as-font-weight-*`, `--as-line-height-*` |
 | Espaciado y forma | `--as-space-{1…16}` (múltiplos de `--as-spacing-unit`), `--as-radius-{sm,md,lg,full}`, `--as-shadow-{sm,md,lg}` |
 | Capas | `--as-z-{base,map-control,dropdown,sticky,drawer,modal,toast,tooltip}` |
+| Overlays sobre el mapa | `--as-overlay-{bg,text,text-muted,surface-muted,border}`: paneles de los widgets `ASMap*` |
 | Datos | `--as-data-cat-{1…8}` (series), `--as-data-seq-{100…700}` (magnitud), `--as-data-div-*` (polaridad), `--as-data-grid`, `--as-data-axis` |
 | Avisos | `--as-alert-{normal,amarillo,naranja,rojo}` y sus variantes `-text` / `-strong` |
 

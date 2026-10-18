@@ -102,6 +102,13 @@ export function readTokens(element: Element = document.documentElement): ThemeTo
       zIndex: fromKeys(Object.keys(Z_LAYERS) as ZIndexLayer[], (layer) =>
         has(`z-${Z_LAYERS[layer]}`) ? Number(raw(`z-${Z_LAYERS[layer]}`)) : NaN,
       ),
+      overlay: {
+        bg: color('overlay-bg'),
+        text: color('overlay-text'),
+        textMuted: color('overlay-text-muted'),
+        surfaceMuted: color('overlay-surface-muted'),
+        border: color('overlay-border'),
+      },
       data: {
         categorical: Array.from({ length: 8 }, (_, i) => color(`data-cat-${i + 1}`)),
         sequential: SEQUENTIAL_STEPS.map((step) => color(`data-seq-${step}`)),

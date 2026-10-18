@@ -17,3 +17,8 @@ Tokens de diseño corporativos. Se mantienen los tokens existentes y se añaden:
 - El rojo pasa de `#e53935` a `#d32f2f`.
 
 Los widgets `ASMap*` usan `--as-z-map-control` (mismo valor, 1000).
+
+Los widgets `ASMap*` dejan de fijar colores propios en sus clases `--dark`/`--light`. Ahora leen los tokens nuevos `--as-overlay-{bg,text,text-muted,surface-muted,border}`, así que un proyecto puede personalizarlos desde CSS. La API no cambia y el aspecto es el mismo salvo dos detalles:
+
+- El texto secundario en claro pasa a `#5a6a81` para llegar a 4.5:1 incluso sobre un mapa oscuro.
+- Los widgets en oscuro usan la sombra del tema oscuro.

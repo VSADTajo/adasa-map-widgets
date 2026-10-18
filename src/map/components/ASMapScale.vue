@@ -98,6 +98,14 @@ const offsetStyle = computed(() => {
 
 <style scoped>
 .as-scale {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  /* Más transparente y con bordes más marcados que el resto de overlays
+     para no tapar el mapa bajo la regla: valores propios. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-border: light-dark(rgba(15, 23, 42, 0.55), rgba(255, 255, 255, 0.7));
+  --as-scale-bg: light-dark(rgba(255, 255, 255, 0.85), rgba(24, 24, 27, 0.72));
   position: absolute;
   z-index: var(--as-z-map-control, 1000);
   font-family: var(--as-font-family, system-ui, sans-serif);
@@ -106,15 +114,11 @@ const offsetStyle = computed(() => {
 }
 
 .as-scale--dark {
-  --as-color-text: #ffffff;
-  --as-color-border: rgba(255, 255, 255, 0.7);
-  --as-scale-bg: rgba(24, 24, 27, 0.72);
+  color-scheme: dark;
 }
 
 .as-scale--light {
-  --as-color-text: #0f172a;
-  --as-color-border: rgba(15, 23, 42, 0.55);
-  --as-scale-bg: rgba(255, 255, 255, 0.85);
+  color-scheme: light;
 }
 
 .as-scale__ruler {

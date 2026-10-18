@@ -27,6 +27,15 @@ export interface AlertTokens {
   strong: string
 }
 
+/** Paneles semitransparentes de los widgets sobre el mapa (`--as-overlay-*`). */
+export interface OverlayTokens {
+  bg: string
+  text: string
+  textMuted: string
+  surfaceMuted: string
+  border: string
+}
+
 /** Paletas para visualización de datos (`--as-data-*`). */
 export interface DataTokens {
   /**
@@ -80,6 +89,7 @@ export interface ThemeTokens {
   radii: Record<'sm' | 'md' | 'lg' | 'full', string>
   shadows: Record<'sm' | 'md' | 'lg', string>
   zIndex: Record<ZIndexLayer, number>
+  overlay: OverlayTokens
   data: DataTokens
   alert: Record<AlertLevel, AlertTokens>
 }

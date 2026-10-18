@@ -145,6 +145,19 @@ const offsetStyle = computed(() => {
 
 <style scoped>
 .as-legend {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-text-muted: var(
+    --as-overlay-text-muted,
+    light-dark(#5a6a81, rgba(255, 255, 255, 0.8))
+  );
+  --as-color-border: var(--as-overlay-border, light-dark(#cbd5e1, rgba(255, 255, 255, 0.45)));
+  --as-legend-bg: var(
+    --as-overlay-bg,
+    light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85))
+  );
   position: absolute;
   z-index: var(--as-z-map-control, 1000);
   min-width: 180px;
@@ -161,17 +174,11 @@ const offsetStyle = computed(() => {
 }
 
 .as-legend--dark {
-  --as-color-text: #ffffff;
-  --as-color-text-muted: rgba(255, 255, 255, 0.8);
-  --as-color-border: rgba(255, 255, 255, 0.45);
-  --as-legend-bg: rgba(24, 24, 27, 0.85);
+  color-scheme: dark;
 }
 
 .as-legend--light {
-  --as-color-text: #0f172a;
-  --as-color-text-muted: #64748b;
-  --as-color-border: #cbd5e1;
-  --as-legend-bg: rgba(255, 255, 255, 0.92);
+  color-scheme: light;
 }
 
 .as-legend__header {

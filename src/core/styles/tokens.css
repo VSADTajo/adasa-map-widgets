@@ -165,6 +165,19 @@
   --as-data-div-warm-2: light-dark(#e3645f, #dc5e59);
   --as-data-div-warm-3: light-dark(#ac3031, #ff958e);
 
+  /*
+   * ── Overlays sobre el mapa ──────────────────────────────────────────
+   * Paneles semitransparentes de los widgets ASMap* (controles de tiempo,
+   * leyenda, selectores...). El modo lo elige cada widget con su prop
+   * `theme` (o el tema de provideTheme), no el de la página. Textos ≥ 4.5:1
+   * incluso con el mapa más oscuro o más claro posible debajo.
+   */
+  --as-overlay-bg: light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85));
+  --as-overlay-text: light-dark(#0f172a, #ffffff);
+  --as-overlay-text-muted: light-dark(#5a6a81, rgba(255, 255, 255, 0.8));
+  --as-overlay-surface-muted: light-dark(#f1f5f9, rgba(255, 255, 255, 0.15));
+  --as-overlay-border: light-dark(#cbd5e1, rgba(255, 255, 255, 0.45));
+
   /* ── Datos: elementos de la gráfica ────────────────────────────────── */
   --as-data-grid: light-dark(#e2e8f0, #334155);
   --as-data-axis: light-dark(#94a3b8, #64748b);

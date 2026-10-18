@@ -292,6 +292,24 @@ const rowStyle = computed(() => ({
 
 <style scoped>
 .as-day-interval-controls {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-text-muted: var(
+    --as-overlay-text-muted,
+    light-dark(#5a6a81, rgba(255, 255, 255, 0.8))
+  );
+  --as-color-surface-muted: var(
+    --as-overlay-surface-muted,
+    light-dark(#f1f5f9, rgba(255, 255, 255, 0.15))
+  );
+  --as-color-border: var(--as-overlay-border, light-dark(#cbd5e1, rgba(255, 255, 255, 0.45)));
+  background-color: var(
+    --as-overlay-bg,
+    light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85))
+  );
+  color: var(--as-color-text);
   position: absolute;
   z-index: var(--as-z-map-control, 1000);
   width: min(760px, calc(100% - 48px));
@@ -316,21 +334,11 @@ const rowStyle = computed(() => ({
 }
 
 .as-day-interval-controls--dark {
-  --as-color-text: #ffffff;
-  --as-color-text-muted: rgba(255, 255, 255, 0.8);
-  --as-color-surface-muted: rgba(255, 255, 255, 0.15);
-  --as-color-border: rgba(255, 255, 255, 0.45);
-  background-color: rgba(24, 24, 27, 0.85);
-  color: var(--as-color-text);
+  color-scheme: dark;
 }
 
 .as-day-interval-controls--light {
-  --as-color-text: #0f172a;
-  --as-color-text-muted: #64748b;
-  --as-color-surface-muted: #f1f5f9;
-  --as-color-border: #cbd5e1;
-  background-color: rgba(255, 255, 255, 0.92);
-  color: var(--as-color-text);
+  color-scheme: light;
 }
 
 .as-day-interval-controls__header {

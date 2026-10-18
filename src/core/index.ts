@@ -19,6 +19,7 @@ export type {
   ThemeMode,
   ThemeTokens,
   DataTokens,
+  OverlayTokens,
   AlertLevel,
   AlertTokens,
   FontSizeToken,
