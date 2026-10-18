@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import type { ScaleProps } from '@/types/ScaleProps'
 import {
   computeImperialScaleBar,
@@ -34,8 +35,11 @@ const props = withDefaults(defineProps<ScaleProps>(), {
   width: 100,
   position: 'bottom-left',
   offset: 20,
-  theme: 'dark',
+  theme: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 /** Número de segmentos (y de marcas intermedias) de la regla graduada. */
 const SEGMENT_COUNT = 4
@@ -72,7 +76,7 @@ const offsetStyle = computed(() => {
 <template>
   <div
     class="amw-scale"
-    :class="[`amw-scale--${props.position}`, `amw-scale--${props.theme}`]"
+    :class="[`amw-scale--${props.position}`, `amw-scale--${resolvedTheme}`]"
     :style="offsetStyle"
   >
     <div

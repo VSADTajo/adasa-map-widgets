@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import { format } from 'date-fns'
 import type { TimelineEmits, TimelineProps } from '@/types/TimelineProps'
 
@@ -28,10 +29,13 @@ import type { TimelineEmits, TimelineProps } from '@/types/TimelineProps'
 const props = withDefaults(defineProps<TimelineProps>(), {
   stepMs: 2000,
   position: 'bottom',
-  theme: 'dark',
+  theme: undefined,
   accentColor: undefined,
   width: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 /** Override local de `--amw-color-primary` cuando se pasa `accentColor` (p. ej. desde una escala de color). */
 const accentStyle = computed(() =>
@@ -139,7 +143,7 @@ const playPauseIconPath = computed(() =>
 <template>
   <div
     class="amw-time-controls"
-    :class="[`amw-time-controls--${props.position}`, `amw-time-controls--${props.theme}`]"
+    :class="[`amw-time-controls--${props.position}`, `amw-time-controls--${resolvedTheme}`]"
     :style="[accentStyle, widthStyle]"
   >
     <div class="amw-time-controls__header">

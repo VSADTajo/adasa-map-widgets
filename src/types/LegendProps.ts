@@ -29,6 +29,9 @@ export interface LegendProps {
    * interpreta en píxeles; un `string` se usa tal cual. @default 20
    */
   offset?: string | number
-  /** Tema visual. @default 'dark' */
+  /**
+   * Tema visual. Si se omite, hereda el de `provideTheme` y, si no hay
+   * ninguno, `'dark'`.
+   */
   theme?: TimeControlsTheme
 }

@@ -24,7 +24,10 @@ export interface TimelineProps {
   stepMs?: number
   /** Lado del contenedor donde se ancla el widget. @default 'bottom' */
   position?: TimeControlsPosition
-  /** Tema visual. @default 'dark' */
+  /**
+   * Tema visual. Si se omite, hereda el de `provideTheme` y, si no hay
+   * ninguno, `'dark'`.
+   */
   theme?: TimeControlsTheme
   /**
    * Color de acento para el instante actual (CSS válido: hex, rgb, hsl...).

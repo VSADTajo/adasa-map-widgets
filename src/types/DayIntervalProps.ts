@@ -90,7 +90,10 @@ export interface DayIntervalProps {
    * @default 20 (píxeles)
    */
   offset?: string | number
-  /** Tema visual. @default 'dark' */
+  /**
+   * Tema visual. Si se omite, hereda el de `provideTheme` y, si no hay
+   * ninguno, `'dark'`.
+   */
   theme?: TimeControlsTheme
   /**
    * Color de acento (CSS válido) usado para el resaltado del intervalo

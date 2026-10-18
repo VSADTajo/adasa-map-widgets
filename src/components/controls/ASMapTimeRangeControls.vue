@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import { format } from 'date-fns'
 import type { TimeRangeEmits, TimeRangeProps } from '@/types/TimeRangeProps'
 
@@ -29,10 +30,13 @@ import type { TimeRangeEmits, TimeRangeProps } from '@/types/TimeRangeProps'
  */
 const props = withDefaults(defineProps<TimeRangeProps>(), {
   position: 'bottom',
-  theme: 'dark',
+  theme: undefined,
   accentColor: undefined,
   width: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 const emit = defineEmits<TimeRangeEmits>()
 
@@ -130,7 +134,7 @@ const fillStyle = computed(() => {
     class="amw-time-range-controls"
     :class="[
       `amw-time-range-controls--${props.position}`,
-      `amw-time-range-controls--${props.theme}`,
+      `amw-time-range-controls--${resolvedTheme}`,
     ]"
     :style="[accentStyle, widthStyle]"
   >

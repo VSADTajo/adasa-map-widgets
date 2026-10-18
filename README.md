@@ -24,7 +24,8 @@ src/
 ├── composables/      # Hooks reutilizables (useTheme, useMapAdapter, useClickOutside...)
 ├── styles/           # tokens.css: variables de tema por defecto
 ├── playground/       # App interactiva: galería de componentes + compositor de widgets sobre un mapa
-│   └── utils/widgetRegistry.ts  # Registro tipo → componente usado por el compositor
+│   ├── registry.ts              # Registro único de componentes (galería + compositor)
+│   └── utils/widgetRegistry.ts  # Lista del compositor, derivada de registry.ts
 └── index.ts          # Punto de entrada de la librería
 ```
 
@@ -73,7 +74,15 @@ Todos los widgets se estilizan con variables CSS (`--amw-*`) definidas en [`src/
 }
 ```
 
-Los tres widgets `ASMap*Controls` además aceptan una prop `theme` (`'dark' | 'light'`) y `accentColor` (para tintar el widget con un color puntual, p. ej. el resultado de tu propia escala de color).
+Para cambiar entre claro y oscuro, llama a `provideTheme` una vez en la raíz de tu app. Todos los widgets lo heredan:
+
+```ts
+import { provideTheme } from '@vsadtajo/adasa-map-widgets'
+
+const { setMode } = provideTheme('auto') // 'light' | 'dark' | 'auto' (sigue al sistema)
+```
+
+Cada widget acepta además una prop `theme` (`'dark' | 'light'`) que tiene prioridad sobre el tema global. Si no hay `provideTheme` ni prop, se usa `'dark'`, como hasta ahora. Los que lo admiten aceptan también `accentColor`, para tintar el widget con un color puntual (p. ej. el resultado de tu propia escala de color).
 
 ## Scripts
 
@@ -156,7 +165,7 @@ Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workf
 
 ## Convenciones para nuevos widgets
 
-- Prefijo `ASMap*` en el nombre del componente.
+- Prefijo `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado) y `AS*` para el resto (gráficas, tablas, layout...).
 - Props tipadas con una interfaz exportada desde `src/types/` (p. ej. `TimelineProps`, `TimeRangeProps`, `DayIntervalProps`), reutilizada por `defineProps<T>()` en el propio `.vue`.
 - Eventos declarados con `defineEmits<T>()` (tipo exportado junto a las props) y documentados con JSDoc.
 - JSDoc en la interfaz de props y en el bloque `<script setup>` explicando el propósito del widget y, si aplica, un `@example`.
@@ -164,4 +173,5 @@ Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workf
 - Sin dependencias externas pesadas. La única excepción es `ASMap`, que carga Leaflet/MapLibre como `peerDependencies` opcionales vía `import()` dinámico — nunca como dependencia obligatoria del bundle (ver `vite.config.ts` → `rollupOptions.external`).
 - Accesibilidad: roles/aria correctos, soporte de teclado y foco visible.
 - Controlado y agnóstico de cualquier store: recibe datos ya resueltos por props y emite eventos `update:*`/`*-changed`, nunca lee un store directamente.
-- Añade el componente al `index.ts` de su categoría y, si quieres que sea explorable, a `src/playground/registry.ts` (galería) y/o `src/playground/utils/widgetRegistry.ts` (compositor).
+- Tema: prop `theme` opcional resuelta con `useResolvedTheme(() => props.theme)`, para heredar `provideTheme` cuando no se pasa.
+- Añade el componente al `index.ts` de su categoría y regístralo en `src/playground/registry.ts`. Si se puede colocar sobre el mapa, añade además `composer` a su entrada para que aparezca en el compositor (`utils/widgetRegistry.ts` se deriva de ahí).

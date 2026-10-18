@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import { useClickOutside } from '@/composables/useClickOutside'
 import type { BasemapOption } from '@/components/mapping/ASMap.vue'
 import type { BasemapsSelectorEmits, BasemapsSelectorProps } from '@/types/BasemapsSelectorProps'
@@ -25,8 +26,11 @@ const props = withDefaults(defineProps<BasemapsSelectorProps>(), {
   basemap: undefined,
   position: 'bottom-right',
   offset: 20,
-  theme: 'dark',
+  theme: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 const emit = defineEmits<BasemapsSelectorEmits>()
 
@@ -71,7 +75,7 @@ const offsetStyle = computed(() => {
   <div
     ref="rootEl"
     class="amw-basemaps-selector"
-    :class="[`amw-basemaps-selector--${props.position}`, `amw-basemaps-selector--${props.theme}`]"
+    :class="[`amw-basemaps-selector--${props.position}`, `amw-basemaps-selector--${resolvedTheme}`]"
     :style="offsetStyle"
     @keydown.escape="isOpen = false"
   >

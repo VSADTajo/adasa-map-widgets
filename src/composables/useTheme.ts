@@ -1,4 +1,4 @@
-import { computed, inject, provide, ref, type InjectionKey, type Ref } from 'vue'
+import { computed, inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } from 'vue'
 import type { ThemeMode } from '@/types/theme'
 
 export interface ThemeContext {
@@ -57,4 +57,23 @@ export function provideTheme(initialMode: ThemeMode = 'auto'): ThemeContext {
  */
 export function useTheme(): ThemeContext {
   return inject(THEME_INJECTION_KEY) ?? provideTheme('auto')
+}
+
+/**
+ * Tema efectivo de un widget: la prop `theme` si se pasa; si no, el del
+ * contexto de un ancestro ({@link provideTheme}); y si tampoco hay contexto,
+ * `fallback`. Así un único `provideTheme` en la raíz de la app tematiza todos
+ * los widgets, sin perder el override por widget ni cambiar el aspecto de
+ * quien no use `provideTheme` (los widgets de mapa eran `'dark'` por defecto).
+ *
+ * A diferencia de {@link useTheme}, no crea un contexto propio si no hay
+ * ninguno: un widget aislado no debe pasar a seguir la preferencia del sistema.
+ */
+export function useResolvedTheme(
+  theme: () => 'light' | 'dark' | undefined,
+  fallback: 'light' | 'dark' = 'dark',
+): ComputedRef<'light' | 'dark'> {
+  const context = inject(THEME_INJECTION_KEY, null)
+  // `||` y no `??`: el playground pasa `''` para "sin valor" (ver PropsEditor).
+  return computed(() => theme() || context?.resolvedMode.value || fallback)
 }

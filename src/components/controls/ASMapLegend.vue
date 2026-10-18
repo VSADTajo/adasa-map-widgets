@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import type { LegendProps } from '@/types/LegendProps'
 import type { LayerConfig } from '@/types/layers'
 import type { LegendItem, LegendRamp } from '@/types/legend'
@@ -29,8 +30,11 @@ const props = withDefaults(defineProps<LegendProps>(), {
   collapsible: true,
   position: 'bottom-right',
   offset: 20,
-  theme: 'dark',
+  theme: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 interface LegendSection {
   layerId: string
@@ -83,7 +87,7 @@ const offsetStyle = computed(() => {
 <template>
   <div
     class="amw-legend"
-    :class="[`amw-legend--${props.position}`, `amw-legend--${props.theme}`]"
+    :class="[`amw-legend--${props.position}`, `amw-legend--${resolvedTheme}`]"
     :style="offsetStyle"
   >
     <div class="amw-legend__header">

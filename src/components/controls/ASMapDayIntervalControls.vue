@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import type { DayIntervalEmits, DayIntervalProps } from '@/types/DayIntervalProps'
 
 /**
@@ -39,10 +40,13 @@ const props = withDefaults(defineProps<DayIntervalProps>(), {
   subtitle: undefined,
   position: 'bottom',
   offset: 20,
-  theme: 'dark',
+  theme: undefined,
   accentColor: undefined,
   width: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 const emit = defineEmits<DayIntervalEmits>()
 
@@ -230,7 +234,7 @@ const rowStyle = computed(() => ({
     class="amw-day-interval-controls"
     :class="[
       `amw-day-interval-controls--${props.position}`,
-      `amw-day-interval-controls--${props.theme}`,
+      `amw-day-interval-controls--${resolvedTheme}`,
     ]"
     :style="[accentStyle, widthStyle, offsetStyle]"
   >

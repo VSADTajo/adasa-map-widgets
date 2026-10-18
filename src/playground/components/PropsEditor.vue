@@ -50,7 +50,7 @@ function handleInput(field: PropField, event: Event): void {
         @change="handleInput(field, $event)"
       >
         <option v-for="option in field.options ?? []" :key="option" :value="option">
-          {{ option }}
+          {{ option === '' ? '(sin valor)' : option }}
         </option>
       </select>
 

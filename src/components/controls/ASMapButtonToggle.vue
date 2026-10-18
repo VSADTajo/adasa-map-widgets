@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useResolvedTheme } from '@/composables/useTheme'
 import type {
   ButtonToggleEmits,
   ButtonToggleOption,
@@ -37,8 +38,11 @@ const props = withDefaults(defineProps<ButtonToggleProps>(), {
   accentColor: '#2563eb',
   position: 'top-left',
   offset: 20,
-  theme: 'dark',
+  theme: undefined,
 })
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
 
 const emit = defineEmits<ButtonToggleEmits>()
 
@@ -63,7 +67,7 @@ const offsetStyle = computed(() => {
 <template>
   <div
     class="amw-button-toggle"
-    :class="[`amw-button-toggle--${props.position}`, `amw-button-toggle--${props.theme}`]"
+    :class="[`amw-button-toggle--${props.position}`, `amw-button-toggle--${resolvedTheme}`]"
     :style="offsetStyle"
     role="group"
   >

@@ -26,7 +26,10 @@ export interface BasemapsSelectorProps {
    * interpreta en píxeles. @default 20 (píxeles)
    */
   offset?: string | number
-  /** Tema visual. @default 'dark' */
+  /**
+   * Tema visual. Si se omite, hereda el de `provideTheme` y, si no hay
+   * ninguno, `'dark'`.
+   */
   theme?: TimeControlsTheme
 }
 
