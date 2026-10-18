@@ -8,8 +8,8 @@ import EventLog, { type LogEntry } from './components/EventLog.vue'
 import WidgetPlayground from './components/WidgetPlayground.vue'
 import { registry, getEntry } from './registry'
 import { buildSnippet } from './propTypes'
-import { provideTheme } from '@/composables/useTheme'
-import type { ThemeMode } from '@/types/theme'
+import { provideTheme } from '@/core/composables/useTheme'
+import type { ThemeMode } from '@/core/types/theme'
 
 const { mode, resolvedMode, setMode } = provideTheme('auto')
 const modes: ThemeMode[] = ['light', 'dark', 'auto']
@@ -73,7 +73,7 @@ const code = computed(
 </script>
 
 <template>
-  <div class="pg-app" :class="{ 'amw-dark': resolvedMode === 'dark' }">
+  <div class="pg-app" :class="{ 'as-dark': resolvedMode === 'dark' }">
     <nav class="pg-view-switch" aria-label="Modo del playground">
       <button
         type="button"

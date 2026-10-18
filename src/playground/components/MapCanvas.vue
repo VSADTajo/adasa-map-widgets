@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/components/mapping/ASMap.vue'
+import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/map/components/ASMap.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
-import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
-import type { LayerConfig, LayerLoadedEvent } from '@/types/layers'
+import type { MapLibraryOption, WidgetPlacement } from '@/playground/types'
+import type { LayerConfig, LayerLoadedEvent } from '@/map/types/layers'
 
 /**
  * Envuelve `ASMap` y renderiza sobre él los widgets colocados por el usuario

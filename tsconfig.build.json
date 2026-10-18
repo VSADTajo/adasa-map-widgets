@@ -12,16 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true
   },
-  "include": [
-    "src/index.ts",
-    "src/vite-env.d.ts",
-    "src/components/**/*.ts",
-    "src/components/**/*.vue",
-    "src/types/**/*.ts",
-    "src/composables/**/*.ts",
-    "src/layers/**/*.ts",
-    "src/legend/**/*.ts",
-    "src/utils/**/*.ts"
-  ],
-  "exclude": ["src/playground/**/*"]
+  "include": ["src/index.ts", "src/vite-env.d.ts", "src/core/**/*", "src/map/**/*"],
+  "exclude": ["src/playground/**/*", "src/**/*.spec.ts"]
 }

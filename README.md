@@ -1,50 +1,69 @@
-# @vsadtajo/adasa-map-widgets
+# @vsadtajo/adasa-ui
 
-Librería **ADASA** de componentes **Vue 3 + TypeScript** con widgets para aplicaciones de web mapping, **agnóstica del motor de mapas** subyacente. Todos los componentes públicos llevan el prefijo **`ASMap*`**. Estándar interno de [VSADTajo](https://github.com/VSADTajo) — paquete privado, distribuido vía GitHub Packages (no publicado en el registro público de npm).
+Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye el dominio de **mapas** (agnóstico del motor: Leaflet o MapLibre), y crecerá por dominios con gráficas, tablas, detalle, layout y formularios (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
 
-## Componentes
+## Dominios y entry points
 
-- **[`ASMap`](src/components/mapping/ASMap.vue)** — contenedor de mapa: instancia Leaflet o MapLibre GL JS (a elección) y muestra un mapa base de OpenStreetMap por defecto. Su slot por defecto aloja los widgets posicionados sobre el mapa.
-- **[`ASMapTimeControls`](src/components/controls/ASMapTimeControls.vue)** — reproducción de una línea de tiempo: play/pause, paso a paso y slider.
-- **[`ASMapTimeRangeControls`](src/components/controls/ASMapTimeRangeControls.vue)** — selección de un **rango** de tiempo con dos manejadores sobre un slider doble.
-- **[`ASMapDayIntervalControls`](src/components/controls/ASMapDayIntervalControls.vue)** — selector de intervalos horarios agrupados por día (p. ej. bloques de 6h × 3 días), coloreados según avisos/severidad.
+Cada dominio se importa desde su propio subpath, así que un proyecto solo carga lo que usa:
 
-## Por qué es agnóstica del mapa
+| Import                         | Contenido                                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `@vsadtajo/adasa-ui`           | `core`: tema (`provideTheme`, `useTheme`, `useResolvedTheme`), `useClickOutside`, tipos de tema |
+| `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
+| `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
-Ningún widget de control importa una librería de mapas — solo `ASMap` lo hace, y de forma opcional (ver más abajo). El resto son componentes **controlados**: reciben sus datos (línea de tiempo, rango, avisos...) como props ya resueltas y emiten eventos (`update:*`, `*-changed`); el proyecto consumidor decide qué hacer con ellos (p. ej. actualizar los parámetros de una capa temporal en su propio store). Ninguno depende de Pinia, Vuex ni ningún store.
+Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
+
+## Componentes del dominio `map`
+
+- **[`ASMap`](src/map/components/ASMap.vue)**: contenedor de mapa. Instancia Leaflet o MapLibre GL JS (a elección) y muestra un mapa base de OpenStreetMap por defecto. Su slot por defecto aloja los widgets posicionados sobre el mapa.
+- **[`ASMapTimeControls`](src/map/components/ASMapTimeControls.vue)**: reproducción de una línea de tiempo (play/pause, paso a paso y slider).
+- **[`ASMapTimeRangeControls`](src/map/components/ASMapTimeRangeControls.vue)**: selección de un **rango** de tiempo con dos manejadores sobre un slider doble.
+- **[`ASMapDayIntervalControls`](src/map/components/ASMapDayIntervalControls.vue)**: selector de intervalos horarios agrupados por día (p. ej. bloques de 6h × 3 días), coloreados según avisos/severidad.
+- **[`ASMapBasemapsSelector`](src/map/components/ASMapBasemapsSelector.vue)**: selector de mapa base con miniaturas.
+- **[`ASMapScale`](src/map/components/ASMapScale.vue)**: escala del mapa (regla graduada o razón numérica).
+- **[`ASMapLegend`](src/map/components/ASMapLegend.vue)**: leyenda de las capas dinámicas, generada por tipo de capa.
+- **[`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)**: grupo de botones de selección única.
+
+### Por qué es agnóstica del mapa
+
+Ningún widget de control importa una librería de mapas: solo `ASMap` y el sistema de capas lo hacen, y de forma opcional (ver más abajo). El resto son componentes **controlados**: reciben sus datos (línea de tiempo, rango, avisos...) como props ya resueltas y emiten eventos (`update:*`, `*-changed`). El proyecto consumidor decide qué hacer con ellos (p. ej. actualizar los parámetros de una capa temporal en su propio store). Ninguno depende de Pinia, Vuex ni ningún store.
 
 ## Estructura
 
 ```
 src/
-├── components/
-│   ├── mapping/      # ASMap
-│   └── controls/      # ASMapTimeControls, ASMapTimeRangeControls, ASMapDayIntervalControls
-├── types/            # Interfaces y tipos (MapAdapter, TimelineProps, TimeRangeProps, DayIntervalProps, playground...)
-├── composables/      # Hooks reutilizables (useTheme, useMapAdapter, useClickOutside...)
-├── styles/           # tokens.css: variables de tema por defecto
-├── playground/       # App interactiva: galería de componentes + compositor de widgets sobre un mapa
-│   └── utils/widgetRegistry.ts  # Registro tipo → componente usado por el compositor
-└── index.ts          # Punto de entrada de la librería
+├── index.ts          # Entry raíz: reexporta core
+├── core/             # Tema, tokens (styles/tokens.css) y utilidades comunes. No depende de ningún dominio
+├── map/              # Entry /map: components/, composables/, layers/, legend/, types/, utils/
+└── playground/       # App interactiva: galería de componentes + compositor de widgets sobre un mapa
+    ├── registry.ts              # Registro único de componentes (galería + compositor)
+    └── utils/widgetRegistry.ts  # Lista del compositor, derivada de registry.ts
+scripts/check-entries.mjs        # Guardarraíl: cada entry solo alcanza sus dominios y paquetes permitidos
 ```
+
+Cada dominio solo puede importar de los dominios que le permite el ADR (p. ej. `core` de ninguno, `map` solo de `core`). ESLint lo comprueba en el código fuente y `npm run check:entries`, en el build.
 
 ## Uso
 
 Requiere autenticación contra GitHub Packages (ver [Publicación](#publicación-y-versionado) más abajo). Una vez configurado el `.npmrc` del proyecto consumidor:
 
 ```bash
-npm install @vsadtajo/adasa-map-widgets
+npm install @vsadtajo/adasa-ui
 ```
 
 ```ts
 // main.ts
-import '@vsadtajo/adasa-map-widgets/style.css' // opcional: tokens de tema por defecto
+import '@vsadtajo/adasa-ui/style.css' // tokens de tema y estilos de los componentes
 ```
 
 ```vue
 <script setup lang="ts">
-import { ASMap, ASMapTimeControls } from '@vsadtajo/adasa-map-widgets'
+import { provideTheme } from '@vsadtajo/adasa-ui'
+import { ASMap, ASMapTimeControls } from '@vsadtajo/adasa-ui/map'
 import { ref } from 'vue'
+
+provideTheme('auto')
 
 const timeline = [/* ... Date[] ... */]
 const index = ref(0)
@@ -64,34 +83,46 @@ const playing = ref(false)
 
 ## Sistema de temas
 
-Todos los widgets se estilizan con variables CSS (`--amw-*`) definidas en [`src/styles/tokens.css`](src/styles/tokens.css), con valores de respaldo inline en cada componente (funcionan aunque no importes el CSS). Para personalizar, sobreescribe las variables en tu propio CSS:
+Todos los componentes se estilizan con variables CSS (`--as-*`) definidas en [`src/core/styles/tokens.css`](src/core/styles/tokens.css), con valores de respaldo inline en cada componente, así que funcionan aunque no importes el CSS. Para personalizar, sobreescribe las variables en tu propio CSS:
 
 ```css
 :root {
-  --amw-color-primary: #16a34a;
-  --amw-radius: 4px;
+  --as-color-primary: #16a34a;
+  --as-radius: 4px;
 }
 ```
 
-Los tres widgets `ASMap*Controls` además aceptan una prop `theme` (`'dark' | 'light'`) y `accentColor` (para tintar el widget con un color puntual, p. ej. el resultado de tu propia escala de color).
+Para cambiar entre claro y oscuro, llama a `provideTheme` una vez en la raíz de tu app. Todos los widgets lo heredan:
+
+```ts
+import { provideTheme } from '@vsadtajo/adasa-ui'
+
+const { setMode } = provideTheme('auto') // 'light' | 'dark' | 'auto' (sigue al sistema)
+```
+
+Cada widget acepta además una prop `theme` (`'dark' | 'light'`) que tiene prioridad sobre el tema global. Si no hay `provideTheme` ni prop, se usa `'dark'`. Los que lo admiten aceptan también `accentColor`, para tintar el widget con un color puntual (p. ej. el resultado de tu propia escala de color).
 
 ## Scripts
 
-| Script                    | Descripción                                                        |
-| -------------------------- | ------------------------------------------------------------------ |
-| `npm run dev`              | Playground interactivo en modo desarrollo (importa el código fuente). |
-| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`) en `dist/`.  |
-| `npm run build:playground` | Build estático del playground en `dist-playground/`.               |
-| `npm run lint`             | ESLint sobre todo el proyecto.                                     |
-| `npm run lint:fix`         | ESLint con auto-fix.                                                |
-| `npm run format`           | Formatea con Prettier.                                              |
-| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir).                        |
+| Script                     | Descripción                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Playground interactivo en modo desarrollo (importa el código fuente).                                         |
+| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`, un entry por dominio) en `dist/`.                     |
+| `npm run check:entries`    | Tras el build: comprueba que cada entry solo alcanza sus dominios y paquetes permitidos, e imprime su tamaño. |
+| `npm run build:playground` | Build estático del playground en `dist-playground/`.                                                          |
+| `npm run lint`             | ESLint sobre todo el proyecto.                                                                                |
+| `npm run lint:fix`         | ESLint con auto-fix.                                                                                          |
+| `npm run format`           | Formatea con Prettier.                                                                                        |
+| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir).                                                                  |
+| `npm run test`             | Tests (Vitest + @vue/test-utils + jsdom), co-locados como `*.spec.ts`.                                        |
+| `npm run test:watch`       | Tests en modo vigilancia.                                                                                     |
+| `npm run test:coverage`    | Tests con informe de cobertura en `coverage/`.                                                                |
 
 ## Playground
 
 `npm run dev` levanta una app en `http://localhost:5173` con dos modos, conmutables desde la barra superior:
 
-**Galería de componentes** (modo por defecto): `ASMap` + los tres `ASMap*Controls`, cada uno con:
+**Galería de componentes** (modo por defecto): todos los componentes y tipos de capa, cada uno con:
 
 - **Selector de componentes** agrupado por categoría (barra lateral).
 - **Editor de props en vivo**: cambia valores y ve el widget actualizarse al instante.
@@ -102,7 +133,7 @@ Los tres widgets `ASMap*Controls` además aceptan una prop `theme` (`'dark' | 'l
 
 **Compositor sobre mapa** (`WidgetPlayground.vue`):
 
-- **Panel izquierdo**: elige el motor de mapas (Leaflet/MapLibre, vía `ASMap`) y añade instancias de cualquiera de los tres `ASMap*Controls` en una esquina o borde central (`top-left`/`top-center`/`top-right`/`bottom-left`/`bottom-center`/`bottom-right`).
+- **Panel izquierdo**: elige el motor de mapas (Leaflet/MapLibre, vía `ASMap`) y añade instancias de cualquier widget `ASMap*` registrado con `composer` en una esquina o borde central (`top-left`/`top-center`/`top-right`/`bottom-left`/`bottom-center`/`bottom-right`).
 - **Centro** (`MapCanvas.vue`): el mapa con todos los widgets colocados, cada uno seleccionable con un click.
 - **Panel derecho** (`WidgetPanel.vue`): lista de widgets colocados (seleccionar/eliminar), editor de props en vivo del seleccionado, código generado y monitor de eventos emitidos.
 - Pensado para probar composiciones reales, p. ej. `ASMapTimeControls` + `ASMapDayIntervalControls` a la vez sobre el mismo mapa.
@@ -152,16 +183,17 @@ npm publish            # publica en GitHub Packages (usa publishConfig del packa
 
 ### CI
 
-Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `lint` → `type-check` → `build` → `build:playground`. Puedes exigir que ese workflow pase antes de mergear desde Settings → Branches del repo.
+Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `lint` → `type-check` → `test:coverage` → `build` → `check:entries` → `build:playground`. Puedes exigir que ese workflow pase antes de mergear desde Settings → Branches del repo.
 
 ## Convenciones para nuevos widgets
 
-- Prefijo `ASMap*` en el nombre del componente.
-- Props tipadas con una interfaz exportada desde `src/types/` (p. ej. `TimelineProps`, `TimeRangeProps`, `DayIntervalProps`), reutilizada por `defineProps<T>()` en el propio `.vue`.
+- Prefijo `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado) y `AS*` para el resto (gráficas, tablas, layout...).
+- Cada componente vive en su dominio (`src/<dominio>/components/`), con las props tipadas en una interfaz de `src/<dominio>/types/` (p. ej. `TimelineProps`), reutilizada por `defineProps<T>()` en el propio `.vue`.
 - Eventos declarados con `defineEmits<T>()` (tipo exportado junto a las props) y documentados con JSDoc.
 - JSDoc en la interfaz de props y en el bloque `<script setup>` explicando el propósito del widget y, si aplica, un `@example`.
-- Estilos `scoped` y **autocontenidos** (sin componentes base compartidos): iconos como SVG inline, botones como `<button>` nativo estilizado con `var(--amw-*, <fallback>)` para heredar el tema sin depender de que se importe `tokens.css`.
+- Estilos `scoped` y **autocontenidos** (sin componentes base compartidos): iconos como SVG inline, botones como `<button>` nativo estilizado con `var(--as-*, <fallback>)` para heredar el tema sin depender de que se importe `tokens.css`.
 - Sin dependencias externas pesadas. La única excepción es `ASMap`, que carga Leaflet/MapLibre como `peerDependencies` opcionales vía `import()` dinámico — nunca como dependencia obligatoria del bundle (ver `vite.config.ts` → `rollupOptions.external`).
 - Accesibilidad: roles/aria correctos, soporte de teclado y foco visible.
 - Controlado y agnóstico de cualquier store: recibe datos ya resueltos por props y emite eventos `update:*`/`*-changed`, nunca lee un store directamente.
-- Añade el componente al `index.ts` de su categoría y, si quieres que sea explorable, a `src/playground/registry.ts` (galería) y/o `src/playground/utils/widgetRegistry.ts` (compositor).
+- Tema: prop `theme` opcional resuelta con `useResolvedTheme(() => props.theme)`, para heredar `provideTheme` cuando no se pasa.
+- Añade el componente al `index.ts` de su dominio y regístralo en `src/playground/registry.ts`. Si se puede colocar sobre el mapa, añade además `composer` a su entrada para que aparezca en el compositor (`utils/widgetRegistry.ts` se deriva de ahí).

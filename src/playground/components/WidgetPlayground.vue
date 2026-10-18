@@ -6,10 +6,10 @@ import type { LogEntry } from './EventLog.vue'
 import { widgetRegistry, getWidgetEntry } from '../utils/widgetRegistry'
 import { LAYER_TYPE_LABELS, layerExamples } from '../utils/layerExamples'
 import { basemapExamples } from '../utils/basemapExamples'
-import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
-import type { WidgetPosition } from '@/types/common'
-import type { LayerCapabilities, LayerConfig, LayerLoadedEvent } from '@/types/layers'
-import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
+import type { MapLibraryOption, WidgetPlacement } from '@/playground/types'
+import type { WidgetPosition } from '@/core/types/common'
+import type { LayerCapabilities, LayerConfig, LayerLoadedEvent } from '@/map/types/layers'
+import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
 
 /**
  * Compositor de widgets sobre un mapa: permite elegir el motor de mapas,

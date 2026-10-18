@@ -1,0 +1,141 @@
+# CLAUDE.md
+
+Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/adasa-ui`), privada en GitHub Packages. Nació para web mapping y va a crecer con gráficas, tablas, paneles de detalle, layout y formularios. Todo el código, JSDoc, README y commits van **en español**.
+
+## Arquitectura
+
+- **Componentes controlados**: reciben datos ya resueltos por props y emiten eventos (`update:*` para `v-model`, `*-changed`/`*-selected` para lo demás). Nunca leen ni escriben un store (ni Pinia ni Vuex) ni hacen peticiones por su cuenta, salvo funciones que aporte el proyecto por prop.
+- **Sin framework de UI** (nada de Vuetify ni similares): `<button>` nativos estilizados, iconos como SVG inline, estilos `scoped` y autocontenidos.
+- **Dependencias pesadas como `peerDependencies` opcionales** (`peerDependenciesMeta.optional`). `vite.config.ts` deriva `external` de `dependencies` + `peerDependencies`: nunca se empaquetan. Las de mapas se cargan con `import()` dinámico. La única dependencia directa es `date-fns`.
+- **Agnóstica del motor**: solo `ASMap` y `src/map/layers/` tocan Leaflet o MapLibre. El resto de widgets nunca importan una librería de mapas.
+- **Prefijos**: `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado: `ASMap`, `ASMapLegend`...) y `AS*` para el resto (`ASLineChart`, `ASTable`, `ASAppHeader`...). Clases CSS `as-*` y variables `--as-*`. Decisiones de nombre, prefijos, dominios y entry points en [ADR 0000](docs/adr/0000-estructura-paquete.md).
+- Alias `@/` = `src/`.
+
+### Estructura
+
+```
+src/
+├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
+├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
+├── map/              # Entry `/map`
+│   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
+│   ├── components/   # ASMap + widgets ASMap*
+│   ├── composables/  # useMapAdapter, useLayerManager
+│   ├── layers/  legend/   # Adapters por tipo de capa / de leyenda
+│   ├── types/        # <Nombre>Props.ts + map, layers, legend
+│   └── utils/        # mapScale.ts
+├── playground/       # App de documentación interactiva (no se publica). Sus tipos en playground/types.ts
+└── vite-env.d.ts
+```
+
+Cada dominio (`core`, `map` y los futuros `charts`, `table`, `forms`, `detail`, `layout`) tiene la misma forma interna y un `index.ts` como única API pública.
+
+**Fronteras entre dominios**:
+
+- Los imports entre dominios van siempre por `@/<dominio>/...`.
+- Qué dominio puede importar de cuál está en `DOMAIN_DEPENDENCIES` de `eslint.config.js` (`core` de ninguno; `map` solo de `core`...), y ESLint falla si se cruza.
+- Tras el build, `npm run check:entries` (`scripts/check-entries.mjs`) comprueba lo mismo en `dist/`, más los paquetes externos permitidos a cada entry.
+
+**Dominio nuevo**:
+
+1. Crear `src/<dominio>/index.ts`.
+2. Añadir el entry en `entries` de `vite.config.ts` y en `include` de `dts` y `tsconfig.build.json`.
+3. Añadir el subpath en `exports` y `typesVersions` de package.json.
+4. Añadir la regla en `RULES` de `check-entries.mjs` y en `DOMAIN_DEPENDENCIES`.
+
+### Anatomía de un componente
+
+1. **Tipos** en `src/<dominio>/types/<Nombre>Props.ts`: `interface <Nombre>Props` + `interface <Nombre>Emits` (sintaxis de tuplas: `'update:modelValue': [value: string]`) y los tipos auxiliares (`<Nombre>Position`, `<Nombre>Option`...).
+   - JSDoc en español en la interfaz y en **cada** prop/evento. Usa `@default` en toda prop opcional con valor por defecto.
+   - Cada prop tiene que ser coherente con `withDefaults`.
+2. **Componente** en `src/<dominio>/components/<Nombre>.vue` con `<script setup lang="ts">`:
+   - `withDefaults(defineProps<XProps>(), {...})` y `defineEmits<XEmits>()`.
+   - Un bloque JSDoc tras los imports que explique qué hace, que es controlado y un `@example` con el uso en plantilla.
+   - Clases CSS con prefijo `as-` en estilo BEM (`as-button-toggle--top-left`).
+3. **Exports**: en `src/<dominio>/index.ts`, tanto el componente (`export { default as X } from './components/X.vue'`) como sus tipos (`export type {...} from './types/XProps'`).
+4. Accesibilidad: roles y `aria-*` correctos, manejo con teclado y foco visible (`--as-focus-ring`).
+
+Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (number = px, string tal cual), `theme` y, si aplica, `accentColor`.
+
+## Theming
+
+- Tokens como variables CSS `--as-*` en `src/core/styles/tokens.css` (`:root` = claro; `.as-dark` y `.as-theme-auto` = oscuro). Su import es opcional: **todo `var()` lleva fallback inline**, p. ej. `var(--as-radius, 10px)`, para que el componente funcione sin `tokens.css`.
+- El tipo `ThemeTokens` (`src/core/types/theme.ts`) documenta los tokens. Si añades un token, actualiza los dos.
+- **`provideTheme(mode)`** (`src/core/composables/useTheme.ts`): el proyecto lo llama una vez en la raíz (`light | dark | auto`) y todos los widgets lo heredan.
+- **Prop `theme`** (`'dark' | 'light'`, opcional, **sin default en `withDefaults`**): tiene prioridad sobre el tema global. Todo componente la resuelve con `const resolvedTheme = useResolvedTheme(() => props.theme)`, que aplica la prop, luego `provideTheme` y por último `'dark'`. Se aplica como clase modificadora (`as-<widget>--${resolvedTheme}`). En el JSDoc del tipo, documenta la herencia en vez de `@default 'dark'`.
+- `useTheme()` es para quien necesite leer o cambiar el contexto. Si no lo hay, crea uno local en `auto`, así que los widgets no lo usan para resolver su tema.
+- `accentColor`: color CSS libre para tintar el elemento activo de un widget.
+
+## Playground
+
+`npm run dev` (http://localhost:5173). **Todo componente, prop o evento nuevo debe verse en el playground, no basta con el código fuente:**
+
+- **Registro único**: `src/playground/registry.ts` (`RegistryEntry`), con `id`, `name`, `category`, `description`, `propsSchema` (props editables, tipos en `propTypes.ts`) y `events` (`EventDoc`). Si hace falta, también `staticProps` (datos complejos de ejemplo) y `bindings` (listeners que sincronizan el estado y registran en el log de eventos).
+- **Compositor sobre mapa**: si el widget se puede colocar sobre el mapa, añade `composer: { label, omitProps?, staticProps? }` a su entrada. `utils/widgetRegistry.ts` se deriva de ahí: no lo edites a mano.
+- Usa `THEME_FIELD` (en `registry.ts`) para la prop `theme`. Su opción vacía significa "sin prop": el widget hereda el tema global del playground.
+- Una categoría nueva se añade a `ComponentDoc['category']` en `propTypes.ts` y al Sidebar.
+- Los datos de ejemplo son sintéticos y autónomos (sin backend), en `src/playground/utils/`.
+
+## Tests
+
+Vitest + `@vue/test-utils` + jsdom (`vitest.config.ts`).
+
+- `npm run test`: una pasada.
+- `npm run test:watch`: modo vigilancia.
+- `npm run test:coverage`: con cobertura, que es lo que corre el CI. El informe HTML queda en `coverage/`.
+
+**Co-locados**: cada test va junto a lo que prueba, `X.spec.ts` al lado de `X.ts` o `X.vue` (p. ej. `src/map/utils/mapScale.spec.ts`). Motivos:
+
+- La librería se organiza por dominios con fronteras estrictas. Un test vive dentro de su dominio, se mueve con él (`git mv` de la carpeta) y le aplican las mismas reglas de ESLint.
+- Un componente sin `.spec.ts` al lado salta a la vista en el explorador. Una carpeta `tests/` aparte se desincroniza del código sin que nadie lo note.
+- Los imports del test son relativos y cortos (`./ASMapButtonToggle.vue`).
+
+Los `*.spec.ts` se excluyen del build (`tsconfig.build.json` y `dts` en `vite.config.ts`), pero sí pasan por `npm run type-check` y ESLint.
+
+**Plantillas** a copiar:
+
+- [mapScale.spec.ts](src/map/utils/mapScale.spec.ts) para funciones puras: valores conocidos, fronteras (p. ej. el paso de m a km) e invariantes con `it.each`.
+- [ASMapButtonToggle.spec.ts](src/map/components/ASMapButtonToggle.spec.ts) para componentes: render y ARIA, `v-model` (emitido y con el padre devolviendo la prop), estados disabled, valores por defecto y herencia del tema con `provideTheme`.
+
+**Convenciones**:
+
+- `describe` por componente o función, con subgrupos por comportamiento.
+- Nombres de test en español que describen el comportamiento ("emite update:modelValue con el value del botón pulsado").
+- Importa `describe`/`it`/`expect` de `'vitest'` (sin globals).
+- Prueba la API pública (props, eventos, DOM, ARIA), no detalles internos.
+- Comprueba que el test falla si rompes el código que cubre.
+
+## Estilo de código
+
+- Prettier: sin `;`, comillas simples, `printWidth` 100, trailing commas. ESLint `--max-warnings 0`.
+- Variables sin usar con prefijo `_`.
+- Comentarios y JSDoc en español, explicando el **porqué** y no lo obvio.
+
+## Commits y ramas
+
+- Mensajes en **español, en imperativo, con la primera letra en mayúscula y sin punto final**. El paréntesis aclara qué es el componente: `Añadir widget ASMapScale (escala del mapa: regla graduada o razón numérica)`, `Corregir crash de Leaflet al destruir el mapa`, `Quitar baseUrl obsoleto de la config de TypeScript`.
+- Un commit por unidad lógica; si incluye un arreglo colateral, se añade con "y": `Añadir tipo de capa WMTS y arreglar pane inexistente en WMS/Tiles de Leaflet`.
+- Ramas `feature/*`, `chore/*`, `refactor/*`, `docs/*`. PR contra `main`. El CI (`.github/workflows/ci.yml`) corre en push/PR a `main` y `develop`.
+
+## Versionado
+
+Changesets (`npx changeset`):
+
+- **patch**: arreglo sin cambio de API.
+- **minor**: prop, evento o componente nuevo compatible.
+- **major**: renombrar o quitar una prop, un evento o un export.
+
+Mientras sea 0.x, los cambios incompatibles se avisan igualmente en el changeset.
+
+## Definition of Done
+
+Una tarea no está terminada hasta que se cumple todo esto:
+
+- [ ] `npm run lint`, `npm run type-check`, `npm run test`, `npm run build`, `npm run check:entries` y `npm run build:playground` en verde.
+- [ ] Tests co-locados (`*.spec.ts`) del comportamiento nuevo o cambiado: lógica pura con valores y fronteras; componentes con render, props, eventos/`v-model` y estados (disabled, vacío, tema).
+- [ ] Tipos en `src/<dominio>/types/` con JSDoc en español, `@default` y `@example`.
+- [ ] Export público en `src/<dominio>/index.ts` (componente y tipos).
+- [ ] Entrada en `src/playground/registry.ts` (con `composer` si va sobre el mapa) con todas sus props y eventos nuevos.
+- [ ] Funciona en tema claro y oscuro (por prop y heredado de `provideTheme`) y se puede manejar con teclado.
+- [ ] README actualizado (lista de componentes y la sección que corresponda).
+- [ ] Changeset creado (`npx changeset`) con el tipo de bump correcto.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { registry, type RegistryEntry } from '../registry'
-import type { LayerKind } from '@/types/layers'
+import type { LayerKind } from '@/map/types/layers'
 
 const props = defineProps<{ activeId: string }>()
 const emit = defineEmits<{ select: [id: string] }>()
@@ -27,7 +27,7 @@ interface Subgroup {
 
 /**
  * Cada categoría se divide en subgrupos: para 'layers', por `layerKind`
- * (vector/raster, ver `src/types/layers.ts`); para el resto, un único
+ * (vector/raster, ver `src/map/types/layers.ts`); para el resto, un único
  * subgrupo sin subtítulo. Así, cuando se añadan más tipos de capa, solo hace
  * falta que declaren su `layerKind` para encajar en el sitio correcto.
  */
@@ -54,7 +54,7 @@ const grouped = computed(() =>
 <template>
   <nav class="pg-sidebar" aria-label="Selector de componentes">
     <div class="pg-sidebar__brand">
-      <strong>@adasa/map-widgets</strong>
+      <strong>@vsadtajo/adasa-ui</strong>
       <span class="pg-sidebar__version">playground</span>
     </div>
     <div v-for="group in grouped" :key="group.key" class="pg-sidebar__group">

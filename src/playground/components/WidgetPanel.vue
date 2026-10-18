@@ -5,7 +5,7 @@ import CodePreview from './CodePreview.vue'
 import EventLog, { type LogEntry } from './EventLog.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
 import { buildSnippet } from '../propTypes'
-import type { WidgetPlacement } from '@/types/playground'
+import type { WidgetPlacement } from '@/playground/types'
 
 /**
  * Panel derecho del compositor: lista los widgets colocados sobre el mapa
