@@ -80,6 +80,7 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 
 ## Textos e idiomas
 
+- **Idioma principal: español de España (`es` → `es-ES`)**. Es el idioma de referencia de los textos (`es` en `messages.ts` define todas las claves) y el valor por defecto en todas partes: sin `provideLocale`, en `provideLocale()`, como respaldo de claves e idiomas que falten y en los formateadores puros. Formato de España: coma decimal, `dd/mm/aaaa` y reloj de 24 h. El inglés y el resto de idiomas son secundarios.
 - **Ningún texto visible ni `aria-label` va escrito a mano en un componente**:
   - Se pide con `const { t } = useLocale()` y `t('<componente>.<texto>', { param })`.
   - Las claves viven en `src/core/i18n/messages.ts`: añade la clave en `es` (la referencia) **y** en `en`.
