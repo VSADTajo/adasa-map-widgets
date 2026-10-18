@@ -71,6 +71,61 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
 />
 ```
 
+### Enlazar gráficas, mapa y controles de tiempo
+
+Las gráficas temporales se integran con el resto de la librería con tres piezas:
+
+- **`current-time`**: dibuja una línea vertical en ese instante. Al hacer clic en la gráfica se emite **`time-select`** (`{ time: Date }`) y `update:current-time`, así que admite `v-model:current-time`.
+- **`sync-group`**: las gráficas con el mismo nombre de grupo comparten cursor, tooltip y zoom, aunque usen motores distintos. Vale para varias `ASChart` o `ASHydrographChart` sueltas en un panel.
+- **`nearestTimeIndex(timeline, time)`** (en el paquete raíz): convierte una fecha en el índice del instante más cercano. `ASMapTimeControls` trabaja con índices y las gráficas con fechas.
+
+El patrón completo: al seleccionar una feature del mapa se muestra su serie, y la gráfica y el slider de tiempo van a la par.
+
+```vue
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { nearestTimeIndex } from '@vsadtajo/adasa-ui'
+import { ASMap, ASMapTimeControls, type FeatureSelectedEvent } from '@vsadtajo/adasa-ui/map'
+import { ASChart } from '@vsadtajo/adasa-ui/charts'
+
+const timeline: Date[] = /* instantes de la capa temporal */ []
+const index = ref(0)
+const playing = ref(false)
+const selected = ref<FeatureSelectedEvent | null>(null)
+const currentTime = computed(() => timeline[index.value])
+
+/** Clic en la gráfica: mover el slider al instante más cercano. */
+const onTimeSelect = ({ time }: { time: Date }) => (index.value = nearestTimeIndex(timeline, time))
+</script>
+
+<template>
+  <ASMap :layers="layers" @feature-selected="selected = $event">
+    <ASMapTimeControls
+      :timeline="timeline"
+      v-model:current-time-index="index"
+      v-model:is-playing="playing"
+    />
+  </ASMap>
+
+  <template v-if="selected">
+    <ASChart
+      :series="[{ id: 'q', name: 'Caudal', type: 'line', data: caudalDe(selected) }]"
+      :current-time="currentTime"
+      sync-group="estacion"
+      @time-select="onTimeSelect"
+    />
+    <ASChart
+      :series="[{ id: 'p', name: 'Precipitación', type: 'bar', data: lluviaDe(selected) }]"
+      :current-time="currentTime"
+      sync-group="estacion"
+      @time-select="onTimeSelect"
+    />
+  </template>
+</template>
+```
+
+Para verlo funcionando, abre el compositor del playground (`#composer`). Activa la capa GeoJSON de ejemplo, coloca unos "Controles de tiempo" y pulsa una feature.
+
 > ⚠️ **ApexCharts** (v4 en adelante) tiene licencia dual. Es gratis solo para organizaciones de menos de 2 M$, y su licencia comercial estándar no permite redistribuirlo dentro de otro producto. Un proyecto que use `chart-library="apexcharts"` necesita su propia licencia. ECharts (Apache-2.0) y Chart.js (MIT) no tienen restricciones. Decisión, arquitectura y diferencias entre motores: [ADR 0001](docs/adr/0001-motores-graficas.md).
 
 ## Estructura

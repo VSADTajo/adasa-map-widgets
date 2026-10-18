@@ -349,6 +349,18 @@ export function resolveSpec(
     })
   }
 
+  // Instante seleccionado (p. ej. el de ASMapTimeControls): línea con el color
+  // principal, sin etiqueta, para distinguirla de "Ahora".
+  if (props.currentTime !== undefined && xType === 'time') {
+    xAnnotations.push({
+      kind: 'line',
+      value: normalizeX(props.currentTime, xType),
+      color: tokens.colorPrimary,
+      fill: withAlpha(tokens.colorPrimary, 0.12),
+      lineStyle: 'solid',
+    })
+  }
+
   const alertTokens = tokens.alert as Record<string, ThemeTokens['alert']['rojo'] | undefined>
   const yAnnotations: ResolvedYAnnotation[] = (props.annotations?.y ?? []).map((annotation) => {
     const yAxisIndex = axisIndexOf(annotation.yAxis)

@@ -6,6 +6,8 @@ export interface ChartEngineHandlers {
   onPointClick: (event: { seriesId: string; x: ChartX; y: number | null }) => void
   onXClick: (x: ChartX) => void
   onRangeChange: (event: { start: ChartX; end: ChartX }) => void
+  /** El cursor está sobre el instante `x` (o salió de la gráfica: `null`). */
+  onHover: (x: ChartX | null) => void
 }
 
 /** Gráfica ya creada por un motor. */
@@ -19,6 +21,14 @@ export interface ChartEngineInstance {
   exportImage: () => Promise<string>
   /** Vuelve al rango X completo tras un zoom. */
   resetZoom: () => void
+  /**
+   * Muestra el cursor (cruceta, tooltip si lo hay y valores en la leyenda)
+   * en el instante `x` normalizado (ms en ejes temporales), como si el
+   * usuario estuviera encima; `null` lo quita. Para los grupos de sincronización.
+   */
+  showCursor: (x: number | string | null) => void
+  /** Aplica un zoom al rango `[start, end]` (normalizado); `null` lo quita. */
+  zoomTo: (range: { start: number | string; end: number | string } | null) => void
   /** Objeto(s) nativo(s) del motor, para `ready` y `getInstance()`. */
   native: unknown
 }

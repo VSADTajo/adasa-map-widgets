@@ -249,6 +249,12 @@ const CHART_EVENTS: EventDoc[] = [
       'Click sobre el área de la gráfica: el instante bajo el cursor (p. ej. para enlazar con ASMapTimeControls).',
   },
   {
+    name: 'time-select',
+    payload: '{ time }',
+    description:
+      'Click en un eje temporal: el instante elegido. También emite update:currentTime (v-model:current-time); aquí mueve la línea del instante actual.',
+  },
+  {
     name: 'range-change',
     payload: '{ start, end }',
     description: 'El rango visible cambió por zoom.',
@@ -256,12 +262,18 @@ const CHART_EVENTS: EventDoc[] = [
   { name: 'ready', payload: '{ library, instance }', description: 'El motor terminó de dibujar.' },
 ]
 const chartBindings = (
-  _values: Record<string, unknown>,
+  values: Record<string, unknown>,
   log: (name: string, payload?: unknown) => void,
 ) =>
   ({
     onPointClick: (event: unknown) => log('point-click', event),
     onXClick: (event: unknown) => log('x-click', event),
+    onTimeSelect: (event: unknown) => log('time-select', event),
+    // v-model:current-time: el clic mueve la línea del instante actual.
+    'onUpdate:currentTime': (time: unknown) => {
+      values.currentTime = time
+      log('update:currentTime', time)
+    },
     onRangeChange: (event: unknown) => log('range-change', event),
     // La instancia nativa del motor es enorme y circular: solo se registra el motor.
     onReady: (event: unknown) => log('ready', { library: (event as { library: string }).library }),

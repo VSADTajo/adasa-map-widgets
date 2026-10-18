@@ -393,12 +393,11 @@ export const apexchartsEngine: ChartEngine = {
       drawLegend()
       const heights = panelHeights(spec, frame.host.clientHeight || 320, X_LABELS_SPACE)
       const containers = panelContainers(frame.host, heights)
-      // Sin tooltip, Apex no dibuja cruceta: se pone una HTML sobre todos los paneles.
+      // Cruceta HTML sobre todos los paneles: Apex no la dibuja sin su tooltip
+      // (valores en la leyenda) ni puede abrir su tooltip por código (cursor
+      // que llega de otra gráfica del grupo de sincronización).
       frame.host.querySelectorAll('[data-as-crosshair]').forEach((node) => node.remove())
-      setCrosshair = () => {}
-      if (!spec.tooltip && spec.legend && spec.legend.values) {
-        setCrosshair = createCrosshair(frame.host, spec)
-      }
+      setCrosshair = createCrosshair(frame.host, spec)
       const optionsList = toApexOptions(spec, heights, group)
       charts = optionsList.map((options, index) => {
         const container = containers[index]!
@@ -444,18 +443,21 @@ export const apexchartsEngine: ChartEngine = {
               w: { globals: { minX: number; maxX: number; translateX: number; gridWidth: number } }
             },
           ) => {
-            if (!(spec.legend && spec.legend.values) || spec.xAxis.type === 'category') return
+            if (spec.xAxis.type === 'category') return
             const { minX, maxX, translateX, gridWidth } = ctx.w.globals
             const offset = event.clientX - host.getBoundingClientRect().left - translateX
-            if (offset < 0 || offset > gridWidth) {
-              setLegendValues(null)
-              setCrosshair(null)
-              return
+            const inside = offset >= 0 && offset <= gridWidth
+            const x = inside ? minX + (offset / gridWidth) * (maxX - minX) : null
+            handlers.onHover(x === null ? null : toChartX(x))
+            if (!(spec.legend && spec.legend.values)) return
+            setLegendValues(x)
+            // Con tooltip, Apex ya dibuja su cruceta.
+            if (!spec.tooltip) {
+              setCrosshair(inside ? event.clientX - frame.host.getBoundingClientRect().left : null)
             }
-            setLegendValues(minX + (offset / gridWidth) * (maxX - minX))
-            setCrosshair(event.clientX - frame.host.getBoundingClientRect().left)
           },
           mouseLeave: () => {
+            handlers.onHover(null)
             setLegendValues(null)
             setCrosshair(null)
           },
@@ -499,6 +501,34 @@ export const apexchartsEngine: ChartEngine = {
           if (typeof min === 'number' && typeof max === 'number') chart.zoomX(min, max)
           else chart.resetSeries(true, true)
         })
+      },
+      showCursor(x) {
+        setLegendValues(x)
+        const first = charts[0] as unknown as
+          | {
+              el: HTMLElement
+              w: { globals: { minX: number; maxX: number; translateX: number; gridWidth: number } }
+            }
+          | undefined
+        if (x === null || typeof x !== 'number' || !first) {
+          setCrosshair(null)
+          return
+        }
+        const { minX, maxX, translateX, gridWidth } = first.w.globals
+        if (x < minX || x > maxX) {
+          setCrosshair(null)
+          return
+        }
+        const offset =
+          first.el.getBoundingClientRect().left - frame.host.getBoundingClientRect().left
+        setCrosshair(offset + translateX + ((x - minX) / (maxX - minX)) * gridWidth)
+      },
+      zoomTo(range) {
+        if (!range) {
+          this.resetZoom()
+          return
+        }
+        charts.forEach((chart) => chart.zoomX(range.start as number, range.end as number))
       },
       dispose() {
         charts.forEach((chart) => chart.destroy())

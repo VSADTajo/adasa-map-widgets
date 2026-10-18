@@ -15,6 +15,8 @@ const engine = vi.hoisted(() => ({
   update: vi.fn(),
   dispose: vi.fn(),
   resetZoom: vi.fn(),
+  showCursor: vi.fn(),
+  zoomTo: vi.fn(),
   fail: false,
 }))
 
@@ -33,6 +35,8 @@ vi.mock('@/charts/engines', () => ({
           resize: vi.fn(),
           dispose: engine.dispose,
           resetZoom: engine.resetZoom,
+          showCursor: engine.showCursor,
+          zoomTo: engine.zoomTo,
           exportImage: async () => 'data:image/png;base64,x',
         }
       },
@@ -57,6 +61,8 @@ beforeEach(() => {
   engine.update.mockReset()
   engine.dispose.mockReset()
   engine.resetZoom.mockReset()
+  engine.showCursor.mockReset()
+  engine.zoomTo.mockReset()
   engine.fail = false
 })
 afterEach(() => vi.restoreAllMocks())
@@ -97,6 +103,59 @@ describe('ASChart', () => {
     const handlers = engine.mount.mock.calls[0]![1] as { onXClick: (x: Date) => void }
     handlers.onXClick(new Date(2026, 9, 18))
     expect(wrapper.emitted('x-click')).toEqual([[{ x: new Date(2026, 9, 18) }]])
+  })
+
+  it('un clic en un instante emite time-select y update:currentTime', async () => {
+    const wrapper = mount(ASChart, { props: { series } })
+    await flushPromises()
+    const handlers = engine.mount.mock.calls[0]![1] as { onXClick: (x: Date | number) => void }
+    handlers.onXClick(new Date(2026, 9, 18, 1))
+    handlers.onXClick(3) // eje no temporal: solo x-click
+    expect(wrapper.emitted('time-select')).toEqual([[{ time: new Date(2026, 9, 18, 1) }]])
+    expect(wrapper.emitted('update:currentTime')).toEqual([[new Date(2026, 9, 18, 1)]])
+    expect(wrapper.emitted('x-click')).toHaveLength(2)
+  })
+
+  describe('syncGroup', () => {
+    type Handlers = {
+      onHover: (x: Date | number | null) => void
+      onRangeChange: (event: { start: Date; end: Date }) => void
+    }
+    const handlersOf = (index: number) => engine.mount.mock.calls[index]![1] as Handlers
+
+    it('las gráficas del mismo grupo comparten cursor y zoom; las demás, no', async () => {
+      const wrappers = [
+        mount(ASChart, { props: { series, syncGroup: 'cuenca' } }),
+        mount(ASChart, { props: { series, syncGroup: 'cuenca' } }),
+        mount(ASChart, { props: { series } }),
+      ]
+      await flushPromises()
+      handlersOf(0).onHover(new Date(2026, 9, 18, 1))
+      // Una sola llamada: la del otro miembro (ni la propia ni la de la gráfica sin grupo).
+      expect(engine.showCursor).toHaveBeenCalledOnce()
+      expect(engine.showCursor).toHaveBeenCalledWith(new Date(2026, 9, 18, 1).getTime())
+      await new Promise(requestAnimationFrame)
+      handlersOf(0).onRangeChange({ start: new Date(2026, 9, 18), end: new Date(2026, 9, 18, 1) })
+      expect(engine.zoomTo).toHaveBeenCalledOnce()
+      expect(engine.zoomTo).toHaveBeenCalledWith({
+        start: new Date(2026, 9, 18).getTime(),
+        end: new Date(2026, 9, 18, 1).getTime(),
+      })
+      for (const wrapper of wrappers) wrapper.unmount()
+    })
+
+    it('lo que llega del grupo no se reenvía (sin rebotes)', async () => {
+      const wrappers = [
+        mount(ASChart, { props: { series, syncGroup: 'eco' } }),
+        mount(ASChart, { props: { series, syncGroup: 'eco' } }),
+      ]
+      await flushPromises()
+      // El motor del segundo reacciona al cursor remoto emitiendo su propio hover.
+      engine.showCursor.mockImplementationOnce((x: number) => handlersOf(1).onHover(x))
+      handlersOf(0).onHover(5)
+      expect(engine.showCursor).toHaveBeenCalledOnce()
+      for (const wrapper of wrappers) wrapper.unmount()
+    })
   })
 
   it('si el motor no está instalado, lo explica en español con el comando npm', async () => {

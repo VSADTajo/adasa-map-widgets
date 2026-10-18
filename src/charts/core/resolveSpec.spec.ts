@@ -111,6 +111,14 @@ describe('resolveSpec', () => {
       ])
     })
 
+    it('currentTime dibuja una línea vertical sin etiqueta en ese instante', () => {
+      const spec = resolve({ series: [line('a')], currentTime: at(1) })
+      expect(spec.annotations.x).toEqual([
+        expect.objectContaining({ kind: 'line', value: at(1).getTime(), lineStyle: 'solid' }),
+      ])
+      expect(spec.annotations.x[0]).not.toHaveProperty('label')
+    })
+
     it('normaliza las fechas de las anotaciones X a milisegundos', () => {
       const spec = resolve({
         series: [line('a')],

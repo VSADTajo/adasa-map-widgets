@@ -41,6 +41,8 @@ const props = withDefaults(defineProps<HydrographProps>(), {
   seriesOverrides: undefined,
   yAxisOverrides: undefined,
   toolbar: undefined,
+  currentTime: undefined,
+  syncGroup: undefined,
   tooltip: true,
   legend: undefined,
   legendValues: false,
@@ -79,5 +81,7 @@ defineExpose({
     @x-click="emit('x-click', $event)"
     @range-change="emit('range-change', $event)"
     @ready="emit('ready', $event)"
+    @time-select="emit('time-select', $event)"
+    @update:current-time="emit('update:currentTime', $event)"
   />
 </template>

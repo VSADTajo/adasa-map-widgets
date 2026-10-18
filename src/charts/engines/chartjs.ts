@@ -334,7 +334,8 @@ export const chartjsEngine: ChartEngine = {
     const crosshair = {
       id: 'asCrosshair',
       afterDatasetsDraw(chart: ChartInstance) {
-        if (hover.x === null || !tracksHover()) return
+        // Se dibuja si el cursor local la pide (tooltip o valores) o si llega de un grupo de sincronización.
+        if (hover.x === null) return
         const scale = chart.scales.x!
         const px = scale.getPixelForValue(hover.x as number)
         const area = chart.chartArea
@@ -404,14 +405,17 @@ export const chartjsEngine: ChartEngine = {
           _elements: unknown,
           chart: ChartInstance,
         ) => {
-          if (!tracksHover() || event.x === null || event.y === null) return
+          if (event.x === null || event.y === null) return
           const area = chart.chartArea
           const inside =
             event.x >= area.left &&
             event.x <= area.right &&
             event.y >= area.top &&
             event.y <= area.bottom
-          hover.x = inside ? xValueAt(chart, event.x) : null
+          const xValue = inside ? xValueAt(chart, event.x) : null
+          handlers.onHover(xValue === null ? null : toChartX(xValue))
+          if (!tracksHover()) return
+          hover.x = xValue
           charts.forEach((c) => c.draw())
           setLegendValues(hover.x)
           if (hover.x === null || !spec.tooltip) {
@@ -457,7 +461,6 @@ export const chartjsEngine: ChartEngine = {
               hit.index
             ]!
             handlers.onPointClick({ seriesId, x: toChartX(point.x), y: point.y })
-            return
           }
           if (event.x === null) return
           const x = xValueAt(chart, event.x)
@@ -480,6 +483,7 @@ export const chartjsEngine: ChartEngine = {
           zoom.pan!.onPanComplete = sync
         }
         canvas.addEventListener('mouseleave', () => {
+          handlers.onHover(null)
           hover.x = null
           setLegendValues(null)
           tooltip.style.display = 'none'
@@ -507,6 +511,35 @@ export const chartjsEngine: ChartEngine = {
         charts.forEach((chart) =>
           (chart as unknown as { resetZoom: (mode?: string) => void }).resetZoom('none'),
         )
+      },
+      showCursor(x) {
+        hover.x = x
+        charts.forEach((chart) => chart.draw())
+        setLegendValues(x)
+        const first = charts[0]
+        if (x === null || !spec.tooltip || !first) {
+          tooltip.style.display = 'none'
+          return
+        }
+        tooltip.innerHTML = tooltipHtml(spec, x)
+        tooltip.style.display = tooltip.innerHTML ? 'block' : 'none'
+        const area = first.chartArea
+        placeTooltip(
+          tooltip,
+          element,
+          frame.host.offsetLeft + first.scales.x!.getPixelForValue(x as number),
+          frame.host.offsetTop + (area.top + area.bottom) / 2,
+        )
+      },
+      zoomTo(range) {
+        charts.forEach((chart) => {
+          const zoomable = chart as unknown as {
+            zoomScale: (id: string, r: object, m: string) => void
+            resetZoom: (mode?: string) => void
+          }
+          if (range) zoomable.zoomScale('x', { min: range.start, max: range.end }, 'none')
+          else zoomable.resetZoom('none')
+        })
       },
       resize() {
         const heights = panelHeights(spec, frame.host.clientHeight || 320, X_LABELS_SPACE)

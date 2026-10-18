@@ -188,6 +188,18 @@ export interface ChartProps {
    * "Ahora": `true` usa la hora actual. @default false
    */
   now?: Date | boolean
+  /**
+   * Instante seleccionado (p. ej. el de `ASMapTimeControls`): se marca con
+   * una línea vertical. Con `v-model:current-time`, un clic en la gráfica lo
+   * cambia. Solo en ejes temporales.
+   */
+  currentTime?: Date | number
+  /**
+   * Grupo de sincronización: las gráficas con el mismo valor comparten
+   * cursor, tooltip y zoom (aunque usen motores distintos). Útil para varias
+   * gráficas de la misma estación o de varias estaciones en paralelo.
+   */
+  syncGroup?: string
   /** Tooltip al pasar el cursor. @default true (modo `'shared'`) */
   tooltip?: boolean | ChartTooltipConfig
   /**
@@ -257,4 +269,8 @@ export interface ChartEmits {
   'range-change': [event: ChartRangeChangeEvent]
   /** El motor terminó de crear la gráfica. `instance` es el objeto nativo del motor. */
   ready: [event: { library: ChartLibrary; instance: unknown }]
+  /** Click sobre la gráfica en un eje temporal: el instante elegido (p. ej. para mover `ASMapTimeControls`). */
+  'time-select': [event: { time: Date }]
+  /** Para `v-model:current-time`: el instante elegido con un click. */
+  'update:currentTime': [time: Date]
 }
