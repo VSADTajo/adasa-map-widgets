@@ -74,10 +74,36 @@ function logEvent(name: string, payload?: unknown): void {
 
 const liveListeners = computed(() => entry.value.bindings?.(propValues, logEvent) ?? {})
 
-const previewProps = computed(() => ({
-  ...(entry.value.toProps ? entry.value.toProps(propValues) : propValues),
-  ...liveListeners.value,
-}))
+/**
+ * Motor con el que se ha dibujado de verdad la gráfica (evento `ready`): los
+ * tres motores se ven casi iguales a propósito, así que sin esto no se nota el cambio.
+ */
+const renderedWith = ref<string | null>(null)
+const ENGINE_LABELS: Record<string, string> = {
+  echarts: 'ECharts (un lienzo canvas)',
+  chartjs: 'Chart.js (un lienzo canvas por panel)',
+  apexcharts: 'ApexCharts (un SVG por panel)',
+}
+watch(activeId, () => (renderedWith.value = null))
+
+const previewProps = computed(() => {
+  const listeners = liveListeners.value as Record<
+    string,
+    ((...args: unknown[]) => void) | undefined
+  >
+  return {
+    ...(entry.value.toProps ? entry.value.toProps(propValues) : propValues),
+    ...listeners,
+    ...(category.value.key === 'charts'
+      ? {
+          onReady: (event: unknown) => {
+            renderedWith.value = (event as { library: string }).library
+            listeners.onReady?.(event)
+          },
+        }
+      : {}),
+  }
+})
 
 const code = computed(
   () =>
@@ -171,7 +197,12 @@ const code = computed(
               :class="{ 'pg-card--wide': category.preview === 'canvas' }"
               aria-label="Vista previa en vivo"
             >
-              <h2 class="pg-card__heading">Vista previa</h2>
+              <h2 class="pg-card__heading">
+                Vista previa
+                <span v-if="renderedWith" class="pg-engine-badge">
+                  Dibujado con {{ ENGINE_LABELS[renderedWith] ?? renderedWith }}
+                </span>
+              </h2>
               <PreviewCanvas v-if="category.preview === 'canvas'" :key="activeId">
                 <component :is="entry.component" v-bind="previewProps">
                   <template v-if="entry.slotDefault !== undefined" #default>{{
@@ -425,5 +456,16 @@ const code = computed(
 /* El lienzo de componentes no-mapa ocupa todo el ancho para poder probar escritorio. */
 .pg-card--wide {
   grid-column: 1 / -1;
+}
+.pg-engine-badge {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pg-surface-muted);
+  border: 1px solid var(--pg-border);
+  color: var(--pg-text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  vertical-align: middle;
 }
 </style>
