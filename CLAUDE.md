@@ -8,7 +8,7 @@ Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/ad
 - **Sin framework de UI** (nada de Vuetify ni similares): `<button>` nativos estilizados, iconos como SVG inline, estilos `scoped` y autocontenidos.
 - **Dependencias pesadas como `peerDependencies` opcionales** (`peerDependenciesMeta.optional`), cargadas con `import()` dinámico y declaradas `external` en `vite.config.ts`. Hoy solo `ASMap` las usa (Leaflet, MapLibre...). La única dependencia directa es `date-fns`.
 - **Agnóstica del motor**: solo `ASMap` y `src/layers/` tocan Leaflet o MapLibre. El resto de widgets nunca importan una librería de mapas.
-- **Prefijos**: `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado: `ASMap`, `ASMapLegend`...) y `AS*` para el resto (`ASLineChart`, `ASTable`, `ASAppHeader`...). Clases CSS siempre `amw-*`. El nombre del paquete se decide en T0.2 (`docs/cronograma-libreria-corporativa.pdf`).
+- **Prefijos**: `ASMap*` para componentes que dependen del mapa (se colocan sobre él o necesitan su estado: `ASMap`, `ASMapLegend`...) y `AS*` para el resto (`ASLineChart`, `ASTable`, `ASAppHeader`...). Nombre del paquete, prefijos CSS, estructura por dominio y entry points: ver [ADR 0000](docs/adr/0000-estructura-paquete.md). El paquete pasa a `@vsadtajo/adasa-ui`, el CSS a `as-*`/`--as-*` y `src/` se organiza en `core/`, `map/`, `charts/`... Hasta que T0.3 lo implemente, el código sigue con `amw-*` y la estructura actual. No mezcles ambos.
 - Alias `@/` = `src/`.
 
 ### Estructura
