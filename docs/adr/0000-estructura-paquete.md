@@ -24,7 +24,7 @@ Estado actual que condiciona la decisión:
 ### 1. Nombre: `@vsadtajo/adasa-ui`
 
 - El scope `@vsadtajo` se mantiene: lo fija la organización de GitHub en GitHub Packages, así que el `.npmrc` de los proyectos no cambia.
-- El repositorio se renombra a `adasa-ui` (GitHub redirige la URL antigua) y se actualiza `repository.url`.
+- El repositorio **no** se renombra: sigue siendo `VSADTajo/adasa-map-widgets`. El nombre del paquete no tiene por qué coincidir con el del repo, y GitHub Packages vincula el paquete al repo por `repository.url` de package.json, que sigue apuntando a la URL actual.
 - No hay migración, porque no hay consumidores. Si la 0.1.0 llegó a publicarse con el nombre antiguo, se borra ese paquete en GitHub → Packages de la organización.
 - La primera publicación con el nombre nuevo crea un paquete nuevo en GitHub Packages con permisos propios. Hay que verificar que hereda el acceso del repositorio para que los proyectos lo lean con `read:packages`.
 - La numeración continúa: la primera versión publicada como `adasa-ui` es la 0.2.0, que cierra la fase F0.
