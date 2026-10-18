@@ -42,7 +42,7 @@ const domainBoundaries = Object.entries(DOMAIN_DEPENDENCIES).map(([domain, allow
 
 export default [
   {
-    ignores: ['dist/**', 'dist-playground/**', 'node_modules/**', '*.d.ts'],
+    ignores: ['dist/**', 'dist-playground/**', 'coverage/**', 'node_modules/**', '*.d.ts'],
   },
   js.configs.recommended,
   ...pluginVue.configs['flat/recommended'],

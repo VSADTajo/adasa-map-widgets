@@ -44,7 +44,7 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       include: ['src/index.ts', 'src/core/**/*', 'src/map/**/*'],
-      exclude: ['src/playground/**/*'],
+      exclude: ['src/playground/**/*', 'src/**/*.spec.ts'],
       rollupTypes: true,
     }),
   ],

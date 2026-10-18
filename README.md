@@ -6,11 +6,11 @@ Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto 
 
 Cada dominio se importa desde su propio subpath, así que un proyecto solo carga lo que usa:
 
-| Import                         | Contenido                                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `@vsadtajo/adasa-ui`           | `core`: tema (`provideTheme`, `useTheme`, `useResolvedTheme`), `useClickOutside`, tipos de tema   |
-| `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos   |
-| `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                                 |
+| Import                         | Contenido                                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `@vsadtajo/adasa-ui`           | `core`: tema (`provideTheme`, `useTheme`, `useResolvedTheme`), `useClickOutside`, tipos de tema |
+| `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
+| `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
 
@@ -104,16 +104,19 @@ Cada widget acepta además una prop `theme` (`'dark' | 'light'`) que tiene prior
 
 ## Scripts
 
-| Script                    | Descripción                                                        |
-| -------------------------- | ------------------------------------------------------------------ |
-| `npm run dev`              | Playground interactivo en modo desarrollo (importa el código fuente). |
-| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`, un entry por dominio) en `dist/`. |
+| Script                     | Descripción                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`              | Playground interactivo en modo desarrollo (importa el código fuente).                                         |
+| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`, un entry por dominio) en `dist/`.                     |
 | `npm run check:entries`    | Tras el build: comprueba que cada entry solo alcanza sus dominios y paquetes permitidos, e imprime su tamaño. |
-| `npm run build:playground` | Build estático del playground en `dist-playground/`.               |
-| `npm run lint`             | ESLint sobre todo el proyecto.                                     |
-| `npm run lint:fix`         | ESLint con auto-fix.                                                |
-| `npm run format`           | Formatea con Prettier.                                              |
-| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir).                        |
+| `npm run build:playground` | Build estático del playground en `dist-playground/`.                                                          |
+| `npm run lint`             | ESLint sobre todo el proyecto.                                                                                |
+| `npm run lint:fix`         | ESLint con auto-fix.                                                                                          |
+| `npm run format`           | Formatea con Prettier.                                                                                        |
+| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir).                                                                  |
+| `npm run test`             | Tests (Vitest + @vue/test-utils + jsdom), co-locados como `*.spec.ts`.                                        |
+| `npm run test:watch`       | Tests en modo vigilancia.                                                                                     |
+| `npm run test:coverage`    | Tests con informe de cobertura en `coverage/`.                                                                |
 
 ## Playground
 
@@ -180,7 +183,7 @@ npm publish            # publica en GitHub Packages (usa publishConfig del packa
 
 ### CI
 
-Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `lint` → `type-check` → `build` → `check:entries` → `build:playground`. Puedes exigir que ese workflow pase antes de mergear desde Settings → Branches del repo.
+Cada push/PR a `main`/`develop` corre [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `lint` → `type-check` → `test:coverage` → `build` → `check:entries` → `build:playground`. Puedes exigir que ese workflow pase antes de mergear desde Settings → Branches del repo.
 
 ## Convenciones para nuevos widgets
 

@@ -31,11 +31,13 @@ src/
 Cada dominio (`core`, `map` y los futuros `charts`, `table`, `forms`, `detail`, `layout`) tiene la misma forma interna y un `index.ts` como única API pública.
 
 **Fronteras entre dominios**:
+
 - Los imports entre dominios van siempre por `@/<dominio>/...`.
 - Qué dominio puede importar de cuál está en `DOMAIN_DEPENDENCIES` de `eslint.config.js` (`core` de ninguno; `map` solo de `core`...), y ESLint falla si se cruza.
 - Tras el build, `npm run check:entries` (`scripts/check-entries.mjs`) comprueba lo mismo en `dist/`, más los paquetes externos permitidos a cada entry.
 
 **Dominio nuevo**:
+
 1. Crear `src/<dominio>/index.ts`.
 2. Añadir el entry en `entries` de `vite.config.ts` y en `include` de `dts` y `tsconfig.build.json`.
 3. Añadir el subpath en `exports` y `typesVersions` de package.json.
@@ -74,6 +76,35 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 - Una categoría nueva se añade a `ComponentDoc['category']` en `propTypes.ts` y al Sidebar.
 - Los datos de ejemplo son sintéticos y autónomos (sin backend), en `src/playground/utils/`.
 
+## Tests
+
+Vitest + `@vue/test-utils` + jsdom (`vitest.config.ts`).
+
+- `npm run test`: una pasada.
+- `npm run test:watch`: modo vigilancia.
+- `npm run test:coverage`: con cobertura, que es lo que corre el CI. El informe HTML queda en `coverage/`.
+
+**Co-locados**: cada test va junto a lo que prueba, `X.spec.ts` al lado de `X.ts` o `X.vue` (p. ej. `src/map/utils/mapScale.spec.ts`). Motivos:
+
+- La librería se organiza por dominios con fronteras estrictas. Un test vive dentro de su dominio, se mueve con él (`git mv` de la carpeta) y le aplican las mismas reglas de ESLint.
+- Un componente sin `.spec.ts` al lado salta a la vista en el explorador. Una carpeta `tests/` aparte se desincroniza del código sin que nadie lo note.
+- Los imports del test son relativos y cortos (`./ASMapButtonToggle.vue`).
+
+Los `*.spec.ts` se excluyen del build (`tsconfig.build.json` y `dts` en `vite.config.ts`), pero sí pasan por `npm run type-check` y ESLint.
+
+**Plantillas** a copiar:
+
+- [mapScale.spec.ts](src/map/utils/mapScale.spec.ts) para funciones puras: valores conocidos, fronteras (p. ej. el paso de m a km) e invariantes con `it.each`.
+- [ASMapButtonToggle.spec.ts](src/map/components/ASMapButtonToggle.spec.ts) para componentes: render y ARIA, `v-model` (emitido y con el padre devolviendo la prop), estados disabled, valores por defecto y herencia del tema con `provideTheme`.
+
+**Convenciones**:
+
+- `describe` por componente o función, con subgrupos por comportamiento.
+- Nombres de test en español que describen el comportamiento ("emite update:modelValue con el value del botón pulsado").
+- Importa `describe`/`it`/`expect` de `'vitest'` (sin globals).
+- Prueba la API pública (props, eventos, DOM, ARIA), no detalles internos.
+- Comprueba que el test falla si rompes el código que cubre.
+
 ## Estilo de código
 
 - Prettier: sin `;`, comillas simples, `printWidth` 100, trailing commas. ESLint `--max-warnings 0`.
@@ -89,6 +120,7 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
 ## Versionado
 
 Changesets (`npx changeset`):
+
 - **patch**: arreglo sin cambio de API.
 - **minor**: prop, evento o componente nuevo compatible.
 - **major**: renombrar o quitar una prop, un evento o un export.
@@ -99,7 +131,8 @@ Mientras sea 0.x, los cambios incompatibles se avisan igualmente en el changeset
 
 Una tarea no está terminada hasta que se cumple todo esto:
 
-- [ ] `npm run lint`, `npm run type-check`, `npm run build`, `npm run check:entries` y `npm run build:playground` en verde (y `npm run test` cuando exista).
+- [ ] `npm run lint`, `npm run type-check`, `npm run test`, `npm run build`, `npm run check:entries` y `npm run build:playground` en verde.
+- [ ] Tests co-locados (`*.spec.ts`) del comportamiento nuevo o cambiado: lógica pura con valores y fronteras; componentes con render, props, eventos/`v-model` y estados (disabled, vacío, tema).
 - [ ] Tipos en `src/<dominio>/types/` con JSDoc en español, `@default` y `@example`.
 - [ ] Export público en `src/<dominio>/index.ts` (componente y tipos).
 - [ ] Entrada en `src/playground/registry.ts` (con `composer` si va sobre el mapa) con todas sus props y eventos nuevos.
