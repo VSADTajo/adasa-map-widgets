@@ -126,6 +126,16 @@ describe('ASIconButton', () => {
     expect(wrapper.classes()).toContain('as-icon-button--pressed')
   })
 
+  it('el slot icon sustituye al trazado (p. ej. un SVG de trazo propio)', () => {
+    const wrapper = mount(ASIconButton, {
+      props: { label: 'Siguiente' },
+      slots: { icon: '<svg class="mi-icono" />' },
+    })
+    expect(wrapper.find('.mi-icono').exists()).toBe(true)
+    expect(wrapper.findAll('svg')).toHaveLength(1)
+    expect(wrapper.classes()).toContain('as-button--icon-only')
+  })
+
   it('deshabilitado no emite nada', async () => {
     const wrapper = mount(ASIconButton, {
       props: { icon: 'M1 1', label: 'Filtros', pressed: false, disabled: true },

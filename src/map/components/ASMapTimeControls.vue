@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
+import ASIconButton from '@/forms/components/ASIconButton.vue'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import type { TimelineEmits, TimelineProps } from '@/map/types/TimelineProps'
 
@@ -167,73 +168,79 @@ const playPauseIconPath = computed(() =>
     </div>
 
     <div class="as-time-controls__row">
-      <button
-        type="button"
+      <ASIconButton
         class="as-time-controls__button"
-        :aria-label="t('time.previous')"
+        size="sm"
+        :label="t('time.previous')"
         :disabled="props.currentTimeIndex <= 0"
         @click="stepBack"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M19 20 9 12l10-8v16ZM5 19V5" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+          </svg>
+        </template>
+      </ASIconButton>
 
-      <button
-        type="button"
+      <ASIconButton
         class="as-time-controls__button"
-        :aria-label="props.isPlaying ? t('time.pause') : t('time.play')"
+        size="sm"
+        :label="props.isPlaying ? t('time.pause') : t('time.play')"
         @click="togglePlay"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path :d="playPauseIconPath" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path :d="playPauseIconPath" />
+          </svg>
+        </template>
+      </ASIconButton>
 
-      <button
-        type="button"
+      <ASIconButton
         class="as-time-controls__button"
-        :aria-label="t('time.next')"
+        size="sm"
+        :label="t('time.next')"
         :disabled="props.currentTimeIndex >= props.timeline.length - 1"
         @click="stepForward"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M5 4l10 8-10 8V4ZM19 5v14" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M5 4l10 8-10 8V4ZM19 5v14" />
+          </svg>
+        </template>
+      </ASIconButton>
 
       <input
         type="range"
@@ -356,37 +363,21 @@ const playPauseIconPath = computed(() =>
   gap: calc(var(--as-spacing-unit, 4px) * 1.5);
 }
 
-.as-time-controls__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+/* ASIconButton (ghost, sm): color y deshabilitado de la primitiva; ancho,
+   hover y foco como antes de usarla, para no cambiar el aspecto del control. */
+.as-time-controls__row .as-time-controls__button {
+  width: auto;
   min-width: 28px;
-  min-height: 28px;
   padding: 0 calc(var(--as-spacing-unit, 4px) * 2);
-  border: 1px solid transparent;
-  border-radius: var(--as-radius, 8px);
-  background: transparent;
-  color: var(--as-color-text, #0f172a);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease;
 }
 
-.as-time-controls__button:hover:not(:disabled) {
+.as-time-controls__row .as-time-controls__button:not(:disabled):hover {
   background-color: var(--as-color-surface-muted, #f1f5f9);
 }
 
-.as-time-controls__button:focus-visible {
-  outline: none;
+/* El anillo de foco de los widgets del mapa (pegado al botón), no el separado de ASButton. */
+.as-time-controls__row .as-time-controls__button:focus-visible {
   box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);
-}
-
-.as-time-controls__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .as-time-controls__slider {

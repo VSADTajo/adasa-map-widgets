@@ -379,7 +379,7 @@ src/
 scripts/check-entries.mjs        # Guardarraíl: cada entry solo alcanza sus dominios y paquetes permitidos
 ```
 
-Cada dominio solo puede importar de los dominios que le permite el ADR (p. ej. `core` de ninguno, `map` solo de `core`). ESLint lo comprueba en el código fuente y `npm run check:entries`, en el build.
+Cada dominio solo puede importar de los dominios que le permite el ADR (p. ej. `core` de ninguno, `map` de `core` y `forms`). ESLint lo comprueba en el código fuente y `npm run check:entries`, en el build.
 
 ## Uso
 

@@ -28,7 +28,7 @@ const ALWAYS_ALLOWED = ['vue', ...Object.keys(pkg.dependencies ?? {})]
 const RULES = {
   '.': { domains: ['core'], packages: [] },
   './map': {
-    domains: ['core', 'map'],
+    domains: ['core', 'forms', 'map'],
     packages: [
       'leaflet',
       'leaflet.vectorgrid',

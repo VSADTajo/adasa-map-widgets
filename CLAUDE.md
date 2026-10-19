@@ -36,7 +36,7 @@ Cada dominio (`core`, `map`, `charts` y los futuros `table`, `forms`, `detail`, 
 **Fronteras entre dominios**:
 
 - Los imports entre dominios van siempre por `@/<dominio>/...`.
-- Qué dominio puede importar de cuál está en `DOMAIN_DEPENDENCIES` de `eslint.config.js` (`core` de ninguno; `map` solo de `core`...), y ESLint falla si se cruza.
+- Qué dominio puede importar de cuál está en `DOMAIN_DEPENDENCIES` de `eslint.config.js` (`core` de ninguno; `map` de `core` y `forms`...), y ESLint falla si se cruza.
 - Tras el build, `npm run check:entries` (`scripts/check-entries.mjs`) comprueba lo mismo en `dist/`, más los paquetes externos permitidos a cada entry.
 
 **Dominio nuevo**:

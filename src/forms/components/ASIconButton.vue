@@ -7,6 +7,8 @@ import ASButton from './ASButton.vue'
  * herramientas). Como no tiene texto, `label` es obligatorio: es su nombre
  * accesible y su tooltip nativo.
  *
+ * El icono es un trazado (`icon`) o, con el slot `icon`, un SVG propio.
+ *
  * Con `pressed` actúa de interruptor (`aria-pressed`) y se usa con
  * `v-model:pressed`: es controlado, solo emite el estado nuevo.
  *
@@ -16,6 +18,7 @@ import ASButton from './ASButton.vue'
  * ```
  */
 const props = withDefaults(defineProps<IconButtonProps>(), {
+  icon: undefined,
   variant: 'ghost',
   size: 'md',
   type: 'button',
@@ -46,7 +49,9 @@ function onClick(event: MouseEvent): void {
     :title="props.label"
     :aria-pressed="props.pressed"
     @click="onClick"
-  />
+  >
+    <template v-if="$slots.icon" #icon><slot name="icon" /></template>
+  </ASButton>
 </template>
 
 <style scoped>

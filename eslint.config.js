@@ -9,7 +9,7 @@ import eslintConfigPrettier from '@vue/eslint-config-prettier'
  */
 const DOMAIN_DEPENDENCIES = {
   core: [],
-  map: ['core'],
+  map: ['core', 'forms'],
   charts: ['core'],
   table: ['core'],
   forms: ['core'],

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
+import ASIconButton from '@/forms/components/ASIconButton.vue'
 import { useResolvedTheme } from '@/core/composables/useTheme'
 import type { TimeRangeEmits, TimeRangeProps } from '@/map/types/TimeRangeProps'
 
@@ -161,52 +162,56 @@ const fillStyle = computed(() => {
     </div>
 
     <div class="as-time-range-controls__row">
-      <button
-        type="button"
+      <ASIconButton
         class="as-time-range-controls__button"
-        :aria-label="t('timeRange.startBack')"
+        size="sm"
+        :label="t('timeRange.startBack')"
         :title="t('timeRange.startBackShort')"
         :disabled="isFromBackDisabled"
         @click="stepFromBack"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M19 20 9 12l10-8v16ZM5 19V5" />
-        </svg>
-      </button>
-      <button
-        type="button"
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+          </svg>
+        </template>
+      </ASIconButton>
+      <ASIconButton
         class="as-time-range-controls__button"
-        :aria-label="t('timeRange.startForward')"
+        size="sm"
+        :label="t('timeRange.startForward')"
         :title="t('timeRange.startForwardShort')"
         :disabled="isFromForwardDisabled"
         @click="stepFromForward"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M5 4l10 8-10 8V4ZM19 5v14" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M5 4l10 8-10 8V4ZM19 5v14" />
+          </svg>
+        </template>
+      </ASIconButton>
 
       <!--
         Slider de doble manejador implementado con dos <input type="range">
@@ -241,52 +246,56 @@ const fillStyle = computed(() => {
         />
       </div>
 
-      <button
-        type="button"
+      <ASIconButton
         class="as-time-range-controls__button"
-        :aria-label="t('timeRange.endBack')"
+        size="sm"
+        :label="t('timeRange.endBack')"
         :title="t('timeRange.endBackShort')"
         :disabled="isToBackDisabled"
         @click="stepToBack"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M19 20 9 12l10-8v16ZM5 19V5" />
-        </svg>
-      </button>
-      <button
-        type="button"
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+          </svg>
+        </template>
+      </ASIconButton>
+      <ASIconButton
         class="as-time-range-controls__button"
-        :aria-label="t('timeRange.endForward')"
+        size="sm"
+        :label="t('timeRange.endForward')"
         :title="t('timeRange.endForwardShort')"
         :disabled="isToForwardDisabled"
         @click="stepToForward"
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M5 4l10 8-10 8V4ZM19 5v14" />
-        </svg>
-      </button>
+        <template #icon>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M5 4l10 8-10 8V4ZM19 5v14" />
+          </svg>
+        </template>
+      </ASIconButton>
     </div>
 
     <div class="as-time-range-controls__range">
@@ -393,37 +402,21 @@ const fillStyle = computed(() => {
   gap: calc(var(--as-spacing-unit, 4px) * 1);
 }
 
-.as-time-range-controls__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+/* ASIconButton (ghost, sm): color y deshabilitado de la primitiva; ancho,
+   hover y foco como antes de usarla, para no cambiar el aspecto del control. */
+.as-time-range-controls__row .as-time-range-controls__button {
+  width: auto;
   min-width: 28px;
-  min-height: 28px;
   padding: 0 calc(var(--as-spacing-unit, 4px) * 2);
-  border: 1px solid transparent;
-  border-radius: var(--as-radius, 8px);
-  background: transparent;
-  color: var(--as-color-text, #0f172a);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    opacity 0.15s ease;
 }
 
-.as-time-range-controls__button:hover:not(:disabled) {
+.as-time-range-controls__row .as-time-range-controls__button:not(:disabled):hover {
   background-color: var(--as-color-surface-muted, #f1f5f9);
 }
 
-.as-time-range-controls__button:focus-visible {
-  outline: none;
+/* El anillo de foco de los widgets del mapa (pegado al botón), no el separado de ASButton. */
+.as-time-range-controls__row .as-time-range-controls__button:focus-visible {
   box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);
-}
-
-.as-time-range-controls__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .as-time-range-controls__slider-track {
