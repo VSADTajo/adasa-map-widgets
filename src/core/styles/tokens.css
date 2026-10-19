@@ -54,7 +54,14 @@
   --as-color-text-muted: light-dark(#64748b, #94a3b8);
   --as-color-border: light-dark(#cbd5e1, #475569);
   --as-color-danger: light-dark(#dc2626, #f87171);
+  /* Texto e icono sobre --as-color-danger (botón danger). */
+  --as-color-danger-contrast: light-dark(#ffffff, #0f172a);
   --as-focus-ring: 0 0 0 2px var(--as-color-primary);
+
+  /* ── Controles de formulario: alto por tamaño (botones, inputs, selects) ─ */
+  --as-control-height-sm: 28px;
+  --as-control-height-md: 36px;
+  --as-control-height-lg: 44px;
 
   /* ── Tipografía ────────────────────────────────────────────────────── */
   --as-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

@@ -27,6 +27,8 @@ export function fakeTokens(surface = '#ffffff'): ThemeTokens {
     colorTextMuted: '#64748b',
     colorBorder: '#cbd5e1',
     colorDanger: '#dc2626',
+    colorDangerContrast: '#fff',
+    controlHeight: { sm: '28px', md: '36px', lg: '44px' },
     radius: '8px',
     spacingUnit: '4px',
     fontFamily: 'system-ui',

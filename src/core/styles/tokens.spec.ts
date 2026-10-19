@@ -20,6 +20,13 @@ describe('tokens.css: contraste WCAG 2.1 AA contra --as-color-surface', () => {
       ).toBeGreaterThanOrEqual(4.5)
     })
 
+    it.each([
+      ['color-primary-contrast', 'color-primary'],
+      ['color-danger-contrast', 'color-danger'],
+    ])('el texto --as-%s llega a 4.5:1 sobre --as-%s (botones primary y danger)', (text, fill) => {
+      expect(contrastRatio(token(text, mode), token(fill, mode))).toBeGreaterThanOrEqual(4.5)
+    })
+
     it.each(Array.from({ length: 8 }, (_, i) => `data-cat-${i + 1}`))(
       'la marca categórica --as-%s llega a 3:1',
       (name) => {

@@ -13,8 +13,8 @@ import type {
   AppShellProps,
   AppShellSectionSlotProps,
 } from '@/layout/types/AppShellProps'
-import { ICONS } from '@/layout/utils/icons'
-import AppIcon from './AppIcon.vue'
+import { ICONS } from '@/core/icons/icons'
+import ASIcon from '@/core/components/ASIcon.vue'
 import ASAppRail from './ASAppRail.vue'
 import ASAppTopBar from './ASAppTopBar.vue'
 
@@ -212,7 +212,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
           :aria-controls="`${id}-menu`"
           @click="menuOpen = !menuOpen"
         >
-          <AppIcon :path="ICONS.menu" />
+          <ASIcon :path="ICONS.menu" />
         </button>
       </template>
       <template v-if="$slots.brand" #brand><slot name="brand" /></template>
@@ -227,7 +227,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
           :aria-expanded="searchOpen"
           @click="searchOpen = !searchOpen"
         >
-          <AppIcon :path="ICONS.magnify" />
+          <ASIcon :path="ICONS.magnify" />
         </button>
         <slot name="actions" />
       </template>
@@ -278,7 +278,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
                 :aria-pressed="section.id === props.activeSection"
                 @click="chooseFromMenu(section.id)"
               >
-                <AppIcon :path="section.icon" />
+                <ASIcon :path="section.icon" />
                 {{ section.label }}
               </button>
             </li>
@@ -316,7 +316,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
             :title="t('layout.closeSearch')"
             @click="searchOpen = false"
           >
-            <AppIcon :path="ICONS.close" />
+            <ASIcon :path="ICONS.close" />
           </button>
         </div>
       </template>
@@ -337,7 +337,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
           :title="t('layout.closeDetail')"
           @click="closeDetail"
         >
-          <AppIcon :path="ICONS.close" />
+          <ASIcon :path="ICONS.close" />
         </button>
         <slot name="detail" />
       </aside>

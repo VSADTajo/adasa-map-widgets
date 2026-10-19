@@ -36,6 +36,8 @@ export {
   type FormatUnitOptions,
 } from './utils/format'
 export { readTokens } from './utils/readTokens'
+export { default as ASIcon } from './components/ASIcon.vue'
+export type { IconProps } from './types/IconProps'
 export { nearestTimeIndex } from './utils/time'
 
 export type {

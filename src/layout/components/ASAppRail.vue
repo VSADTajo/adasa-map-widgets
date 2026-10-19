@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
 import type { AppRailEmits, AppRailProps } from '@/layout/types/AppRailProps'
-import AppIcon from './AppIcon.vue'
+import ASIcon from '@/core/components/ASIcon.vue'
 
 /**
  * Barra vertical de iconos con el color corporativo: una sección por
@@ -57,7 +57,7 @@ const groups = computed(() => [
           :aria-controls="props.controls"
           @click="emit('toggle', section.id)"
         >
-          <AppIcon :path="section.icon" />
+          <ASIcon :path="section.icon" />
         </button>
       </li>
     </ul>

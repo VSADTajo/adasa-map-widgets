@@ -76,6 +76,12 @@ export function readTokens(element: Element = document.documentElement): ThemeTo
       colorTextMuted: color('color-text-muted'),
       colorBorder: color('color-border'),
       colorDanger: color('color-danger'),
+      colorDangerContrast: color('color-danger-contrast'),
+      controlHeight: {
+        sm: length('control-height-sm'),
+        md: length('control-height-md'),
+        lg: length('control-height-lg'),
+      },
       radius: length('radius'),
       spacingUnit: length('spacing-unit'),
       fontFamily: raw('font-family'),
