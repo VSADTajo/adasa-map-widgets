@@ -2,8 +2,8 @@
 import { computed, ref } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
 import { buildHydrograph } from '@/charts/core/hydrograph'
-import type { ChartEmits, ChartExposed } from '@/charts/types/chart'
-import type { HydrographProps } from '@/charts/types/HydrographProps'
+import type { ChartExposed } from '@/charts/types/chart'
+import type { HydrographEmits, HydrographProps } from '@/charts/types/HydrographProps'
 import ASChart from './ASChart.vue'
 
 /**
@@ -34,7 +34,9 @@ const props = withDefaults(defineProps<HydrographProps>(), {
   precipitationInverted: true,
   precipitationWeight: 0.35,
   thresholds: undefined,
-  now: undefined,
+  now: true,
+  xAxis: undefined,
+  annotations: undefined,
   bands: undefined,
   extraSeries: undefined,
   extraYAxes: undefined,
@@ -61,7 +63,7 @@ const props = withDefaults(defineProps<HydrographProps>(), {
   nativeOptions: undefined,
 })
 
-const emit = defineEmits<ChartEmits>()
+const emit = defineEmits<HydrographEmits>()
 
 const { t } = useLocale()
 const chartProps = computed(() => buildHydrograph(props, t))

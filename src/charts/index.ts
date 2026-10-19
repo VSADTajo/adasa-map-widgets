@@ -42,4 +42,5 @@ export type {
   HydroThreshold,
   HydroBand,
   HydrographProps,
+  HydrographEmits,
 } from './types/HydrographProps'

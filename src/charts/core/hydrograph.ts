@@ -1,3 +1,4 @@
+import { extent } from './extent'
 import type { LocaleContext } from '@/core/composables/useLocale'
 import type {
   ChartPanel,
@@ -27,14 +28,14 @@ const DISCHARGE_AXIS = 'discharge'
 
 /** Máximo del eje de precipitación superpuesta: las barras ocupan ~el 40 % del alto. */
 function overlayMax(precipitation: HydroVariable): number | undefined {
-  const values = [
-    ...(precipitation.observed ?? []),
-    ...(precipitation.forecasts ?? []).flatMap((f) => f.values ?? []),
-  ]
-    .map(([, value]) => value)
-    .filter((value): value is number => value !== null)
-  if (!values.length) return undefined
-  const max = Math.max(...values) * 2.5
+  const range = extent(
+    [
+      ...(precipitation.observed ?? []),
+      ...(precipitation.forecasts ?? []).flatMap((f) => f.values ?? []),
+    ].map(([, value]) => value),
+  )
+  if (!range) return undefined
+  const max = range[1] * 2.5
   const step = 10 ** Math.floor(Math.log10(max)) / 2
   return Math.ceil(max / step) * step
 }
@@ -212,11 +213,20 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
   return {
     chartLibrary: props.chartLibrary,
     series: customized,
-    xAxis: { type: 'time' },
+    xAxis: { ...props.xAxis, type: 'time' },
     yAxes,
     panels,
-    annotations: { y: thresholds },
-    now: props.now === false ? false : (props.now ?? true),
+    annotations: {
+      x: props.annotations?.x,
+      y: [
+        ...thresholds,
+        ...(props.annotations?.y ?? []).map((annotation) => ({
+          yAxis: DISCHARGE_AXIS,
+          ...annotation,
+        })),
+      ],
+    },
+    now: props.now ?? true,
     tooltip: props.tooltip,
     legend: props.legend,
     legendValues: props.legendValues,

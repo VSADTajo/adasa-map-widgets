@@ -210,6 +210,14 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
     default: '#eb6834',
     playgroundOnly: true,
   },
+  {
+    key: 'episode',
+    label: 'Marcar el episodio (annotations)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Añade un intervalo en X con `annotations`, igual que en ASChart.',
+  },
   { key: 'epsName', label: 'EPS: nombre', type: 'string', default: 'EPS', playgroundOnly: true },
   { key: 'epsColor', label: 'EPS: color', type: 'color', default: '#05a873', playgroundOnly: true },
 ]
@@ -238,6 +246,7 @@ export function hydrographToProps(values: Values): Values {
     precipitation: customizeVariable(examplePrecipitation, values),
     thresholds: exampleThresholds,
     now: EXAMPLE_NOW,
+    annotations: values.episode ? { x: exampleChartAnnotations.x } : undefined,
   }
 }
 
@@ -258,6 +267,9 @@ export function hydrographToSnippet(values: Values): string {
     '  ] }"',
     `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedColor: '${values.observedColor}' }"`,
     '  :thresholds="umbrales"',
+    ...(values.episode
+      ? [`  :annotations="{ x: [{ type: 'range', from: inicio, to: fin, label: 'Episodio' }] }"`]
+      : []),
     '/>',
   ].join('\n')
 }
