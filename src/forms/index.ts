@@ -11,6 +11,11 @@ export { default as ASSelect } from './components/ASSelect.vue'
 export { default as ASCheckbox } from './components/ASCheckbox.vue'
 export { default as ASSwitch } from './components/ASSwitch.vue'
 export { default as ASRadioGroup } from './components/ASRadioGroup.vue'
+export { default as ASDatePicker } from './components/ASDatePicker.vue'
+export { default as ASDateRangePicker } from './components/ASDateRangePicker.vue'
+export { default as ASSearchInput } from './components/ASSearchInput.vue'
+
+export { hydrologicalYearStart } from './utils/dates'
 
 export type {
   ButtonVariant,
@@ -33,3 +38,17 @@ export type {
 export type { CheckboxEmits, CheckboxProps } from './types/CheckboxProps'
 export type { SwitchEmits, SwitchProps } from './types/SwitchProps'
 export type { RadioGroupEmits, RadioGroupProps } from './types/RadioGroupProps'
+export type { DatePickerEmits, DatePickerProps } from './types/DatePickerProps'
+export type {
+  DateRange,
+  DateRangePickerEmits,
+  DateRangePickerProps,
+  DateRangePreset,
+  DateRangePresetId,
+} from './types/DateRangePickerProps'
+export type {
+  FetchSuggestions,
+  SearchInputEmits,
+  SearchInputProps,
+  SearchSuggestion,
+} from './types/SearchInputProps'

@@ -495,8 +495,8 @@ defineExpose({
       <ul
         v-show="isOpen"
         :id="listboxId"
-        class="as-select__list"
-        :class="`as-select__list--${placement}`"
+        class="as-listbox"
+        :class="`as-listbox--${placement}`"
         role="listbox"
         :aria-labelledby="props.label ? labelId : undefined"
         :aria-label="props.label ? undefined : t('forms.options')"
@@ -505,14 +505,14 @@ defineExpose({
       >
         <li v-for="section in sections" :key="section.key" role="presentation">
           <ul
-            class="as-select__group"
+            class="as-listbox__group"
             :role="section.label ? 'group' : 'presentation'"
             :aria-labelledby="section.label ? `${listboxId}-${section.key}` : undefined"
           >
             <li
               v-if="section.label"
               :id="`${listboxId}-${section.key}`"
-              class="as-select__group-label"
+              class="as-listbox__group-label"
               role="presentation"
             >
               {{ section.label }}
@@ -521,11 +521,11 @@ defineExpose({
               v-for="{ option, index } in section.options"
               :id="optionId(index)"
               :key="option.value"
-              class="as-select__option"
+              class="as-listbox__option"
               :class="{
-                'as-select__option--active': index === activeIndex,
-                'as-select__option--selected': isSelected(option.value),
-                'as-select__option--disabled': option.disabled,
+                'as-listbox__option--active': index === activeIndex,
+                'as-listbox__option--selected': isSelected(option.value),
+                'as-listbox__option--disabled': option.disabled,
               }"
               role="option"
               :aria-selected="isSelected(option.value)"
@@ -544,13 +544,13 @@ defineExpose({
                 </span>
                 <ASIcon
                   v-if="option.icon"
-                  class="as-select__option-icon"
+                  class="as-listbox__option-icon"
                   :path="option.icon"
                   :size="18"
                 />
-                <span class="as-select__option-text">
+                <span class="as-listbox__option-text">
                   {{ option.label }}
-                  <small v-if="option.description" class="as-select__description">
+                  <small v-if="option.description" class="as-listbox__description">
                     {{ option.description }}
                   </small>
                 </span>
@@ -564,7 +564,7 @@ defineExpose({
             </li>
           </ul>
         </li>
-        <li v-if="!visible.length" class="as-select__empty" role="presentation">
+        <li v-if="!visible.length" class="as-listbox__empty" role="presentation">
           <slot name="empty">{{ props.noOptionsText ?? t('forms.noOptions') }}</slot>
         </li>
       </ul>
@@ -573,6 +573,7 @@ defineExpose({
 </template>
 
 <style scoped src="../styles/control-box.css"></style>
+<style scoped src="../styles/listbox.css"></style>
 
 <style scoped>
 .as-select__anchor {
@@ -681,90 +682,6 @@ defineExpose({
   color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
 }
 
-/* ── Lista ─────────────────────────────────────────────────────────── */
-.as-select__list {
-  position: absolute;
-  right: 0;
-  left: 0;
-  z-index: var(--as-z-dropdown, 1100);
-  box-sizing: border-box;
-  max-height: 256px;
-  margin: 0;
-  padding: var(--as-space-1, 4px);
-  overflow-y: auto;
-  border: 1px solid var(--as-color-border, light-dark(#cbd5e1, #475569));
-  border-radius: var(--as-radius, 8px);
-  background-color: var(--as-color-surface, light-dark(#ffffff, #1e293b));
-  color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
-  box-shadow: var(--as-shadow-lg, 0 8px 24px rgba(15, 23, 42, 0.16));
-  font-size: var(--as-font-size-sm, 0.875rem);
-  list-style: none;
-}
-
-.as-select__list--bottom {
-  top: calc(100% + 4px);
-}
-
-.as-select__list--top {
-  bottom: calc(100% + 4px);
-}
-
-.as-select__group {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.as-select__group-label {
-  padding: var(--as-space-2, 8px) var(--as-space-2, 8px) var(--as-space-1, 4px);
-  font-size: var(--as-font-size-xs, 0.75rem);
-  font-weight: var(--as-font-weight-semibold, 600);
-  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.as-select__option {
-  display: flex;
-  gap: var(--as-space-2, 8px);
-  align-items: center;
-  padding: var(--as-space-2, 8px);
-  border-radius: var(--as-radius-sm, 4px);
-  cursor: pointer;
-}
-
-.as-select__option--active {
-  background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
-  /* Marca también sin color (alto contraste): un borde a la izquierda. */
-  box-shadow: inset 3px 0 0 var(--as-color-primary, light-dark(#2563eb, #60a5fa));
-}
-
-.as-select__option--selected {
-  font-weight: var(--as-font-weight-medium, 500);
-}
-
-.as-select__option--disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.as-select__option-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.as-select__description {
-  font-size: var(--as-font-size-xs, 0.75rem);
-  font-weight: var(--as-font-weight-regular, 400);
-  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
-}
-
-.as-select__option-icon {
-  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
-}
-
 .as-select__tick {
   color: var(--as-color-primary, light-dark(#2563eb, #60a5fa));
 }
@@ -781,15 +698,9 @@ defineExpose({
   color: var(--as-color-primary-contrast, light-dark(#ffffff, #0f172a));
 }
 
-.as-select__option--selected .as-select__check {
+.as-listbox__option--selected .as-select__check {
   border-color: var(--as-color-primary, light-dark(#2563eb, #60a5fa));
   background-color: var(--as-color-primary, light-dark(#2563eb, #60a5fa));
-}
-
-.as-select__empty {
-  padding: var(--as-space-3, 12px) var(--as-space-2, 8px);
-  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
-  text-align: center;
 }
 
 @media (prefers-reduced-motion: reduce) {
