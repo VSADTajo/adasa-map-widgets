@@ -2,3 +2,4 @@ dist
 dist-playground
 node_modules
 *.md
+coverage

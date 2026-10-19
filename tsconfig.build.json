@@ -1,6 +1,7 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -15,13 +16,9 @@
   "include": [
     "src/index.ts",
     "src/vite-env.d.ts",
-    "src/components/**/*.ts",
-    "src/components/**/*.vue",
-    "src/types/**/*.ts",
-    "src/composables/**/*.ts",
-    "src/layers/**/*.ts",
-    "src/legend/**/*.ts",
-    "src/utils/**/*.ts"
+    "src/core/**/*",
+    "src/map/**/*",
+    "src/charts/**/*"
   ],
-  "exclude": ["src/playground/**/*"]
+  "exclude": ["src/playground/**/*", "src/**/*.spec.ts", "src/**/*.fixtures.ts"]
 }

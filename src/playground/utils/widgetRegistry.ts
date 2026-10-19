@@ -1,217 +1,31 @@
-import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
-import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
-import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
-import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
-import ASMapScale from '@/components/controls/ASMapScale.vue'
-import ASMapLegend from '@/components/controls/ASMapLegend.vue'
-import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
-import type { WidgetRegistryEntry } from '@/types/playground'
-import type { DayIntervalAlert } from '@/types/DayIntervalProps'
-import { basemapExamples } from './basemapExamples'
+import type { WidgetRegistryEntry } from '@/playground/types'
+import { registry, type RegistryEntry } from '../registry'
 
-function buildDemoTimeline(hours = 12): Date[] {
-  const start = new Date()
-  start.setMinutes(0, 0, 0)
-  return Array.from({ length: hours }, (_, index) => new Date(start.getTime() + index * 3600_000))
-}
+const DEFAULT_OMITTED_PROPS = ['position', 'offset']
 
-function buildDemoAlerts(): DayIntervalAlert[] {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const at = (dayOffset: number, hour: number) =>
-    new Date(today.getTime() + dayOffset * 86_400_000 + hour * 3_600_000)
-
-  return [
-    { start: at(0, 6), end: at(0, 18), level: 'amarillo' },
-    { start: at(1, 12), end: at(1, 24), level: 'naranja' },
-    { start: at(2, 0), end: at(2, 12), level: 'rojo' },
-  ]
+function toWidgetEntry(entry: RegistryEntry): WidgetRegistryEntry {
+  const composer = entry.composer!
+  const omitted = composer.omitProps ?? DEFAULT_OMITTED_PROPS
+  return {
+    id: entry.id,
+    label: composer.label,
+    componentName: entry.name,
+    component: entry.component,
+    propsSchema: entry.propsSchema.filter((field) => !omitted.includes(field.key)),
+    staticProps: composer.staticProps ?? (() => ({ ...entry.staticProps })),
+    bindings: entry.bindings,
+  }
 }
 
 /**
- * Registro de widgets disponibles para componer sobre el mapa en el
- * playground: mapea un id estable a su componente Vue, sus props editables
- * y (cuando aplica) los datos de ejemplo/listeners necesarios para que
- * funcione de forma autónoma sin un backend real.
+ * Widgets disponibles para componer sobre el mapa en el playground. No se
+ * registran aquí: se derivan de las entradas de `registry.ts` que declaran
+ * `composer`, para que un widget nuevo se registre en un único sitio y la
+ * galería y el compositor no se desincronicen.
  */
-export const widgetRegistry: WidgetRegistryEntry[] = [
-  {
-    id: 'time-controls',
-    label: 'Controles de tiempo (ASMapTimeControls)',
-    componentName: 'ASMapTimeControls',
-    component: ASMapTimeControls,
-    propsSchema: [
-      {
-        key: 'currentTimeIndex',
-        label: 'Índice actual',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 11,
-        step: 1,
-      },
-      { key: 'isPlaying', label: 'Reproduciendo', type: 'boolean', default: false },
-      {
-        key: 'stepMs',
-        label: 'Intervalo (ms)',
-        type: 'number',
-        default: 2000,
-        min: 250,
-        max: 10000,
-        step: 250,
-      },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#22c55e' },
-      { key: 'width', label: 'Ancho (CSS, ej. 720px / 90%)', type: 'string', default: '' },
-    ],
-    staticProps: () => ({ timeline: buildDemoTimeline() }),
-    bindings: (widgetProps, log) => ({
-      'onUpdate:currentTimeIndex': (value) => {
-        widgetProps.currentTimeIndex = value
-        log('update:currentTimeIndex', value)
-      },
-      'onUpdate:isPlaying': (value) => {
-        widgetProps.isPlaying = value
-        log('update:isPlaying', value)
-      },
-      onTimeChanged: (date) => log('time-changed', date),
-    }),
-  },
-  {
-    id: 'time-range-controls',
-    label: 'Controles de rango de tiempo (ASMapTimeRangeControls)',
-    componentName: 'ASMapTimeRangeControls',
-    component: ASMapTimeRangeControls,
-    propsSchema: [
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#f97316' },
-      { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
-    ],
-    staticProps: () => ({ timeline: buildDemoTimeline(), currentRange: [2, 9] }),
-    bindings: (widgetProps, log) => ({
-      'onUpdate:currentRange': (value) => {
-        widgetProps.currentRange = value
-        log('update:currentRange', value)
-      },
-      onRangeChanged: (range) => log('range-changed', range),
-    }),
-  },
-  {
-    id: 'day-interval-controls',
-    label: 'Intervalos por día (ASMapDayIntervalControls)',
-    componentName: 'ASMapDayIntervalControls',
-    component: ASMapDayIntervalControls,
-    propsSchema: [
-      { key: 'title', label: 'Título', type: 'string', default: 'Avisos AEMET' },
-      { key: 'subtitle', label: 'Subtítulo', type: 'string', default: 'Viento y lluvia' },
-      { key: 'days', label: 'Días', type: 'number', default: 3, min: 1, max: 5, step: 1 },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
-      { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
-    ],
-    staticProps: () => ({ alerts: buildDemoAlerts(), selectedIntervalStart: null }),
-    bindings: (widgetProps, log) => ({
-      'onUpdate:selectedIntervalStart': (value) => {
-        widgetProps.selectedIntervalStart = value
-        log('update:selectedIntervalStart', value)
-      },
-      onIntervalChanged: (interval) => log('interval-changed', interval),
-    }),
-  },
-  {
-    id: 'basemaps-selector',
-    label: 'Selector de basemap (ASMapBasemapsSelector)',
-    componentName: 'ASMapBasemapsSelector',
-    component: ASMapBasemapsSelector,
-    propsSchema: [
-      { key: 'basemap', label: 'Basemap activo (id)', type: 'string', default: 'osm' },
-      {
-        key: 'position',
-        label: 'Esquina de apertura del menú',
-        type: 'select',
-        options: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-        default: 'bottom-right',
-      },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-    ],
-    staticProps: () => ({ basemaps: basemapExamples }),
-    bindings: (widgetProps, log) => ({
-      'onUpdate:basemap': (id) => {
-        widgetProps.basemap = id
-        log('update:basemap', id)
-      },
-    }),
-  },
-  {
-    id: 'scale',
-    label: 'Escala (ASMapScale)',
-    componentName: 'ASMapScale',
-    component: ASMapScale,
-    propsSchema: [
-      { key: 'mode', label: 'Modo', type: 'select', options: ['bar', 'numeric'], default: 'bar' },
-      {
-        key: 'units',
-        label: 'Unidades (solo "bar")',
-        type: 'select',
-        options: ['metric', 'imperial'],
-        default: 'metric',
-      },
-      {
-        key: 'width',
-        label: 'Ancho (px, solo "bar")',
-        type: 'number',
-        default: 100,
-        min: 40,
-        max: 200,
-        step: 10,
-      },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-    ],
-    // Solo el valor inicial: MapCanvas.vue sustituye center/zoom por los
-    // reales del ASMap del compositor (liveCenter/liveZoom), así que la
-    // regla/razón sí cambia de verdad al hacer scroll/zoom en el mapa.
-    staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
-  },
-  {
-    id: 'legend',
-    label: 'Leyenda (ASMapLegend)',
-    componentName: 'ASMapLegend',
-    component: ASMapLegend,
-    propsSchema: [
-      { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
-      { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-    ],
-    // Solo el valor inicial: MapCanvas.vue sustituye `layers` por las capas
-    // reales activas en el compositor (props.layers), así que la leyenda
-    // muestra de verdad lo que hay activado en "Capas de ejemplo".
-    staticProps: () => ({ layers: [] }),
-  },
-  {
-    id: 'button-toggle',
-    label: 'Grupo de botones (ASMapButtonToggle)',
-    componentName: 'ASMapButtonToggle',
-    component: ASMapButtonToggle,
-    propsSchema: [
-      { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
-    ],
-    staticProps: () => ({
-      modelValue: 'observado',
-      options: [
-        { value: 'observado', label: 'Observado' },
-        { value: 'harmonie', label: 'Harmonie' },
-        { value: 'epsmedio', label: 'EPS Medio' },
-      ],
-    }),
-    bindings: (widgetProps, log) => ({
-      'onUpdate:modelValue': (value) => {
-        widgetProps.modelValue = value
-        log('update:modelValue', value)
-      },
-    }),
-  },
-]
+export const widgetRegistry: WidgetRegistryEntry[] = registry
+  .filter((entry) => entry.composer)
+  .map(toWidgetEntry)
 
 export function getWidgetEntry(id: string): WidgetRegistryEntry | undefined {
   return widgetRegistry.find((entry) => entry.id === id)

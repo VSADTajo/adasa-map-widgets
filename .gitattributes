@@ -1,0 +1,15 @@
+# Finales de línea LF en el repo y en la copia de trabajo, en cualquier SO.
+# Prettier (y por tanto ESLint con prettier/prettier) exige LF; sin esto, Git
+# para Windows con core.autocrlf=true convierte a CRLF al hacer checkout y el
+# editor marca cada línea con "Delete ␍".
+* text=auto eol=lf
+
+# Binarios: sin conversión.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

@@ -17,6 +17,11 @@ export interface PropField {
   step?: number
   /** Explicación corta de qué hace la prop (se muestra como ayuda inline). */
   description?: string
+  /**
+   * Control que solo existe en el playground (p. ej. "número de ejes"): lo
+   * convierte `toProps` en props reales, así que no se lista como prop del componente.
+   */
+  playgroundOnly?: boolean
 }
 
 /** Documentación de un evento emitido por el componente. */
@@ -28,7 +33,7 @@ export interface EventDoc {
 
 /**
  * Documenta un campo de `options` de un {@link LayerType} (ver
- * `src/types/layers.ts`). A diferencia de {@link PropField}, no es editable
+ * `src/map/types/layers.ts`). A diferencia de {@link PropField}, no es editable
  * desde un formulario genérico: `options` varía por tipo de capa y admite
  * formas complejas (objetos, funciones...) que no encajan en el editor de
  * props. Solo se usa para la tabla de documentación de la categoría 'layers'.
@@ -41,10 +46,42 @@ export interface LayerOptionField {
   description: string
 }
 
+/** Categoría del catálogo: una por dominio de la librería (los de mapa, divididos en tres). */
+export type ComponentCategory =
+  'mapping' | 'controls' | 'layers' | 'charts' | 'tables' | 'detail' | 'layout' | 'forms'
+
+export interface CategoryInfo {
+  key: ComponentCategory
+  /** Título en la barra lateral. */
+  label: string
+  /**
+   * Cómo se previsualizan sus componentes: `'map'`, en el escenario de los
+   * widgets de mapa (se anclan con position absolute); `'canvas'`, en un
+   * lienzo neutro redimensionable para probar el responsive.
+   */
+  preview: 'map' | 'canvas'
+}
+
+/** Categorías del catálogo, en el orden de la barra lateral. */
+export const COMPONENT_CATEGORIES: CategoryInfo[] = [
+  { key: 'mapping', label: 'Mapa', preview: 'map' },
+  { key: 'controls', label: 'Controles de mapa', preview: 'map' },
+  { key: 'layers', label: 'Capas', preview: 'map' },
+  { key: 'charts', label: 'Gráficas', preview: 'canvas' },
+  { key: 'tables', label: 'Tablas', preview: 'canvas' },
+  { key: 'detail', label: 'Detalle', preview: 'canvas' },
+  { key: 'layout', label: 'Layout', preview: 'canvas' },
+  { key: 'forms', label: 'Formularios', preview: 'canvas' },
+]
+
+export function getCategory(key: ComponentCategory): CategoryInfo {
+  return COMPONENT_CATEGORIES.find((category) => category.key === key)!
+}
+
 export interface ComponentDoc {
   id: string
   name: string
-  category: 'controls' | 'mapping' | 'layers'
+  category: ComponentCategory
   description: string
   propsSchema: PropField[]
   events: EventDoc[]

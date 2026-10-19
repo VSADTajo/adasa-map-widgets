@@ -1,25 +1,35 @@
 import type { Component } from 'vue'
-import ASMap from '@/components/mapping/ASMap.vue'
-import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
-import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
-import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
-import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
-import ASMapScale from '@/components/controls/ASMapScale.vue'
-import ASMapLegend from '@/components/controls/ASMapLegend.vue'
-import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
-import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
-import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import ASMap from '@/map/components/ASMap.vue'
+import ASMapTimeControls from '@/map/components/ASMapTimeControls.vue'
+import ASMapTimeRangeControls from '@/map/components/ASMapTimeRangeControls.vue'
+import ASMapDayIntervalControls from '@/map/components/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/map/components/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/map/components/ASMapScale.vue'
+import ASMapLegend from '@/map/components/ASMapLegend.vue'
+import ASMapButtonToggle from '@/map/components/ASMapButtonToggle.vue'
+import type { ComponentDoc, EventDoc, LayerOptionField, PropField } from './propTypes'
+import type { DayIntervalAlert } from '@/map/types/DayIntervalProps'
 import type {
   FeatureSelectedEvent,
   LayerCapabilities,
   LayerConfig,
   LayerKind,
   LayerLoadedEvent,
-} from '@/types/layers'
-import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
-import { detectCapabilities, LAYER_KIND } from '@/layers'
+} from '@/map/types/layers'
+import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
+import { detectCapabilities, LAYER_KIND } from '@/map/layers'
 import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
+import ASChart from '@/charts/components/ASChart.vue'
+import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
+import {
+  CHART_SERIES_FIELDS,
+  HYDROGRAPH_SERIES_FIELDS,
+  chartToProps,
+  chartToSnippet,
+  hydrographToProps,
+  hydrographToSnippet,
+} from './utils/chartPlayground'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -40,12 +50,49 @@ export interface RegistryEntry extends ComponentDoc {
    * no las props de `ASMap` (que solo lo recibe tal cual en su prop `layers`).
    */
   codeOverride?: string
-  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/types/layers.ts`). */
+  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/map/types/layers.ts`). */
   layerOptionsSchema?: LayerOptionField[]
   /** Capacidades detectadas para el ejemplo de esta capa (ver `detectCapabilities`), solo categoría `'layers'`. */
   layerCapabilities?: LayerCapabilities
   /** Si el cliente ve datos vectoriales o solo una imagen ya renderizada (ver `LAYER_KIND`), solo categoría `'layers'`. */
   layerKind?: LayerKind
+  /**
+   * Convierte los valores del formulario en los props reales del
+   * componente, cuando estos no son primitivos (p. ej. un control "número
+   * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
+   */
+  toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
+  toSnippet?: (values: Record<string, unknown>) => string
+  /**
+   * Si se define, el widget también se puede colocar en el compositor sobre
+   * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
+   */
+  composer?: ComposerConfig
+}
+
+/** Cómo aparece una entrada de la galería en el compositor sobre mapa. */
+export interface ComposerConfig {
+  /** Texto del selector de widgets del compositor. */
+  label: string
+  /**
+   * Claves de `propsSchema` que no se editan en el compositor, porque ya las
+   * decide él (la esquina la fija la colocación del widget).
+   * @default ['position', 'offset']
+   */
+  omitProps?: string[]
+  /** Datos de ejemplo de cada instancia colocada. Si se omite, se copia `staticProps`. */
+  staticProps?: () => Record<string, unknown>
+}
+
+/** Campo `theme` común: vacío = sin prop, el widget hereda el tema global del playground. */
+const THEME_FIELD: PropField = {
+  key: 'theme',
+  label: 'Tema',
+  type: 'select',
+  options: ['', 'dark', 'light'],
+  default: '',
+  description: 'Vacío: hereda el tema global (provideTheme). Si no hay ninguno, "dark".',
 }
 
 /**
@@ -139,6 +186,135 @@ function buildLegendDemoLayers(): LayerConfig[] {
     .map((id) => getLayerExample(id)?.config)
     .filter((config): config is LayerConfig => Boolean(config))
 }
+
+/** Campos comunes a las gráficas: motor, tema y opciones de interacción. */
+const CHART_LIBRARY_FIELD: PropField = {
+  key: 'chartLibrary',
+  label: 'Motor de gráficas',
+  type: 'select',
+  options: ['echarts', 'chartjs', 'apexcharts'],
+  default: 'echarts',
+  description:
+    'Mismos props con cualquier motor. ApexCharts requiere licencia comercial para organizaciones de más de 2 M$.',
+}
+const CHART_THEME_FIELD: PropField = {
+  ...THEME_FIELD,
+  description: 'Vacío: hereda el tema global (provideTheme) o el de la página.',
+}
+const CHART_INTERACTION_FIELDS: PropField[] = [
+  { key: 'tooltip', label: 'Tooltip', type: 'boolean', default: true },
+  {
+    key: 'legend',
+    label: 'Posición de la leyenda',
+    type: 'select',
+    options: ['top', 'bottom', 'left', 'right'],
+    default: 'top',
+    description: 'Para ocultarla, :legend="false".',
+  },
+  {
+    key: 'legendValues',
+    label: 'Valores en la leyenda',
+    type: 'boolean',
+    default: false,
+    description:
+      'Muestra en la leyenda el valor de cada serie bajo el cursor. Desactiva el tooltip para verlos solo ahí.',
+  },
+  {
+    key: 'zoom',
+    label: 'Zoom',
+    type: 'boolean',
+    default: false,
+    description: 'Rueda/pellizco para acercar; barra de zoom en ECharts.',
+  },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: true,
+    description:
+      'Descargar PNG, SVG y CSV, pantalla completa y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom. Lo mismo se puede hacer desde fuera con exportImage(), exportData() y toggleFullscreen().',
+  },
+  {
+    key: 'fileName',
+    label: 'Nombre de los archivos',
+    type: 'string',
+    default: '',
+    description: 'Sin extensión. Vacío: "grafica".',
+  },
+  {
+    key: 'patterns',
+    label: 'Tramas (daltonismo)',
+    type: 'boolean',
+    default: false,
+    description:
+      'Una trama distinta en cada relleno (barras, áreas, bandas), además del color, también en la leyenda y en las imágenes exportadas.',
+  },
+  {
+    key: 'dataTable',
+    label: 'Tabla para lectores de pantalla',
+    type: 'boolean',
+    default: true,
+    description:
+      'Tabla oculta con todos los datos. Con el foco en la gráfica, las flechas recorren los valores (prueba con Tab y →).',
+  },
+  {
+    key: 'ariaLabel',
+    label: 'Nombre accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera ("Gráfica de líneas y barras: Caudal, Nivel, Lluvia").',
+  },
+  {
+    key: 'description',
+    label: 'Descripción accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera con el rango del eje X, mínimos y máximos y umbrales.',
+  },
+  { key: 'animation', label: 'Animación', type: 'boolean', default: true },
+]
+const CHART_EVENTS: EventDoc[] = [
+  {
+    name: 'point-click',
+    payload: '{ seriesId, x, y }',
+    description: 'Click sobre un punto, barra o banda.',
+  },
+  {
+    name: 'x-click',
+    payload: '{ x }',
+    description:
+      'Click sobre el área de la gráfica: el instante bajo el cursor (p. ej. para enlazar con ASMapTimeControls).',
+  },
+  {
+    name: 'time-select',
+    payload: '{ time }',
+    description:
+      'Click en un eje temporal: el instante elegido. También emite update:currentTime (v-model:current-time); aquí mueve la línea del instante actual.',
+  },
+  {
+    name: 'range-change',
+    payload: '{ start, end }',
+    description: 'El rango visible cambió por zoom.',
+  },
+  { name: 'ready', payload: '{ library, instance }', description: 'El motor terminó de dibujar.' },
+]
+const chartBindings = (
+  values: Record<string, unknown>,
+  log: (name: string, payload?: unknown) => void,
+) =>
+  ({
+    onPointClick: (event: unknown) => log('point-click', event),
+    onXClick: (event: unknown) => log('x-click', event),
+    onTimeSelect: (event: unknown) => log('time-select', event),
+    // v-model:current-time: el clic mueve la línea del instante actual.
+    'onUpdate:currentTime': (time: unknown) => {
+      values.currentTime = time
+      log('update:currentTime', time)
+    },
+    onRangeChange: (event: unknown) => log('range-change', event),
+    // La instancia nativa del motor es enorme y circular: solo se registra el motor.
+    onReady: (event: unknown) => log('ready', { library: (event as { library: string }).library }),
+  }) as LiveBindings
 
 export const registry: RegistryEntry[] = [
   {
@@ -421,7 +597,7 @@ export const registry: RegistryEntry[] = [
         max: 10000,
         step: 250,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#22c55e' },
       { key: 'width', label: 'Ancho (CSS, ej. 720px / 90%)', type: 'string', default: '' },
     ],
@@ -443,6 +619,7 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: { timeline: buildDemoTimeline() },
+    composer: { label: 'Controles de tiempo (ASMapTimeControls)' },
     component: ASMapTimeControls,
     bindings: (values, log) => ({
       'onUpdate:currentTimeIndex': (value) => {
@@ -463,7 +640,7 @@ export const registry: RegistryEntry[] = [
     description:
       'Selección de un rango de tiempo dentro de una línea temporal: dos manejadores sobre un slider doble y botones de ajuste fino ±1 para cada extremo. Sin reproducción automática.',
     propsSchema: [
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#f97316' },
       { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
     ],
@@ -480,6 +657,7 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: { timeline: buildDemoTimeline(), currentRange: [2, 9] },
+    composer: { label: 'Controles de rango de tiempo (ASMapTimeRangeControls)' },
     component: ASMapTimeRangeControls,
     bindings: (values, log) => ({
       'onUpdate:currentRange': (value) => {
@@ -499,7 +677,7 @@ export const registry: RegistryEntry[] = [
       { key: 'title', label: 'Título', type: 'string', default: 'Avisos AEMET' },
       { key: 'subtitle', label: 'Subtítulo', type: 'string', default: 'Viento y lluvia' },
       { key: 'days', label: 'Días', type: 'number', default: 3, min: 1, max: 5, step: 1 },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
       { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
     ],
@@ -517,6 +695,7 @@ export const registry: RegistryEntry[] = [
     ],
     staticProps: { alerts: buildDemoAlerts(), selectedIntervalStart: null },
     notes: 'La prop "alerts" no es editable en este playground; se usa un set de ejemplo fijo.',
+    composer: { label: 'Intervalos por día (ASMapDayIntervalControls)' },
     component: ASMapDayIntervalControls,
     bindings: (values, log) => ({
       'onUpdate:selectedIntervalStart': (value) => {
@@ -556,7 +735,7 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [
       {
@@ -568,6 +747,11 @@ export const registry: RegistryEntry[] = [
     staticProps: { basemaps: basemapExamples },
     notes:
       'La prop "basemaps" no es editable en este playground (no es un tipo primitivo); se usan los 5 basemaps reales de `basemapExamples` (OpenStreetMap, OpenTopoMap, CARTO Positron/Dark Matter y Esri World Imagery), con su miniatura real. Haz click en el recuadro para ver el menú con los otros cuatro. Para ver que además cambia el mapa base de verdad, usa el modo "Compositor sobre mapa".',
+    composer: {
+      label: 'Selector de basemap (ASMapBasemapsSelector)',
+      // `position` sí se edita: en este widget es la esquina hacia la que abre el menú.
+      omitProps: ['offset'],
+    },
     component: ASMapBasemapsSelector,
     bindings: (values, log) => ({
       'onUpdate:basemap': (id) => {
@@ -623,12 +807,20 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [],
     staticProps: { center: [40.4168, -3.7038] },
     notes:
       'No emite eventos: es un simple indicador de lectura. Sube/baja el zoom para ver cómo cambia la regla/razón — se recalcula automáticamente porque `bar`/`ratioLabel` son `computed()` sobre `zoom`/`center`. El ancho real de la regla puede ser algo menor que `width`, para que la distancia total mostrada sea un número redondo.',
+    composer: {
+      label: 'Escala (ASMapScale)',
+      omitProps: ['zoom', 'position', 'offset'],
+      // Solo el valor inicial: MapCanvas.vue sustituye center/zoom por los
+      // reales del ASMap del compositor (liveCenter/liveZoom), así que la
+      // regla/razón sí cambia de verdad al hacer scroll/zoom en el mapa.
+      staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
+    },
     component: ASMapScale,
   },
   {
@@ -636,7 +828,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMapLegend',
     category: 'controls',
     description:
-      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
+      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/map/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
     propsSchema: [
       { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
       { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
@@ -656,12 +848,19 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [],
     staticProps: { layers: buildLegendDemoLayers() },
     notes:
       'Se precargan 4 capas de ejemplo para ver los tres tipos de leyenda a la vez: imagen (WMS, vía `GetLegendGraphic`), degradado (COG con `colorScale`) y símbolo genérico (GeoJSON) — más una capa Tiles que a propósito NO aparece en la leyenda (su `canGenerateLegend` es `false`: no hay nada fiable que mostrar, así que no se rellena con un símbolo inventado). No emite eventos: es un simple indicador de lectura.',
+    composer: {
+      label: 'Leyenda (ASMapLegend)',
+      // Solo el valor inicial: MapCanvas.vue sustituye `layers` por las capas
+      // reales activas en el compositor, así que la leyenda muestra de verdad
+      // lo que hay activado en "Capas de ejemplo".
+      staticProps: () => ({ layers: [] }),
+    },
     component: ASMapLegend,
   },
   {
@@ -695,7 +894,7 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [
       {
@@ -713,6 +912,7 @@ export const registry: RegistryEntry[] = [
     },
     notes:
       'La prop "options" no es editable aquí (no es un tipo primitivo): son fijas, tres fuentes de datos meteorológicos de ejemplo. Haz click en un botón para ver `update:modelValue` en el log, y cómo se refleja en "Valor activo".',
+    composer: { label: 'Grupo de botones (ASMapButtonToggle)' },
     component: ASMapButtonToggle,
     bindings: (values, log) => ({
       'onUpdate:modelValue': (value) => {
@@ -720,6 +920,99 @@ export const registry: RegistryEntry[] = [
         log('update:modelValue', value)
       },
     }),
+  },
+  {
+    id: 'as-chart',
+    name: 'ASChart',
+    category: 'charts',
+    description:
+      'Gráfica cartesiana genérica con el mismo API para ECharts, Chart.js y ApexCharts: de 1 a 4 ejes Y, paneles apilados con el eje X compartido, umbrales e intervalos como anotaciones, línea "ahora", tooltip, leyenda y zoom. Colores, textos y formatos salen de los tokens y del idioma activo.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      { key: 'now', label: 'Línea "ahora"', type: 'boolean', default: true },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 360,
+        min: 200,
+        max: 700,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...CHART_SERIES_FIELDS,
+    ],
+    events: CHART_EVENTS,
+    toProps: chartToProps,
+    toSnippet: chartToSnippet,
+    notes:
+      'Cambia el número de ejes Y (1–4) y el nombre, el color y el eje de cada serie: el código de ejemplo se actualiza con los `series` e `yAxes` resultantes. El intervalo sombreado y el umbral son `annotations`.',
+    component: ASChart,
+    bindings: chartBindings,
+  },
+  {
+    id: 'as-hydrograph-chart',
+    name: 'ASHydrographChart',
+    category: 'charts',
+    description:
+      'Hidrograma: precipitación arriba (barras, eje invertido) y caudal o nivel abajo, con el eje temporal compartido. Observado sólido, previsto discontinuo con una línea "ahora", varias fuentes de previsión (Harmonie, EPS) con bandas de percentiles p10–p90 y p25–p75, y umbrales de aviso.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      {
+        key: 'magnitude',
+        label: 'Magnitud',
+        type: 'select',
+        options: ['flow', 'level'],
+        default: 'flow',
+        description: 'Unidad y título por defecto: caudal (m³/s) o nivel (m).',
+      },
+      {
+        key: 'precipitationLayout',
+        label: 'Precipitación',
+        type: 'select',
+        options: ['panel', 'overlay'],
+        default: 'panel',
+        description:
+          '"panel": en su propio panel encima del caudal (alineados); "overlay": superpuesta al caudal, con su eje a la derecha.',
+      },
+      {
+        key: 'precipitationInverted',
+        label: 'Lluvia colgando desde arriba',
+        type: 'boolean',
+        default: true,
+        description:
+          'Eje de precipitación invertido. Desactívalo para que las barras crezcan desde abajo.',
+      },
+      {
+        key: 'precipitationWeight',
+        label: 'Alto del panel de lluvia',
+        type: 'number',
+        default: 0.35,
+        min: 0.1,
+        max: 0.9,
+        step: 0.05,
+      },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 440,
+        min: 260,
+        max: 800,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...HYDROGRAPH_SERIES_FIELDS,
+    ],
+    events: CHART_EVENTS,
+    toProps: hydrographToProps,
+    toSnippet: hydrographToSnippet,
+    notes:
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el color de cada serie (`observedName`/`observedColor` y `name`/`color` de cada previsión). Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
+    component: ASHydrographChart,
+    bindings: chartBindings,
   },
   buildLayerEntry({
     id: 'layer-geojson',
@@ -1095,7 +1388,7 @@ export const registry: RegistryEntry[] = [
         key: 'colorScale',
         type: 'string',
         description:
-          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/layers/cog.ts`).',
+          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/map/layers/cog.ts`).',
       },
     ],
     events: [

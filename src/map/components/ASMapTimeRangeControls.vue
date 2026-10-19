@@ -1,0 +1,495 @@
+<script setup lang="ts">
+import { computed, watch } from 'vue'
+import { useLocale } from '@/core/composables/useLocale'
+import { useResolvedTheme } from '@/core/composables/useTheme'
+import type { TimeRangeEmits, TimeRangeProps } from '@/map/types/TimeRangeProps'
+
+/**
+ * Control de selección de un **rango** de tiempo dentro de una línea
+ * temporal: dos manejadores (inicio/fin) sobre un slider doble y botones de
+ * ajuste fino ±1 paso para cada extremo.
+ *
+ * Es un componente **controlado** y agnóstico de cualquier fuente de datos o
+ * store: recibe la línea de tiempo ya calculada y `currentRange` se usa con
+ * `v-model` — el proyecto consumidor decide qué hacer con el rango
+ * resultante (p. ej. actualizar los parámetros `from`/`to` de una capa
+ * temporal en su propio store). El propio widget no sabe nada de capas ni de
+ * mapas, y no tiene reproducción automática (a diferencia de `ASMapTimeControls`).
+ *
+ * Hermano de `ASMapTimeControls` (que selecciona un único instante en vez de
+ * un rango): comparte el mismo lenguaje visual y la misma filosofía de props.
+ *
+ * @example
+ * ```vue
+ * <ASMapTimeRangeControls
+ *   :timeline="timeline"
+ *   v-model:current-range="range"
+ *   @range-changed="({ start, end }) => setLayerRange(start, end)"
+ * />
+ * ```
+ */
+const props = withDefaults(defineProps<TimeRangeProps>(), {
+  position: 'bottom',
+  theme: undefined,
+  accentColor: undefined,
+  width: undefined,
+})
+
+/** Prop `theme` o, si no se pasa, el tema de `provideTheme` (ver `useResolvedTheme`). */
+const resolvedTheme = useResolvedTheme(() => props.theme)
+
+/** Textos y formatos en el idioma de `provideLocale` (español por defecto). */
+const { t, formatDate } = useLocale()
+
+const emit = defineEmits<TimeRangeEmits>()
+
+const startIndex = computed(() => props.currentRange[0])
+const endIndex = computed(() => props.currentRange[1])
+const maxIndex = computed(() => Math.max(props.timeline.length - 1, 0))
+
+const startTime = computed<Date | undefined>(() => props.timeline[startIndex.value])
+const endTime = computed<Date | undefined>(() => props.timeline[endIndex.value])
+
+const formattedStartDate = computed(() =>
+  startTime.value ? formatDate(startTime.value, { pattern: 'd MMM yyyy' }) : '',
+)
+const formattedStartHour = computed(() =>
+  startTime.value ? formatDate(startTime.value, { pattern: 'HH:mm' }) : '',
+)
+const formattedEndDate = computed(() =>
+  endTime.value ? formatDate(endTime.value, { pattern: 'd MMM yyyy' }) : '',
+)
+const formattedEndHour = computed(() =>
+  endTime.value ? formatDate(endTime.value, { pattern: 'HH:mm' }) : '',
+)
+
+const startLabel = computed(() =>
+  props.timeline.length > 0
+    ? formatDate(props.timeline[0] as Date, { pattern: 'd MMM HH:mm' })
+    : '',
+)
+const endLabel = computed(() =>
+  props.timeline.length > 0
+    ? formatDate(props.timeline[props.timeline.length - 1] as Date, { pattern: 'd MMM HH:mm' })
+    : '',
+)
+
+watch(
+  () => [startTime.value?.getTime(), endTime.value?.getTime()],
+  () => {
+    if (startTime.value && endTime.value) {
+      emit('range-changed', { start: startTime.value, end: endTime.value })
+    }
+  },
+)
+
+function setRange(next: [number, number]): void {
+  emit('update:currentRange', next)
+}
+
+const isFromBackDisabled = computed(() => props.timeline.length === 0 || startIndex.value <= 0)
+const isFromForwardDisabled = computed(
+  () => props.timeline.length === 0 || startIndex.value >= endIndex.value,
+)
+const isToBackDisabled = computed(
+  () => props.timeline.length === 0 || endIndex.value <= startIndex.value,
+)
+const isToForwardDisabled = computed(
+  () => props.timeline.length === 0 || endIndex.value >= maxIndex.value,
+)
+
+function stepFromBack(): void {
+  if (!isFromBackDisabled.value) setRange([startIndex.value - 1, endIndex.value])
+}
+function stepFromForward(): void {
+  if (!isFromForwardDisabled.value) setRange([startIndex.value + 1, endIndex.value])
+}
+function stepToBack(): void {
+  if (!isToBackDisabled.value) setRange([startIndex.value, endIndex.value - 1])
+}
+function stepToForward(): void {
+  if (!isToForwardDisabled.value) setRange([startIndex.value, endIndex.value + 1])
+}
+
+function onStartInput(event: Event): void {
+  const value = Number((event.target as HTMLInputElement).value)
+  setRange([Math.min(value, endIndex.value), endIndex.value])
+}
+function onEndInput(event: Event): void {
+  const value = Number((event.target as HTMLInputElement).value)
+  setRange([startIndex.value, Math.max(value, startIndex.value)])
+}
+
+/** Override local de `--as-color-primary` cuando se pasa `accentColor` (p. ej. desde una escala de color). */
+const accentStyle = computed(() =>
+  props.accentColor ? { '--as-color-primary': props.accentColor } : undefined,
+)
+
+/** Ancho explícito (sobreescribe el responsive por defecto de `position`) cuando se pasa `width`. */
+const widthStyle = computed(() => {
+  if (props.width === undefined || props.width === '') return undefined
+  return { width: typeof props.width === 'number' ? `${props.width}px` : props.width }
+})
+
+/** Posición/ancho de la barra que resalta el rango seleccionado sobre el track del slider. */
+const fillStyle = computed(() => {
+  if (maxIndex.value === 0) return { left: '0%', width: '100%' }
+  const startPct = (startIndex.value / maxIndex.value) * 100
+  const endPct = (endIndex.value / maxIndex.value) * 100
+  return { left: `${startPct}%`, width: `${endPct - startPct}%` }
+})
+</script>
+
+<template>
+  <div
+    class="as-time-range-controls"
+    :class="[
+      `as-time-range-controls--${props.position}`,
+      `as-time-range-controls--${resolvedTheme}`,
+    ]"
+    :style="[accentStyle, widthStyle]"
+  >
+    <div class="as-time-range-controls__header">
+      <div class="as-time-range-controls__block">
+        <span class="as-time-range-controls__date">{{ formattedStartDate }}</span>
+        <span class="as-time-range-controls__hour">{{ formattedStartHour }}</span>
+      </div>
+      <div class="as-time-range-controls__block as-time-range-controls__block--end">
+        <span class="as-time-range-controls__date">{{ formattedEndDate }}</span>
+        <span class="as-time-range-controls__hour">{{ formattedEndHour }}</span>
+      </div>
+    </div>
+
+    <div class="as-time-range-controls__row">
+      <button
+        type="button"
+        class="as-time-range-controls__button"
+        :aria-label="t('timeRange.startBack')"
+        :title="t('timeRange.startBackShort')"
+        :disabled="isFromBackDisabled"
+        @click="stepFromBack"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="as-time-range-controls__button"
+        :aria-label="t('timeRange.startForward')"
+        :title="t('timeRange.startForwardShort')"
+        :disabled="isFromForwardDisabled"
+        @click="stepFromForward"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M5 4l10 8-10 8V4ZM19 5v14" />
+        </svg>
+      </button>
+
+      <!--
+        Slider de doble manejador implementado con dos <input type="range">
+        superpuestos (técnica CSS estándar, sin dependencias): el track de
+        cada input es transparente y solo su thumb es interactivo, así que
+        cada manejador se puede arrastrar de forma independiente aunque
+        compartan el mismo espacio.
+      -->
+      <div class="as-time-range-controls__slider-track">
+        <div class="as-time-range-controls__slider-fill" :style="fillStyle" />
+        <input
+          type="range"
+          class="as-time-range-controls__slider"
+          min="0"
+          :max="maxIndex"
+          step="1"
+          :value="startIndex"
+          :aria-label="t('timeRange.start')"
+          :aria-valuetext="`${formattedStartDate} ${formattedStartHour}`"
+          @input="onStartInput"
+        />
+        <input
+          type="range"
+          class="as-time-range-controls__slider"
+          min="0"
+          :max="maxIndex"
+          step="1"
+          :value="endIndex"
+          :aria-label="t('timeRange.end')"
+          :aria-valuetext="`${formattedEndDate} ${formattedEndHour}`"
+          @input="onEndInput"
+        />
+      </div>
+
+      <button
+        type="button"
+        class="as-time-range-controls__button"
+        :aria-label="t('timeRange.endBack')"
+        :title="t('timeRange.endBackShort')"
+        :disabled="isToBackDisabled"
+        @click="stepToBack"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M19 20 9 12l10-8v16ZM5 19V5" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="as-time-range-controls__button"
+        :aria-label="t('timeRange.endForward')"
+        :title="t('timeRange.endForwardShort')"
+        :disabled="isToForwardDisabled"
+        @click="stepToForward"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M5 4l10 8-10 8V4ZM19 5v14" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="as-time-range-controls__range">
+      <span>{{ startLabel }}</span>
+      <span>{{ endLabel }}</span>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.as-time-range-controls {
+  /* Colores de overlay sobre el mapa: tokens --as-overlay-* (con su valor
+     por defecto como fallback). El modo claro/oscuro lo elige color-scheme,
+     que fijan las clases --light/--dark según la prop theme. */
+  /* En oscuro, bordes y texto secundario más suaves que el resto de
+     overlays: valores propios, no los tokens --as-overlay-*. */
+  --as-color-text: var(--as-overlay-text, light-dark(#0f172a, #ffffff));
+  --as-color-text-muted: light-dark(#5a6a81, #cbd5e1);
+  --as-color-surface-muted: light-dark(#f1f5f9, rgba(255, 255, 255, 0.12));
+  --as-color-border: light-dark(#cbd5e1, rgba(255, 255, 255, 0.2));
+  background-color: var(
+    --as-overlay-bg,
+    light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85))
+  );
+  color: var(--as-color-text);
+  position: absolute;
+  z-index: var(--as-z-map-control, 1000);
+  width: min(760px, 94%);
+  border-radius: var(--as-radius, 14px);
+  padding: calc(var(--as-spacing-unit, 4px) * 3) calc(var(--as-spacing-unit, 4px) * 4);
+  backdrop-filter: blur(10px);
+  font-family: var(--as-font-family, system-ui, sans-serif);
+  box-shadow: var(--as-shadow, 0 2px 8px rgba(15, 23, 42, 0.16));
+}
+
+.as-time-range-controls--bottom {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.as-time-range-controls--top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.as-time-range-controls--left {
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(500px, 90%);
+}
+
+.as-time-range-controls--right {
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(500px, 90%);
+}
+
+.as-time-range-controls--dark {
+  color-scheme: dark;
+}
+
+.as-time-range-controls--light {
+  color-scheme: light;
+}
+
+.as-time-range-controls__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--as-spacing-unit, 4px) * 3);
+  margin-bottom: calc(var(--as-spacing-unit, 4px) * 2);
+}
+
+.as-time-range-controls__block {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--as-spacing-unit, 4px) * 2);
+  min-width: 0;
+}
+
+.as-time-range-controls__block--end {
+  flex-direction: row-reverse;
+}
+
+.as-time-range-controls__date {
+  font-size: 1.05rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.as-time-range-controls__hour {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.as-time-range-controls__row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--as-spacing-unit, 4px) * 1);
+}
+
+.as-time-range-controls__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 calc(var(--as-spacing-unit, 4px) * 2);
+  border: 1px solid transparent;
+  border-radius: var(--as-radius, 8px);
+  background: transparent;
+  color: var(--as-color-text, #0f172a);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.as-time-range-controls__button:hover:not(:disabled) {
+  background-color: var(--as-color-surface-muted, #f1f5f9);
+}
+
+.as-time-range-controls__button:focus-visible {
+  outline: none;
+  box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);
+}
+
+.as-time-range-controls__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.as-time-range-controls__slider-track {
+  position: relative;
+  flex: 1;
+  height: 20px;
+  margin: 0 calc(var(--as-spacing-unit, 4px) * 2);
+}
+
+.as-time-range-controls__slider-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background-color: var(--as-color-primary, #2563eb);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.as-time-range-controls__slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.as-time-range-controls__slider::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+.as-time-range-controls__slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.as-time-range-controls__slider::-webkit-slider-thumb {
+  appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background-color: var(--as-color-primary, #2563eb);
+  border: 2px solid var(--as-color-surface, #fff);
+  cursor: pointer;
+}
+
+.as-time-range-controls__slider::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: var(--as-color-primary, #2563eb);
+  border: 2px solid var(--as-color-surface, #fff);
+  cursor: pointer;
+}
+
+.as-time-range-controls__range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(var(--as-spacing-unit, 4px) * 1.5);
+  font-size: 0.7rem;
+  opacity: 0.65;
+}
+</style>

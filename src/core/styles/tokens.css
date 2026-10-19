@@ -1,0 +1,206 @@
+/**
+ * Tokens de diseño de @vsadtajo/adasa-ui.
+ *
+ * Variables CSS para que cualquier proyecto personalice el aspecto de los
+ * componentes sin tocar JavaScript: basta con sobreescribirlas en un selector
+ * con mayor especificidad. Para leer sus valores resueltos desde JS (p. ej.
+ * para pasar colores a una librería de gráficas) usa `readTokens()` /
+ * `useTokens()`.
+ *
+ * Import opcional: cada componente define un fallback en su propio
+ * `var(--as-x, fallback)`, así que la librería funciona sin este archivo.
+ *
+ * ── Claro / oscuro ─────────────────────────────────────────────────────────
+ * Cada color se declara una sola vez con `light-dark(claro, oscuro)`, que
+ * elige según el `color-scheme` del elemento donde se usa:
+ * - sin clase (o `.as-light`): claro;
+ * - `.as-dark`: oscuro;
+ * - `.as-theme-auto`: sigue la preferencia del sistema operativo.
+ * Requiere navegadores de 2024 en adelante (Chrome/Edge 123, Firefox 120,
+ * Safari 17.5).
+ *
+ * ── Contraste (WCAG 2.1 AA) ───────────────────────────────────────────────
+ * Comprobado contra --as-color-surface en ambos modos por
+ * `src/core/styles/tokens.spec.ts`:
+ * - textos ≥ 4.5:1;
+ * - marcas de datos (categórica, extremos de secuencial y divergente,
+ *   variante `-strong` de los avisos) ≥ 3:1;
+ * - texto sobre el relleno de cada aviso (`-text` sobre el aviso) ≥ 4.5:1.
+ * Los pasos de secuencial y divergente cercanos a "cero" se funden con la
+ * superficie a propósito: representan ausencia de magnitud.
+ */
+
+/* Sin clase, `light-dark()` ya resuelve a claro: no se fija `color-scheme`
+   en :root para no pisar el que declare el propio proyecto. */
+.as-light {
+  color-scheme: light;
+}
+
+.as-dark {
+  color-scheme: dark;
+}
+
+.as-theme-auto {
+  color-scheme: light dark;
+}
+
+:root {
+  /* ── Color de interfaz ─────────────────────────────────────────────── */
+  --as-color-primary: light-dark(#2563eb, #60a5fa);
+  --as-color-primary-contrast: light-dark(#ffffff, #0f172a);
+  --as-color-surface: light-dark(#ffffff, #1e293b);
+  --as-color-surface-muted: light-dark(#f1f5f9, #334155);
+  --as-color-text: light-dark(#0f172a, #f1f5f9);
+  --as-color-text-muted: light-dark(#64748b, #94a3b8);
+  --as-color-border: light-dark(#cbd5e1, #475569);
+  --as-color-danger: light-dark(#dc2626, #f87171);
+  --as-focus-ring: 0 0 0 2px var(--as-color-primary);
+
+  /* ── Tipografía ────────────────────────────────────────────────────── */
+  --as-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --as-font-family-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  --as-font-size-xs: 0.75rem;
+  --as-font-size-sm: 0.875rem;
+  --as-font-size-md: 1rem;
+  --as-font-size-lg: 1.125rem;
+  --as-font-size-xl: 1.25rem;
+  --as-font-size-2xl: 1.5rem;
+  --as-font-size-3xl: 1.875rem;
+  --as-font-weight-regular: 400;
+  --as-font-weight-medium: 500;
+  --as-font-weight-semibold: 600;
+  --as-font-weight-bold: 700;
+  --as-line-height-tight: 1.25;
+  --as-line-height-normal: 1.5;
+
+  /* ── Espaciado: múltiplos de --as-spacing-unit (cámbialo y escala todo) ─ */
+  --as-spacing-unit: 4px;
+  --as-space-1: calc(var(--as-spacing-unit) * 1);
+  --as-space-2: calc(var(--as-spacing-unit) * 2);
+  --as-space-3: calc(var(--as-spacing-unit) * 3);
+  --as-space-4: calc(var(--as-spacing-unit) * 4);
+  --as-space-5: calc(var(--as-spacing-unit) * 5);
+  --as-space-6: calc(var(--as-spacing-unit) * 6);
+  --as-space-8: calc(var(--as-spacing-unit) * 8);
+  --as-space-10: calc(var(--as-spacing-unit) * 10);
+  --as-space-12: calc(var(--as-spacing-unit) * 12);
+  --as-space-16: calc(var(--as-spacing-unit) * 16);
+
+  /* ── Radios ────────────────────────────────────────────────────────── */
+  --as-radius-sm: 4px;
+  --as-radius-md: 8px;
+  --as-radius-lg: 12px;
+  --as-radius-full: 9999px;
+  --as-radius: var(--as-radius-md);
+
+  /* ── Sombras ───────────────────────────────────────────────────────── */
+  --as-shadow-color: light-dark(rgba(15, 23, 42, 0.16), rgba(0, 0, 0, 0.45));
+  --as-shadow-sm: 0 1px 2px var(--as-shadow-color);
+  --as-shadow-md: 0 2px 8px var(--as-shadow-color);
+  --as-shadow-lg: 0 8px 24px var(--as-shadow-color);
+  --as-shadow: var(--as-shadow-md);
+
+  /*
+   * ── Capas (z-index) ─────────────────────────────────────────────────
+   * Leaflet usa 200-800 en sus panes y controles nativos (ASMap los aísla
+   * con z-index: 0). Los controles de mapa van por encima de eso, y las
+   * capas de la aplicación (menús, modales, avisos), por encima de los mapas.
+   */
+  --as-z-base: 0;
+  --as-z-map-control: 1000;
+  --as-z-dropdown: 1100;
+  --as-z-sticky: 1200;
+  --as-z-drawer: 1300;
+  --as-z-modal: 1400;
+  --as-z-toast: 1500;
+  --as-z-tooltip: 1600;
+
+  /*
+   * ── Datos: categórica (identidad de series) ─────────────────────────
+   * Asignar en este orden, sin ciclar: una 9.ª serie va a "Otros". El orden
+   * es el mecanismo de seguridad para daltonismo (ΔE CVD adyacente ≥ 8,
+   * visión normal ≥ 15). En dispersión/mapas (todas las parejas visibles a la
+   * vez) solo los 3 primeros se distinguen con seguridad.
+   */
+  --as-data-cat-1: light-dark(#2a78d6, #3987e5); /* azul */
+  --as-data-cat-2: light-dark(#eb6834, #d95926); /* naranja */
+  --as-data-cat-3: light-dark(#05a873, #199e70); /* aguamarina */
+  --as-data-cat-4: light-dark(#c68609, #c98500); /* amarillo */
+  --as-data-cat-5: light-dark(#dc709a, #d55181); /* magenta */
+  --as-data-cat-6: light-dark(#008300, #098607); /* verde */
+  --as-data-cat-7: light-dark(#6250d6, #9085e9); /* violeta */
+  --as-data-cat-8: light-dark(#e34948, #e66767); /* rojo */
+
+  /*
+   * ── Datos: secuencial (magnitud) ────────────────────────────────────
+   * Un solo tono, de 100 (≈ cero, cerca de la superficie) a 700 (máximo).
+   * En oscuro se invierte la rampa para que el "cero" siga fundiéndose con
+   * la superficie y el máximo sea el paso más luminoso.
+   */
+  --as-data-seq-100: light-dark(#cde2fb, #0d366b);
+  --as-data-seq-150: light-dark(#b7d3f6, #104281);
+  --as-data-seq-200: light-dark(#9ec5f4, #184f95);
+  --as-data-seq-250: light-dark(#86b6ef, #1c5cab);
+  --as-data-seq-300: light-dark(#6da7ec, #256abf);
+  --as-data-seq-350: light-dark(#5598e7, #2a78d6);
+  --as-data-seq-400: light-dark(#3987e5, #3987e5);
+  --as-data-seq-450: light-dark(#2a78d6, #5598e7);
+  --as-data-seq-500: light-dark(#256abf, #6da7ec);
+  --as-data-seq-550: light-dark(#1c5cab, #86b6ef);
+  --as-data-seq-600: light-dark(#184f95, #9ec5f4);
+  --as-data-seq-650: light-dark(#104281, #b7d3f6);
+  --as-data-seq-700: light-dark(#0d366b, #cde2fb);
+
+  /*
+   * ── Datos: divergente (polaridad respecto a un valor de referencia) ──
+   * Frío (azul) ↔ neutro gris ↔ cálido (rojo), 3 pasos por brazo; 1 es el
+   * más cercano al neutro. Qué polo es "positivo" lo decide cada gráfica
+   * (p. ej. anomalía de precipitación: déficit cálido, superávit frío).
+   */
+  --as-data-div-cool-3: light-dark(#0e61bb, #87bafe);
+  --as-data-div-cool-2: light-dark(#4893f1, #418ceb);
+  --as-data-div-cool-1: light-dark(#9dc7fe, #0e61bb);
+  --as-data-div-mid: light-dark(#eeeeee, #3d3d3d);
+  --as-data-div-warm-1: light-dark(#ffaba4, #ac3031);
+  --as-data-div-warm-2: light-dark(#e3645f, #dc5e59);
+  --as-data-div-warm-3: light-dark(#ac3031, #ff958e);
+
+  /*
+   * ── Overlays sobre el mapa ──────────────────────────────────────────
+   * Paneles semitransparentes de los widgets ASMap* (controles de tiempo,
+   * leyenda, selectores...). El modo lo elige cada widget con su prop
+   * `theme` (o el tema de provideTheme), no el de la página. Textos ≥ 4.5:1
+   * incluso con el mapa más oscuro o más claro posible debajo.
+   */
+  --as-overlay-bg: light-dark(rgba(255, 255, 255, 0.92), rgba(24, 24, 27, 0.85));
+  --as-overlay-text: light-dark(#0f172a, #ffffff);
+  --as-overlay-text-muted: light-dark(#5a6a81, rgba(255, 255, 255, 0.8));
+  --as-overlay-surface-muted: light-dark(#f1f5f9, rgba(255, 255, 255, 0.15));
+  --as-overlay-border: light-dark(#cbd5e1, rgba(255, 255, 255, 0.45));
+
+  /* ── Datos: elementos de la gráfica ────────────────────────────────── */
+  --as-data-grid: light-dark(#e2e8f0, #334155);
+  --as-data-axis: light-dark(#94a3b8, #64748b);
+
+  /*
+   * ── Niveles de aviso (semántica reservada) ──────────────────────────
+   * Coherentes con ASMapDayIntervalControls. Nunca se usan como "serie 4"
+   * de una gráfica, y siempre acompañados de texto o icono (no solo color).
+   * - `--as-alert-<nivel>`: relleno reconocible (pastillas, celdas, bandas).
+   * - `--as-alert-<nivel>-text`: texto sobre ese relleno (≥ 4.5:1).
+   * - `--as-alert-<nivel>-strong`: líneas, iconos y bordes sobre la
+   *   superficie (≥ 3:1), p. ej. una línea de umbral en una gráfica.
+   */
+  --as-alert-normal: #43a047;
+  --as-alert-normal-text: #1a1a1a;
+  --as-alert-normal-strong: #43a047;
+  --as-alert-amarillo: #ffd54f;
+  --as-alert-amarillo-text: #2f2f2f;
+  --as-alert-amarillo-strong: light-dark(#b28f09, #ffd54f);
+  --as-alert-naranja: #fb8c00;
+  --as-alert-naranja-text: #1a1a1a;
+  --as-alert-naranja-strong: light-dark(#dc7b09, #fb8c00);
+  --as-alert-rojo: #d32f2f;
+  --as-alert-rojo-text: #ffffff;
+  --as-alert-rojo-strong: light-dark(#d32f2f, #e53935);
+}

@@ -6,19 +6,38 @@ import CodePreview from './components/CodePreview.vue'
 import DocsPanel from './components/DocsPanel.vue'
 import EventLog, { type LogEntry } from './components/EventLog.vue'
 import WidgetPlayground from './components/WidgetPlayground.vue'
+import TokensPage from './components/TokensPage.vue'
 import { registry, getEntry } from './registry'
-import { buildSnippet } from './propTypes'
-import { provideTheme } from '@/composables/useTheme'
-import type { ThemeMode } from '@/types/theme'
+import { buildSnippet, getCategory } from './propTypes'
+import PreviewCanvas from './components/PreviewCanvas.vue'
+import { provideTheme } from '@/core/composables/useTheme'
+import { provideLocale, type LocaleCode } from '@/core/composables/useLocale'
+import type { ThemeMode } from '@/core/types/theme'
 
 const { mode, resolvedMode, setMode } = provideTheme('auto')
 const modes: ThemeMode[] = ['light', 'dark', 'auto']
+const MODE_LABELS: Record<ThemeMode, string> = { light: 'Claro', dark: 'Oscuro', auto: 'Auto' }
 
-/** Alterna entre la galería de un solo componente y el compositor de widgets sobre un mapa. */
-const viewMode = ref<'gallery' | 'composer'>('gallery')
+// Idioma de los textos y formatos de todos los componentes del playground.
+const { locale, setLocale } = provideLocale('es')
+const locales: LocaleCode[] = ['es', 'en']
 
-const activeId = ref<string>(registry[0]!.id)
+/** Alterna entre la galería de un solo componente, el compositor de widgets sobre un mapa y los tokens de diseño. */
+type ViewMode = 'gallery' | 'composer' | 'tokens'
+const VIEW_MODES: ViewMode[] = ['gallery', 'composer', 'tokens']
+
+// La vista (y, en la galería, el componente) va en el hash para poder enlazar
+// directamente a ella: `#tokens`, `#composer`, `#gallery/as-hydrograph-chart`.
+const [hashView, hashEntry] = window.location.hash.slice(1).split('/')
+const viewMode = ref<ViewMode>(VIEW_MODES.find((view) => view === hashView) ?? 'gallery')
+const activeId = ref<string>(
+  registry.find((entry) => entry.id === hashEntry)?.id ?? registry[0]!.id,
+)
+watch([viewMode, activeId], ([view, id]) =>
+  history.replaceState(null, '', view === 'gallery' ? `#gallery/${id}` : `#${view}`),
+)
 const entry = computed(() => getEntry(activeId.value) ?? registry[0]!)
+const category = computed(() => getCategory(entry.value.category))
 
 /**
  * Valores de props del preview. Las claves declaradas en `propsSchema` son
@@ -55,13 +74,40 @@ function logEvent(name: string, payload?: unknown): void {
 
 const liveListeners = computed(() => entry.value.bindings?.(propValues, logEvent) ?? {})
 
-const previewProps = computed(() => ({
-  ...propValues,
-  ...liveListeners.value,
-}))
+/**
+ * Motor con el que se ha dibujado de verdad la gráfica (evento `ready`): los
+ * tres motores se ven casi iguales a propósito, así que sin esto no se nota el cambio.
+ */
+const renderedWith = ref<string | null>(null)
+const ENGINE_LABELS: Record<string, string> = {
+  echarts: 'ECharts (un lienzo canvas)',
+  chartjs: 'Chart.js (un lienzo canvas por panel)',
+  apexcharts: 'ApexCharts (un SVG por panel)',
+}
+watch(activeId, () => (renderedWith.value = null))
+
+const previewProps = computed(() => {
+  const listeners = liveListeners.value as Record<
+    string,
+    ((...args: unknown[]) => void) | undefined
+  >
+  return {
+    ...(entry.value.toProps ? entry.value.toProps(propValues) : propValues),
+    ...listeners,
+    ...(category.value.key === 'charts'
+      ? {
+          onReady: (event: unknown) => {
+            renderedWith.value = (event as { library: string }).library
+            listeners.onReady?.(event)
+          },
+        }
+      : {}),
+  }
+})
 
 const code = computed(
   () =>
+    entry.value.toSnippet?.(propValues) ??
     entry.value.codeOverride ??
     buildSnippet(
       entry.value.name,
@@ -73,7 +119,7 @@ const code = computed(
 </script>
 
 <template>
-  <div class="pg-app" :class="{ 'amw-dark': resolvedMode === 'dark' }">
+  <div class="pg-app" :class="{ 'as-dark': resolvedMode === 'dark' }">
     <nav class="pg-view-switch" aria-label="Modo del playground">
       <button
         type="button"
@@ -93,6 +139,44 @@ const code = computed(
       >
         Compositor sobre mapa
       </button>
+      <button
+        type="button"
+        class="pg-view-switch__button"
+        :class="{ 'pg-view-switch__button--active': viewMode === 'tokens' }"
+        :aria-pressed="viewMode === 'tokens'"
+        @click="viewMode = 'tokens'"
+      >
+        Tokens de diseño
+      </button>
+      <!-- Tema e idioma globales: aplican a la galería, al compositor y a los tokens. -->
+      <div class="pg-app__settings">
+        <div class="pg-theme-toggle" role="group" aria-label="Idioma">
+          <button
+            v-for="lang in locales"
+            :key="lang"
+            type="button"
+            class="pg-theme-toggle__button"
+            :class="{ 'pg-theme-toggle__button--active': locale === lang }"
+            :aria-pressed="locale === lang"
+            @click="setLocale(lang)"
+          >
+            {{ lang.toUpperCase() }}
+          </button>
+        </div>
+        <div class="pg-theme-toggle" role="group" aria-label="Tema">
+          <button
+            v-for="m in modes"
+            :key="m"
+            type="button"
+            class="pg-theme-toggle__button"
+            :class="{ 'pg-theme-toggle__button--active': mode === m }"
+            :aria-pressed="mode === m"
+            @click="setMode(m)"
+          >
+            {{ MODE_LABELS[m] }}
+          </button>
+        </div>
+      </div>
     </nav>
 
     <div class="pg-app__body">
@@ -103,27 +187,30 @@ const code = computed(
           <header class="pg-main__header">
             <div>
               <h1 class="pg-main__title">{{ entry.name }}</h1>
-              <p class="pg-main__category">{{ entry.category }}</p>
-            </div>
-            <div class="pg-theme-toggle" role="group" aria-label="Tema">
-              <button
-                v-for="m in modes"
-                :key="m"
-                type="button"
-                class="pg-theme-toggle__button"
-                :class="{ 'pg-theme-toggle__button--active': mode === m }"
-                :aria-pressed="mode === m"
-                @click="setMode(m)"
-              >
-                {{ m }}
-              </button>
+              <p class="pg-main__category">{{ category.label }}</p>
             </div>
           </header>
 
           <div class="pg-main__grid">
-            <section class="pg-card pg-card--preview" aria-label="Vista previa en vivo">
-              <h2 class="pg-card__heading">Vista previa</h2>
-              <div class="pg-preview__stage">
+            <section
+              class="pg-card pg-card--preview"
+              :class="{ 'pg-card--wide': category.preview === 'canvas' }"
+              aria-label="Vista previa en vivo"
+            >
+              <h2 class="pg-card__heading">
+                Vista previa
+                <span v-if="renderedWith" class="pg-engine-badge">
+                  Dibujado con {{ ENGINE_LABELS[renderedWith] ?? renderedWith }}
+                </span>
+              </h2>
+              <PreviewCanvas v-if="category.preview === 'canvas'" :key="activeId">
+                <component :is="entry.component" v-bind="previewProps">
+                  <template v-if="entry.slotDefault !== undefined" #default>{{
+                    slotContent
+                  }}</template>
+                </component>
+              </PreviewCanvas>
+              <div v-else class="pg-preview__stage">
                 <!--
                   `:key="activeId"` fuerza a Vue a desmontar/remontar en vez de
                   parchear en sitio: varias entradas (todas las de "as-map" y
@@ -172,7 +259,8 @@ const code = computed(
         </main>
       </template>
 
-      <WidgetPlayground v-else class="pg-app__composer" />
+      <WidgetPlayground v-else-if="viewMode === 'composer'" class="pg-app__composer" />
+      <TokensPage v-else class="pg-app__tokens" />
     </div>
   </div>
 </template>
@@ -214,6 +302,10 @@ const code = computed(
   min-height: 0;
 }
 
+.pg-app__tokens {
+  grid-column: 1 / -1;
+}
+
 .pg-app__composer {
   grid-column: 1 / -1;
   padding: 20px 28px 40px;
@@ -223,6 +315,12 @@ const code = computed(
 .pg-main {
   padding: 20px 28px 40px;
   overflow-y: auto;
+}
+
+.pg-app__settings {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .pg-main__header {
@@ -353,5 +451,21 @@ const code = computed(
   .pg-card--preview {
     grid-row: auto;
   }
+}
+
+/* El lienzo de componentes no-mapa ocupa todo el ancho para poder probar escritorio. */
+.pg-card--wide {
+  grid-column: 1 / -1;
+}
+.pg-engine-badge {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pg-surface-muted);
+  border: 1px solid var(--pg-border);
+  color: var(--pg-text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  vertical-align: middle;
 }
 </style>

@@ -1,6 +1,6 @@
 /* Tokens visuales del "chrome" del playground (distintos de los tokens de los
-   propios widgets, definidos en src/styles/tokens.css, aunque comparten la
-   misma clase `.amw-dark` para conmutar ambos a la vez). */
+   propios widgets, definidos en src/core/styles/tokens.css, aunque comparten la
+   misma clase `.as-dark` para conmutar ambos a la vez). */
 :root {
   --pg-primary: #2563eb;
   --pg-primary-contrast: #ffffff;
@@ -13,7 +13,7 @@
   --pg-code-text: #e2e8f0;
 }
 
-.amw-dark {
+.as-dark {
   --pg-primary: #60a5fa;
   --pg-primary-contrast: #0f172a;
   --pg-surface: #1e293b;

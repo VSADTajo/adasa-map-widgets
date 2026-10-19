@@ -6,3 +6,4 @@ dist-playground
 *.tsbuildinfo
 .vscode/*
 !.vscode/extensions.json
+coverage
