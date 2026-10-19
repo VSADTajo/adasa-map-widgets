@@ -2,6 +2,7 @@ import type { ThemeTokens } from '@/core/types/theme'
 import type { LocaleContext } from '@/core/composables/useLocale'
 import { parseColor } from '@/core/utils/contrast'
 import { withAlpha } from './color'
+import { extent } from './extent'
 import { PATTERN_KINDS, patternColors, type ChartPatternKind } from './patterns'
 import type {
   ChartLibrary,
@@ -401,14 +402,15 @@ export function resolveSpec(
   let xMin: number | undefined
   let xMax: number | undefined
   if (xType !== 'category') {
-    const xs = [
-      ...series.flatMap((s) => [...s.points.map(([x]) => x), ...s.ranges.map(([x]) => x)]),
-      ...xAnnotations.flatMap((a) => (a.kind === 'range' ? [a.from, a.to] : [a.value])),
-    ].filter((x): x is number => typeof x === 'number' && Number.isFinite(x))
-    if (xs.length) {
-      xMin = Math.min(...xs)
-      xMax = Math.max(...xs)
+    const xs = function* () {
+      for (const s of series) {
+        for (const [x] of s.points) yield x as number
+        for (const [x] of s.ranges) yield x as number
+      }
+      for (const a of xAnnotations)
+        yield* (a.kind === 'range' ? [a.from, a.to] : [a.value]) as number[]
     }
+    ;[xMin, xMax] = extent(xs()) ?? []
   }
 
   const legendSeries = series.filter((s) => s.legend)

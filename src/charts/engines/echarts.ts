@@ -171,6 +171,9 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
       symbolSize: s.type === 'scatter' ? 8 : 6,
       step: s.step || undefined,
       connectNulls: false,
+      // Con más puntos que píxeles, dibuja una muestra LTTB (conserva picos y forma):
+      // con series de 100 000 puntos aligera cada redibujado (ver docs/rendimiento-graficas.md).
+      sampling: 'lttb',
     }
     if (s.type === 'bar') {
       series.push({
@@ -458,10 +461,13 @@ export const echartsEngine: ChartEngine = {
       })
     }
 
+    /** Primer panel (px), para colocar el tooltip de `showCursor` sin leer la opción del gráfico. */
+    let firstGrid = { top: 0, height: 0 }
     const render = () => {
       drawLegend()
       chart.resize()
       const option = toEChartsOption(spec, chart.getHeight())
+      firstGrid = (option.grid as { top: number; height: number }[])[0] ?? firstGrid
       chart.setOption(
         (nativeOptions ? nativeOptions(option, 'echarts') : option) as Parameters<
           EChartsInstance['setOption']
@@ -541,8 +547,9 @@ export const echartsEngine: ChartEngine = {
         // Como si el cursor estuviera en ese instante, a media altura del primer panel.
         // Con `xAxisIndex`, convertToPixel recibe y devuelve un solo valor (no un par).
         const px = chart.convertToPixel({ xAxisIndex: 0 }, x) as number
-        const grid = (chart.getOption().grid as { top: number; height: number }[])[0]!
-        chart.dispatchAction({ type: 'showTip', x: px, y: grid.top + grid.height / 2 })
+        // No `chart.getOption()`: copia la opción entera, con todos los datos (~60 ms
+        // con 500 000 puntos en cada movimiento del cursor).
+        chart.dispatchAction({ type: 'showTip', x: px, y: firstGrid.top + firstGrid.height / 2 })
       },
       zoomTo(range) {
         if (!range) chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })

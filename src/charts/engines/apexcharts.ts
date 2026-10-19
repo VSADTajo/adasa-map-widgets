@@ -1,5 +1,6 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
+import { extent as valueExtent } from '@/charts/core/extent'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
@@ -94,18 +95,20 @@ export function toApexOptions(
     // eje (ver más abajo), así que tiene que ser la misma en todas sus entradas.
     const extent = (axisId: string): { min?: number; max?: number } => {
       const axis = axes.find((a) => a.id === axisId)!
-      const values = panelSeries
-        .filter((s) => s.yAxis === axisId)
-        .flatMap((s) =>
-          s.type === 'range' ? s.ranges.flatMap(([, l, h]) => [l, h]) : s.points.map(([, y]) => y),
-        )
-        .filter((v): v is number => v !== null)
-        .concat(axis.include)
-      if (axis.beginAtZero) values.push(0)
-      if (!values.length) return {}
+      const range = valueExtent(
+        (function* () {
+          for (const s of panelSeries.filter((s) => s.yAxis === axisId)) {
+            if (s.type === 'range') for (const [, low, high] of s.ranges) yield* [low, high]
+            else for (const [, y] of s.points) yield y
+          }
+          yield* axis.include
+          if (axis.beginAtZero) yield 0
+        })(),
+      )
+      if (!range) return {}
       return {
-        min: axis.min ?? niceRound(Math.min(...values), 'down'),
-        max: axis.max ?? niceRound(Math.max(...values), 'up'),
+        min: axis.min ?? niceRound(range[0], 'down'),
+        max: axis.max ?? niceRound(range[1], 'up'),
       }
     }
 

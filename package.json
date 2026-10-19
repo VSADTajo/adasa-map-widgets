@@ -53,7 +53,7 @@
     "dev": "vite --config vite.config.playground.ts",
     "build": "npm run type-check && vite build --config vite.config.ts",
     "check:entries": "node scripts/check-entries.mjs",
-    "build:playground": "vue-tsc -p tsconfig.json --noEmit && vite build --config vite.config.playground.ts",
+    "build:playground": "npm run type-check && vite build --config vite.config.playground.ts",
     "preview:playground": "vite preview --config vite.config.playground.ts --outDir dist-playground",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -62,6 +62,7 @@
     "type-check": "vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "perf:charts": "vite --config vite.config.playground.ts --open /perf.html?engine=echarts",
     "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
