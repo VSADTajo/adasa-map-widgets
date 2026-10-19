@@ -97,6 +97,14 @@ export const es = {
   'hydrograph.forecast': 'Previsto',
   'hydrograph.band': '{source} {range}',
   'hydrograph.threshold': 'Umbral {level}',
+
+  'forms.loading': 'Cargando…',
+  'forms.clear': 'Borrar',
+  'forms.placeholder': 'Selecciona una opción',
+  'forms.noOptions': 'Sin resultados',
+  'forms.removeOption': 'Quitar {label}',
+  'forms.moreSelected': '{count} más seleccionadas',
+  'forms.options': 'Opciones',
 } as const
 
 /** Clave de un texto de la librería. */
@@ -197,4 +205,12 @@ export const en: Messages = {
   'hydrograph.forecast': 'Forecast',
   'hydrograph.band': '{source} {range}',
   'hydrograph.threshold': 'Threshold {level}',
+
+  'forms.loading': 'Loading…',
+  'forms.clear': 'Clear',
+  'forms.placeholder': 'Select an option',
+  'forms.noOptions': 'No results',
+  'forms.removeOption': 'Remove {label}',
+  'forms.moreSelected': '{count} more selected',
+  'forms.options': 'Options',
 }

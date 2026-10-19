@@ -57,6 +57,11 @@ const RULES = {
     domains: ['core', 'layout'],
     packages: [],
   },
+  // Las primitivas de formulario no dependen de ningún paquete.
+  './forms': {
+    domains: ['core', 'forms'],
+    packages: [],
+  },
 }
 
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g
