@@ -1,6 +1,6 @@
 # @vsadtajo/adasa-ui
 
-Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye los dominios de **mapas** (agnóstico del motor: Leaflet o MapLibre), **gráficas** (ECharts, Chart.js o ApexCharts), **layout** y **formularios**, y crecerá por dominios con tablas y detalle (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
+Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye los dominios de **mapas** (agnóstico del motor: Leaflet o MapLibre), **gráficas** (ECharts, Chart.js o ApexCharts), **layout**, **formularios** y **detalle** (fichas de estación), y crecerá con tablas (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
 
 ## Dominios y entry points
 
@@ -13,6 +13,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas (`ASAppTopBar`, `ASAppRail`, `ASAppPanelHeader`): la estructura de las aplicaciones de mapa |
 | `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput` y `ASFormField` |
+| `@vsadtajo/adasa-ui/detail`    | Ficha de una estación: `ASDetailHeader`, `ASCard`, `ASStatusBadge` y tarjetas hidrológicas (`ASAlertStatus`, `ASObservedSummary`, `ASThresholdSummary`, `ASValueMatrix`, `ASThresholdLegend`) |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
@@ -46,6 +47,14 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASDateRangePicker`](src/forms/components/ASDateRangePicker.vue)       | `/forms`  | Periodo con atajos (últimas 24 h, año hidrológico...) y calendario           | —                                   |
 | [`ASSearchInput`](src/forms/components/ASSearchInput.vue)               | `/forms`  | Buscador con sugerencias asíncronas (`fetchSuggestions`)                     | —                                   |
 | [`ASFormField`](src/forms/components/ASFormField.vue)                   | `/forms`  | Etiqueta, ayuda y error enlazados a cualquier control                        | —                                   |
+| [`ASDetailHeader`](src/detail/components/ASDetailHeader.vue)            | `/detail` | Cabecera de una ficha: título, etiquetas y cerrar, fija arriba               | —                                   |
+| [`ASCard`](src/detail/components/ASCard.vue)                            | `/detail` | Tarjeta con título, acciones, esqueleto de carga y texto sin datos           | —                                   |
+| [`ASStatusBadge`](src/detail/components/ASStatusBadge.vue)              | `/detail` | Píldora de un nivel de aviso (normal, amarillo, naranja, rojo)               | —                                   |
+| [`ASAlertStatus`](src/detail/components/ASAlertStatus.vue)              | `/detail` | Nivel de aviso actual (observado) o previsto (máximo de las previsiones)     | —                                   |
+| [`ASObservedSummary`](src/detail/components/ASObservedSummary.vue)      | `/detail` | Último valor y máximo observados, con su fecha y su nivel                    | —                                   |
+| [`ASThresholdSummary`](src/detail/components/ASThresholdSummary.vue)    | `/detail` | Superaciones de umbral por serie y nivel                                     | —                                   |
+| [`ASValueMatrix`](src/detail/components/ASValueMatrix.vue)              | `/detail` | Tabla de valores por intervalo (mín./media/máx.) teñida por nivel            | —                                   |
+| [`ASThresholdLegend`](src/detail/components/ASThresholdLegend.vue)      | `/detail` | Umbrales con su valor; resalta uno (p. ej. en el hidrograma)                 | —                                   |
 | [`ASIcon`](src/core/components/ASIcon.vue)                              | raíz      | Icono SVG a partir de su trazado (formato `@mdi/js`)                         | —                                   |
 
 Los widgets de control `ASMap*` no dependen de ninguna librería de mapas; las dependencias de la última columna son `peerDependencies` opcionales que se instalan solo si se usa ese motor.
@@ -365,6 +374,44 @@ import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/form
 
 **Iconos.** Todo prop de icono es el trazado SVG de 24 × 24 que exporta `@mdi/js` (`import { mdiFilter } from '@mdi/js'`). La librería no depende de `@mdi/js` ni de ninguna fuente de iconos: cada proyecto importa solo los que usa. Para logos o SVG multicolor, los componentes tienen slots (`#icon`, `#prefix`, `#suffix`), y `ASIcon` pinta un trazado igual que lo hace la librería.
 
+## Detalle (`@vsadtajo/adasa-ui/detail`)
+
+Piezas para la ficha de una estación, a partir del panel de estación de TAJO. Las tarjetas **no leen la API de ningún proyecto**: reciben las series y los umbrales ya preparados, y cada proyecto escribe un adaptador pequeño de su API a estos tipos.
+
+```ts
+import type { AlertThresholds, MeasureSeries } from '@vsadtajo/adasa-ui/detail'
+
+const observado: MeasureSeries = {
+  id: 'observado',
+  label: 'Observado',
+  unit: 'm³/s',
+  data: api.historico.results.map((r) => [new Date(r.date), Number(r.value)]),
+}
+const umbrales: AlertThresholds = { amarillo: 90, naranja: 130, rojo: 180 }
+```
+
+```vue
+<ASDetailHeader :title="estacion.codigo" :subtitle="estacion.nombre" :tags="etiquetas" @close="cerrar" />
+<ASAlertStatus :series="[observado]" :thresholds="umbrales" />
+<ASAlertStatus :series="[harmonie, eps]" :thresholds="umbrales" mode="max" />
+<ASObservedSummary :series="[entrada, salida, volumen]" :thresholds="umbrales" v-model:active="vista" />
+<ASThresholdSummary :series="[harmonie, eps]" :thresholds="umbrales" mode="forecast" />
+<ASThresholdLegend :thresholds="umbrales" unit="m³/s" v-model:selected="umbral" />
+<ASValueMatrix :series="[observado, harmonie, eps]" :thresholds="umbrales" v-model:aggregate="agregado" />
+```
+
+- **Niveles**: un valor está en el nivel más alto cuyo umbral alcanza, con el umbral incluido (`alertLevelOf`). Con varias series, manda la más grave. Una serie puede traer sus propios umbrales (p. ej. el volumen de un embalse), que mandan sobre los del componente.
+- **Funciones puras** que también usan las tarjetas:
+  - `summarizeSeries`: último valor, máximo y mínimo;
+  - `exceedanceSegments`: tramos seguidos en un mismo nivel;
+  - `aggregateByInterval`: mínimo, media y máximo por intervalo (si el intervalo divide el día, desde las 00:00 locales).
+- **Colores de aviso** de los tokens `--as-alert-*`, siempre con texto: el nivel nunca depende solo del color.
+- **Matriz**:
+  - cada celda anuncia su nivel a los lectores de pantalla;
+  - debajo, una leyenda con los umbrales;
+  - la zona de la tabla se enfoca para desplazarla con el teclado.
+- **Enlace con el hidrograma**: `ASThresholdLegend` emite el umbral resaltado; el proyecto se lo pasa a `ASHydrographChart` (en el playground, la "Ficha de estación de ejemplo").
+
 ## Estructura
 
 ```
@@ -372,7 +419,7 @@ src/
 ├── index.ts          # Entry raíz: reexporta core
 ├── core/             # Tema, tokens (styles/tokens.css) y utilidades comunes. No depende de ningún dominio
 ├── map/              # Entry /map: components/, composables/, layers/, legend/, types/, utils/
-├── charts/  layout/  forms/   # Entries /charts, /layout y /forms, con la misma forma interna
+├── charts/  layout/  forms/  detail/   # Entries /charts, /layout, /forms y /detail, con la misma forma interna
 └── playground/       # App interactiva: galería de componentes + compositor de widgets sobre un mapa
     ├── registry.ts              # Registro único de componentes (galería + compositor)
     └── utils/widgetRegistry.ts  # Lista del compositor, derivada de registry.ts

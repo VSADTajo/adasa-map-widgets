@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { isSameDay } from 'date-fns'
 import { useMeasureFormat } from '@/detail/composables/useMeasureFormat'
 import type { ThresholdSummaryProps } from '@/detail/types/HydroCardsProps'
 import type { ExceededLevel } from '@/detail/types/hydro'
@@ -47,7 +48,10 @@ const items = computed(() => {
           ? format.dateTimeShort(last.start)
           : format.t('dates.rangeValue', {
               start: format.dateTimeShort(last.start),
-              end: format.dateTimeShort(last.end),
+              // El mismo día no se repite: "20 oct, 11:00 – 16:00".
+              end: isSameDay(last.start, last.end)
+                ? format.time(last.end)
+                : format.dateTimeShort(last.end),
             })
       const params = {
         series: series.label,

@@ -15,6 +15,8 @@ export function useMeasureFormat() {
       unit ? formatUnit(value, unit) : formatNumber(value),
     /** "19/10/2026, 06:00". */
     dateTime: (date: Date) => formatDate(date, 'datetime'),
+    /** "06:00". */
+    time: (date: Date) => formatDate(date, 'time'),
     /** "19 oct, 06:00". */
     dateTimeShort: (date: Date) => formatDate(date, 'datetimeShort'),
     /** "Naranja". */

@@ -90,6 +90,8 @@ const { t } = useLocale()
 
 .as-detail-header__title {
   margin: 0;
+  /* Explícito: los estilos de títulos de la página no deben pisar el color de la barra. */
+  color: inherit;
   font-size: var(--as-font-size-xl, 1.25rem);
   font-weight: var(--as-font-weight-bold, 700);
   line-height: var(--as-line-height-tight, 1.25);

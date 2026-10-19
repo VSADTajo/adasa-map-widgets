@@ -130,6 +130,7 @@ const rows = computed(() => {
 
 .as-observed-summary__value {
   margin: 0;
+  white-space: nowrap;
   font-weight: var(--as-font-weight-medium, 500);
   font-variant-numeric: tabular-nums;
   text-align: right;

@@ -132,7 +132,7 @@ describe('ASThresholdSummary', () => {
       props: { series: [series('Observado', [50, 55])], thresholds },
     })
     expect(wrapper.find('li').text().replace(/\s+/g, ' ')).toBe(
-      'Observado: nivel amarillo superado en 1 intervalo. Último: 19 oct, 00:00 – 19 oct, 01:00',
+      'Observado: nivel amarillo superado en 1 intervalo. Último: 19 oct, 00:00 – 01:00',
     )
   })
 

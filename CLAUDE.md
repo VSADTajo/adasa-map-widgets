@@ -19,6 +19,7 @@ src/
 ├── core/             # Tema (useTheme), styles/tokens.css, i18n, icons/ + ASIcon, useClickOutside, utils/
 ├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync, data, describe, patterns), engines/ (echarts, chartjs, apexcharts), types/
 ├── forms/            # Entry `/forms`: primitivas (ASButton, ASInput, ASSelect...), fechas (ASDatePicker, ASDateRangePicker) y ASSearchInput; styles/ con los CSS compartidos (control-box, listbox, popover)
+├── detail/           # Entry `/detail`: ficha de estación (ASDetailHeader, ASCard, ASStatusBadge) y tarjetas hidrológicas; utils/hydro.ts (alertLevelOf, summarizeSeries...)
 ├── layout/           # Entry `/layout`: ASAppShell (layout de aplicación de mapa) y sus piezas ASAppTopBar, ASAppRail, ASAppPanelHeader
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
