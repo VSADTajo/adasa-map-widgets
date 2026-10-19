@@ -178,6 +178,24 @@
   --as-overlay-surface-muted: light-dark(#f1f5f9, rgba(255, 255, 255, 0.15));
   --as-overlay-border: light-dark(#cbd5e1, rgba(255, 255, 255, 0.45));
 
+  /*
+   * ── Layout de la aplicación (ASAppShell) ────────────────────────────
+   * Color corporativo de cada proyecto: la barra superior y la barra de
+   * iconos usan "chrome" (por defecto, el azul marino de los visores SAIH),
+   * igual en claro y en oscuro. Cada proyecto lo cambia redefiniendo estos
+   * tokens. Los paneles laterales usan "panel".
+   */
+  --as-app-chrome: #1d283a;
+  --as-app-chrome-text: #ffffff;
+  /* Iconos no activos de la barra (≥ 3:1 sobre chrome). */
+  --as-app-chrome-text-muted: rgba(255, 255, 255, 0.72);
+  /* Fondo del elemento activo y al pasar el ratón. */
+  --as-app-chrome-active: rgba(255, 255, 255, 0.16);
+  --as-app-panel-bg: light-dark(#e7e7e7, #212121);
+  --as-app-panel-text: light-dark(#0f172a, #f1f5f9);
+  /* Tarjetas y listas dentro de los paneles. */
+  --as-app-panel-surface: light-dark(#ffffff, #393939);
+
   /* ── Datos: elementos de la gráfica ────────────────────────────────── */
   --as-data-grid: light-dark(#e2e8f0, #334155);
   --as-data-axis: light-dark(#94a3b8, #64748b);

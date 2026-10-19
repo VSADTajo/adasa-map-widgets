@@ -11,6 +11,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
+| `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas (`ASAppTopBar`, `ASAppRail`, `ASAppPanelHeader`): la estructura de las aplicaciones de mapa |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
@@ -29,6 +30,10 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)         | `/map`    | Grupo de botones de selección única                                          | —                                   |
 | [`ASChart`](src/charts/components/ASChart.vue)                          | `/charts` | Gráfica cartesiana: líneas, barras, áreas, bandas y dispersión; 1–4 ejes Y, paneles | `echarts`, `chart.js` o `apexcharts` (a elegir) |
 | [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación y caudal/nivel, observado y previsto, umbrales     | el motor de `ASChart`               |
+| [`ASAppShell`](src/layout/components/ASAppShell.vue)                    | `/layout` | Layout de aplicación de mapa: barra, iconos, panel de sección y de detalle; escritorio y móvil | —                  |
+| [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
+| [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
+| [`ASAppPanelHeader`](src/layout/components/ASAppPanelHeader.vue)        | `/layout` | Cabecera de panel: título y botón de cerrar con flecha                       | —                                   |
 
 Los widgets de control `ASMap*` no dependen de ninguna librería de mapas; las dependencias de la última columna son `peerDependencies` opcionales que se instalan solo si se usa ese motor.
 
@@ -220,6 +225,78 @@ const onTimeSelect = ({ time }: { time: Date }) => (index.value = nearestTimeInd
 Para verlo funcionando, abre el compositor del playground (`#composer`). Activa la capa GeoJSON de ejemplo, coloca unos "Controles de tiempo" y pulsa una feature.
 
 > ⚠️ **ApexCharts** (v4 en adelante) tiene licencia dual. Es gratis solo para organizaciones de menos de 2 M$, y su licencia comercial estándar no permite redistribuirlo dentro de otro producto. Un proyecto que use `chart-library="apexcharts"` necesita su propia licencia. ECharts (Apache-2.0) y Chart.js (MIT) no tienen restricciones. Decisión, arquitectura y diferencias entre motores: [ADR 0001](docs/adr/0001-motores-graficas.md).
+
+## Layout (`@vsadtajo/adasa-ui/layout`)
+
+**`ASAppShell`** da la estructura de los visores de mapa: el contenido principal (el mapa) ocupa todo, con una **barra corporativa** arriba, una **barra de iconos** a la izquierda que abre el **panel de cada sección**, y un **panel de detalle** que entra por la derecha. Abre y cierra igual que los visores SAIH:
+
+- **Panel de sección** (escritorio): junto a la barra de iconos, de 320 px, y **empuja** el mapa (no lo tapa; `ASMap` se reajusta solo). Pulsar la sección abierta lo cierra; pulsar otra lo cierra y lo **vuelve a abrir con la nueva a los 280 ms** (`switch-delay`).
+- **Detalle**: entra por la derecha y tapa el mapa **desde el borde de los menús**; si el panel de sección se abre o se cierra, se ajusta sin cerrarse. Siempre tiene botón de cerrar (`detail-close-button`), y por ahora su contenido es un slot vacío.
+- **Móvil** (por debajo de `breakpoint`, 960 px, medido sobre el propio layout y no sobre la ventana):
+  - la barra va abajo, al alcance del pulgar, respetando la zona segura del iPhone;
+  - su botón ☰ despliega las secciones encima de ella;
+  - cada sección sube desde abajo, al 60 % de alto, con un asa para ampliarla a pantalla completa;
+  - el detalle ocupa toda la pantalla;
+  - el buscador se abre con un botón de la barra.
+- **Teclado**: Escape cierra lo que esté encima (menú o buscador, luego el detalle y por último el panel). Los paneles cerrados son inertes.
+
+```vue
+<ASAppShell :sections="secciones" v-model:active-section="seccion" v-model:detail-open="detalle">
+  <template #brand><img src="/logo.svg" alt="SAIH Tajo" /></template>
+  <template #search><MiBuscador /></template>
+  <template #actions><MiMenuUsuario /></template>
+
+  <template #section="{ section, close, mobile }">
+    <ASAppPanelHeader :title="section.label" :direction="mobile ? 'down' : 'left'" @close="close" />
+    <PanelCapas v-if="section.id === 'capas'" />
+    <PanelMapasBase v-else-if="section.id === 'mapasbase'" />
+  </template>
+
+  <template #detail><!-- ficha de estación, gráficas... --></template>
+
+  <ASMap :layers="capas" @feature-selected="detalle = true" />
+</ASAppShell>
+```
+
+Las secciones llevan su icono como trazado SVG; encajan con `@mdi/js`:
+
+```ts
+import { mdiLayers, mdiMap } from '@mdi/js'
+const secciones: AppSection[] = [
+  { id: 'capas', label: 'Capas', icon: mdiLayers },
+  { id: 'simulaciones', label: 'Simulaciones', icon: mdiTuneVariant, hidden: !esAdmin },
+  { id: 'mapasbase', label: 'Mapas base', icon: mdiMap, position: 'bottom' },
+]
+```
+
+**Enlazarlo con la URL** (como en los visores SAIH): la sección va en la ruta y el detalle en un parámetro. Al cambiar de sección se conserva la query, para que no se cierre el detalle.
+
+```ts
+const route = useRoute()
+const router = useRouter()
+const seccion = computed({
+  get: () => (route.path === '/' ? null : route.path.slice(1)),
+  set: (id) => router.push({ path: id ? `/${id}` : '/', query: route.query }),
+})
+const detalle = computed({
+  get: () => Boolean(route.query.station),
+  set: (abierto) => {
+    if (abierto) return
+    const { station: _station, ...query } = route.query
+    router.replace({ query })
+  },
+})
+```
+
+**Color corporativo de cada proyecto**: la barra y la barra de iconos usan `--as-app-chrome` (por defecto, el azul marino `#1d283a` de los visores SAIH) y los paneles, `--as-app-panel-*`. Cada proyecto pone el suyo:
+
+```css
+:root {
+  --as-app-chrome: #00594f; /* el color de la marca */
+}
+```
+
+Los textos e iconos de la barra tienen que seguir contrastando con el color nuevo: el test de `tokens.css` comprueba los valores por defecto.
 
 ## Estructura
 

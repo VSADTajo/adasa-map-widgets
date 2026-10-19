@@ -18,6 +18,7 @@ src/
 ├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
 ├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
 ├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync, data, describe, patterns), engines/ (echarts, chartjs, apexcharts), types/
+├── layout/           # Entry `/layout`: ASAppShell (layout de aplicación de mapa) y sus piezas ASAppTopBar, ASAppRail, ASAppPanelHeader
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
 │   ├── components/   # ASMap + widgets ASMap*

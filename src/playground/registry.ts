@@ -22,6 +22,8 @@ import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
 import ASChart from '@/charts/components/ASChart.vue'
 import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
+import AppShellDemo from './components/AppShellDemo.vue'
+import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
 import {
   CHART_SERIES_FIELDS,
   HYDROGRAPH_SERIES_FIELDS,
@@ -1512,6 +1514,104 @@ export const registry: RegistryEntry[] = [
     notes:
       'Servidor GeoServer público de demostración (ahocevar.com): polígonos reales de los estados de EE. UU. (`topp:states`), limitado a 50 features. Este ejemplo concreto no pasa `editable: true`, así que no emite `feature-selected` (pruébalo en el "Compositor sobre mapa" añadiendo `editable: true` a la config si quieres verlo). Depende de un servidor de terceros — si está caído, verás `layer-error`. Si el servidor es GeoServer (como en este ejemplo), en vez de construir `url`/`typeName` a mano puedes usar el helper `geoServerLayer({ url, workspace, layer, mode: \'wfs\' })` — es justo como se construyó el ejemplo "GeoServer: topp:states" de las capas de ejemplo del compositor.',
   }),
+  {
+    id: 'as-app-shell',
+    name: 'ASAppShell',
+    category: 'layout',
+    description:
+      'Layout de aplicación de mapa: barra corporativa, barra de iconos que abre el panel de cada sección (empuja el mapa) y panel de detalle que entra por la derecha. En móvil, la barra va abajo, las secciones salen de su menú y suben desde abajo. Usa los presets Móvil/Tableta/Escritorio para verlo.',
+    propsSchema: [
+      {
+        key: 'activeSection',
+        label: 'Sección abierta (v-model)',
+        type: 'select',
+        options: ['', ...DEMO_SECTIONS.map((section) => section.id)],
+        default: '',
+        description:
+          'Vacío: panel cerrado. Pulsar otra sección cierra el panel y lo reabre con ella.',
+      },
+      {
+        key: 'detailOpen',
+        label: 'Detalle abierto (v-model)',
+        type: 'boolean',
+        default: false,
+        description: 'También se abre al hacer clic en el mapa del ejemplo.',
+      },
+      {
+        key: 'breakpoint',
+        label: 'Ancho para móvil (px)',
+        type: 'number',
+        default: 960,
+        min: 320,
+        max: 1600,
+        step: 20,
+        description: 'Se mide sobre el propio layout, no sobre la ventana.',
+      },
+      {
+        key: 'railWidth',
+        label: 'Ancho de la barra de iconos',
+        type: 'number',
+        default: 56,
+        min: 40,
+        max: 120,
+        step: 4,
+      },
+      {
+        key: 'drawerWidth',
+        label: 'Ancho del panel lateral',
+        type: 'number',
+        default: 320,
+        min: 240,
+        max: 480,
+        step: 20,
+      },
+      {
+        key: 'switchDelay',
+        label: 'Reapertura al cambiar de sección (ms)',
+        type: 'number',
+        default: 280,
+        min: 0,
+        max: 1000,
+        step: 20,
+      },
+      {
+        key: 'detailCloseButton',
+        label: 'Botón de cerrar el detalle',
+        type: 'boolean',
+        default: true,
+      },
+      { key: 'height', label: 'Alto (CSS)', type: 'string', default: '640px' },
+      THEME_FIELD,
+    ],
+    events: [
+      {
+        name: 'update:activeSection',
+        payload: 'string | null',
+        description: 'Se pulsó una sección (o se cerró el panel): para v-model:active-section.',
+      },
+      {
+        name: 'update:detailOpen',
+        payload: 'boolean',
+        description: 'Se cerró el detalle (botón o Escape): para v-model:detail-open.',
+      },
+    ],
+    staticProps: { sections: DEMO_SECTIONS },
+    toProps: appShellToProps,
+    toSnippet: appShellToSnippet,
+    notes:
+      'Las secciones, el buscador, el usuario y los paneles son contenidos de ejemplo (slots). Prueba: abrir una sección, pulsar otra (se cierra y se reabre), hacer clic en el mapa con el panel abierto, y cambiar al preset Móvil. Escape cierra lo que esté encima.',
+    component: AppShellDemo,
+    bindings: (values, log) => ({
+      'onUpdate:activeSection': (section) => {
+        values.activeSection = section ?? ''
+        log('update:activeSection', section)
+      },
+      'onUpdate:detailOpen': (open) => {
+        values.detailOpen = open
+        log('update:detailOpen', open)
+      },
+    }),
+  },
 ]
 
 export function getEntry(id: string): RegistryEntry | undefined {

@@ -18,7 +18,8 @@
     "src/vite-env.d.ts",
     "src/core/**/*",
     "src/map/**/*",
-    "src/charts/**/*"
+    "src/charts/**/*",
+    "src/layout/**/*"
   ],
   "exclude": ["src/playground/**/*", "src/**/*.spec.ts", "src/**/*.fixtures.ts"]
 }

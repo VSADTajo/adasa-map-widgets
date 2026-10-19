@@ -49,6 +49,15 @@ export function fakeTokens(surface = '#ffffff'): ThemeTokens {
       tooltip: 0,
     },
     overlay: { bg: '', text: '', textMuted: '', surfaceMuted: '', border: '' },
+    app: {
+      chrome: '',
+      chromeText: '',
+      chromeTextMuted: '',
+      chromeActive: '',
+      panelBg: '',
+      panelText: '',
+      panelSurface: '',
+    },
     data: {
       categorical: CATEGORICAL,
       sequential: [],

@@ -36,6 +36,17 @@ export interface OverlayTokens {
   border: string
 }
 
+/** Layout de la aplicación (`--as-app-*`): color corporativo de la barra y fondo de los paneles. */
+export interface AppTokens {
+  chrome: string
+  chromeText: string
+  chromeTextMuted: string
+  chromeActive: string
+  panelBg: string
+  panelText: string
+  panelSurface: string
+}
+
 /** Paletas para visualización de datos (`--as-data-*`). */
 export interface DataTokens {
   /**
@@ -90,6 +101,7 @@ export interface ThemeTokens {
   shadows: Record<'sm' | 'md' | 'lg', string>
   zIndex: Record<ZIndexLayer, number>
   overlay: OverlayTokens
+  app: AppTokens
   data: DataTokens
   alert: Record<AlertLevel, AlertTokens>
 }

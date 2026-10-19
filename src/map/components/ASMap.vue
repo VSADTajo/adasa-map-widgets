@@ -534,8 +534,36 @@ async function createMap(): Promise<void> {
   }
 }
 
-onMounted(createMap)
-onBeforeUnmount(destroyMap)
+/**
+ * Leaflet y MapLibre solo se reajustan al cambiar la ventana. Si cambia el
+ * contenedor (un panel lateral que se abre y empuja el mapa, una rejilla...),
+ * hay que avisarles; si no, el mapa queda descuadrado con teselas grises.
+ */
+let resizeObserver: ResizeObserver | undefined
+let resizeFrame = 0
+function observeResize(): void {
+  if (!containerEl.value || typeof ResizeObserver === 'undefined') return
+  resizeObserver = new ResizeObserver(() => {
+    cancelAnimationFrame(resizeFrame)
+    resizeFrame = requestAnimationFrame(() => {
+      const map = mapInstance.value
+      if (!map) return
+      if (props.mapLibrary === 'leaflet') (map as L.Map).invalidateSize({ pan: false })
+      else (map as MapLibreMap).resize()
+    })
+  })
+  resizeObserver.observe(containerEl.value)
+}
+
+onMounted(() => {
+  observeResize()
+  void createMap()
+})
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  cancelAnimationFrame(resizeFrame)
+  destroyMap()
+})
 
 watch(() => props.mapLibrary, createMap)
 watch(() => props.layers, syncLayers, { deep: true })

@@ -32,6 +32,7 @@ const entries = {
   index: 'src/index.ts',
   map: 'src/map/index.ts',
   charts: 'src/charts/index.ts',
+  layout: 'src/layout/index.ts',
 }
 
 /**
@@ -44,7 +45,13 @@ export default defineConfig({
     vue(),
     dts({
       tsconfigPath: './tsconfig.build.json',
-      include: ['src/index.ts', 'src/core/**/*', 'src/map/**/*', 'src/charts/**/*'],
+      include: [
+        'src/index.ts',
+        'src/core/**/*',
+        'src/map/**/*',
+        'src/charts/**/*',
+        'src/layout/**/*',
+      ],
       exclude: ['src/playground/**/*', 'src/**/*.spec.ts', 'src/**/*.fixtures.ts'],
       rollupTypes: true,
     }),
