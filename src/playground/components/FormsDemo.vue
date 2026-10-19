@@ -7,8 +7,16 @@ import ASSelect from '@/forms/components/ASSelect.vue'
 import ASCheckbox from '@/forms/components/ASCheckbox.vue'
 import ASSwitch from '@/forms/components/ASSwitch.vue'
 import ASRadioGroup from '@/forms/components/ASRadioGroup.vue'
+import ASSearchInput from '@/forms/components/ASSearchInput.vue'
+import ASDateRangePicker from '@/forms/components/ASDateRangePicker.vue'
+import type { DateRange } from '@/forms/types/DateRangePickerProps'
 import type { ControlSize, SelectValue } from '@/forms/types/common'
-import { DEMO_ICONS, DEMO_SOURCES, DEMO_STATIONS } from '../utils/formsExample'
+import {
+  DEMO_ICONS,
+  DEMO_SOURCES,
+  DEMO_STATIONS,
+  demoFetchSuggestions,
+} from '../utils/formsExample'
 
 /**
  * Formulario de ejemplo para el playground: un filtro de estaciones con
@@ -39,6 +47,7 @@ const TYPES = [
 function initial() {
   return {
     search: '',
+    period: null as DateRange | null,
     basin: null as SelectValue | null,
     types: ['aforo'] as SelectValue[],
     stations: [] as SelectValue[],
@@ -52,6 +61,7 @@ function initial() {
 const form = reactive(initial())
 const errors = reactive<{ basin?: string; threshold?: string }>({})
 const showFilters = ref(true)
+const fetchSuggestions = demoFetchSuggestions(400, false)
 
 function submit(): void {
   errors.basin = form.basin ? undefined : 'Elige una cuenca'
@@ -73,14 +83,12 @@ function reset(): void {
 <template>
   <form class="demo-form" novalidate @submit.prevent="submit">
     <div class="demo-form__row">
-      <ASInput
+      <ASSearchInput
         v-model="form.search"
         class="demo-form__wide"
-        type="search"
         label="Buscar"
-        placeholder="Estación, municipio o código"
-        :prefix-icon="DEMO_ICONS.buscar!.path"
-        clearable
+        placeholder="Estación o municipio"
+        :fetch-suggestions="fetchSuggestions"
         :size="props.size"
         :disabled="props.disabled"
         :theme="props.theme"
@@ -97,6 +105,16 @@ function reset(): void {
     </div>
 
     <div class="demo-form__grid">
+      <ASDateRangePicker
+        v-model="form.period"
+        class="demo-form__wide"
+        label="Periodo"
+        :max="new Date()"
+        clearable
+        :size="props.size"
+        :disabled="props.disabled"
+        :theme="props.theme"
+      />
       <ASSelect
         v-model="form.basin"
         label="Cuenca"

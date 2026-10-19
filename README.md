@@ -12,7 +12,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas (`ASAppTopBar`, `ASAppRail`, `ASAppPanelHeader`): la estructura de las aplicaciones de mapa |
-| `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup` y `ASFormField` |
+| `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput` y `ASFormField` |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
@@ -42,6 +42,9 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASCheckbox`](src/forms/components/ASCheckbox.vue)                     | `/forms`  | Casilla booleana o de grupo, con estado indeterminado                        | —                                   |
 | [`ASSwitch`](src/forms/components/ASSwitch.vue)                         | `/forms`  | Interruptor de encendido y apagado                                           | —                                   |
 | [`ASRadioGroup`](src/forms/components/ASRadioGroup.vue)                 | `/forms`  | Opciones de selección única                                                  | —                                   |
+| [`ASDatePicker`](src/forms/components/ASDatePicker.vue)                 | `/forms`  | Fecha (y hora opcional): se escribe o se elige en un calendario              | —                                   |
+| [`ASDateRangePicker`](src/forms/components/ASDateRangePicker.vue)       | `/forms`  | Periodo con atajos (últimas 24 h, año hidrológico...) y calendario           | —                                   |
+| [`ASSearchInput`](src/forms/components/ASSearchInput.vue)               | `/forms`  | Buscador con sugerencias asíncronas (`fetchSuggestions`)                     | —                                   |
 | [`ASFormField`](src/forms/components/ASFormField.vue)                   | `/forms`  | Etiqueta, ayuda y error enlazados a cualquier control                        | —                                   |
 | [`ASIcon`](src/core/components/ASIcon.vue)                              | raíz      | Icono SVG a partir de su trazado (formato `@mdi/js`)                         | —                                   |
 
@@ -336,6 +339,27 @@ import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/form
   - `multiple` con chips (`max-chips` resume el resto en "+N");
   - `searchable` sin mayúsculas ni tildes, o con `filter` propio, y el evento `search` para pedir opciones al servidor;
   - teclado: ↑/↓, Inicio/Fin, RePág/AvPág, Intro, Escape (no cierra el panel que lo contiene), Tab y Retroceso. Sin búsqueda, escribir salta a la opción que empieza por esas letras.
+- **`ASDatePicker`** se escribe con el formato corto del idioma (`dd/mm/aaaa`, o `dd/mm/aaaa hh:mm` con `with-time`) o se elige en un calendario (patrón "date picker dialog" de WAI-ARIA):
+  - en la rejilla: flechas, Inicio/Fin, RePág/AvPág (con Mayús, año), Intro y Escape;
+  - `min`/`max` deshabilitan los días de fuera;
+  - lo escrito que no es fecha, o queda fuera de rango, no se emite y se marca como error.
+- **`ASDateRangePicker`** emite `{ start, end }`:
+  - periodos predefinidos que se aplican al pulsarlos (`presets`: `'today'`, `'last24h'`, `'last7d'`, `'last30d'`, `'hydroYear'` o propios `{ id, label, range: (now) => ({ start, end }) }`);
+  - o inicio y fin en el calendario, con "Aplicar";
+  - el año hidrológico empieza el 1 de octubre (`hydrologicalYearStart`);
+  - sin hora, el periodo va de las 00:00 del primer día al final del último.
+- **`ASSearchInput`** pide sugerencias a `fetchSuggestions(query, signal)`, la función que aporta el proyecto:
+  - tras `debounce` ms y con `minChars` caracteres;
+  - aborta la petición anterior con la `signal`, y una respuesta tardía nunca pisa a la nueva;
+  - agrupa por `group`, resalta lo buscado y anuncia "Buscando…" y el número de resultados;
+  - Intro sin sugerencia activa emite `submit` (búsqueda libre, p. ej. de direcciones).
+
+  ```ts
+  const buscar: FetchSuggestions = async (q, signal) =>
+    (await (await fetch(`/api/buscar?q=${encodeURIComponent(q)}`, { signal })).json()).map((r) => ({
+      id: r.codigo, label: r.nombre, description: r.tipo, group: r.grupo, data: r,
+    }))
+  ```
 - **Tema**: sin prop `theme` ni `provideTheme`, no fuerzan ninguno y heredan el del contenedor (un formulario en un panel oscuro se ve oscuro).
 - **Controles propios**: `ASFormField` da a cualquier control la misma etiqueta, ayuda y error, y le pasa por el slot el `id` y el `aria-describedby`.
 

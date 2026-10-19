@@ -280,7 +280,7 @@ defineExpose({ focusActive })
   cursor: pointer;
 }
 
-.as-calendar__day:hover {
+.as-calendar__day:not(.as-calendar__day--selected, .as-calendar__day--edge):hover {
   background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
 }
 
