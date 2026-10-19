@@ -200,7 +200,7 @@ describe('ASSelect', () => {
     it('sin resultados muestra el texto vacío', async () => {
       const wrapper = mountSelect({ searchable: true, noOptionsText: 'Nada' })
       await wrapper.find('input').setValue('zzz')
-      expect(wrapper.find('.as-select__empty').text()).toBe('Nada')
+      expect(wrapper.find('.as-listbox__empty').text()).toBe('Nada')
     })
 
     it('filtro propio', async () => {

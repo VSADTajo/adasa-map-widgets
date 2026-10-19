@@ -5,13 +5,19 @@ import ASSelect from '@/forms/components/ASSelect.vue'
 import ASCheckbox from '@/forms/components/ASCheckbox.vue'
 import ASSwitch from '@/forms/components/ASSwitch.vue'
 import ASRadioGroup from '@/forms/components/ASRadioGroup.vue'
+import ASDatePicker from '@/forms/components/ASDatePicker.vue'
+import ASDateRangePicker from '@/forms/components/ASDateRangePicker.vue'
+import ASSearchInput from '@/forms/components/ASSearchInput.vue'
+import type { DateRangePreset, DateRangePresetId } from '@/forms/types/DateRangePickerProps'
 import FormFieldDemo from './components/FormFieldDemo.vue'
 import FormsDemo from './components/FormsDemo.vue'
 import type { PropField } from './propTypes'
 import type { RegistryEntry } from './registry'
 import {
+  DEMO_CUSTOM_PRESET,
   DEMO_SOURCES,
   DEMO_STATIONS,
+  demoFetchSuggestions,
   formsToProps,
   formsToSnippet,
   iconField,
@@ -253,6 +259,109 @@ const FORM_FIELD_SCHEMA: PropField[] = [
   },
 ]
 
+/** Límites de ejemplo de los selectores de fecha (campo solo del playground). */
+const LIMIT_FIELD: PropField = {
+  key: 'limit',
+  label: 'Límites (min/max)',
+  type: 'select',
+  options: ['sin límites', 'hasta hoy', 'desde hoy'],
+  default: 'sin límites',
+  playgroundOnly: true,
+  description: '"Hasta hoy" fija max = ahora; "desde hoy", min = hoy.',
+}
+
+function limitProps(limit: unknown): Record<string, unknown> {
+  if (limit === 'hasta hoy') return { max: new Date() }
+  if (limit === 'desde hoy') return { min: startOfToday() }
+  return {}
+}
+
+function startOfToday(): Date {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
+}
+
+const DATE_PICKER_SCHEMA: PropField[] = [
+  ...fieldFields('Fecha del informe'),
+  { key: 'withTime', label: 'Con hora', type: 'boolean', default: false },
+  {
+    key: 'minuteStep',
+    label: 'Paso de los minutos',
+    type: 'number',
+    default: 5,
+    min: 1,
+    max: 30,
+  },
+  { key: 'clearable', label: 'Botón de borrar', type: 'boolean', default: true },
+  { key: 'placeholder', label: 'Placeholder', type: 'string', default: '' },
+  LIMIT_FIELD,
+]
+
+const PRESET_SETS: Record<string, (DateRangePresetId | DateRangePreset)[]> = {
+  'por defecto': ['last24h', 'last7d', 'last30d', 'hydroYear'],
+  todos: ['today', 'last24h', 'last7d', 'last30d', 'hydroYear'],
+  'con uno propio': ['last7d', 'hydroYear', DEMO_CUSTOM_PRESET],
+  ninguno: [],
+}
+
+const PRESET_SNIPPETS: Record<string, string> = {
+  todos: "['today', 'last24h', 'last7d', 'last30d', 'hydroYear']",
+  'con uno propio':
+    "['last7d', 'hydroYear', { id: 'avenida2025', label: 'Avenida de marzo de 2025', range: () => avenida }]",
+  ninguno: '[]',
+}
+
+const DATE_RANGE_SCHEMA: PropField[] = [
+  ...fieldFields('Periodo'),
+  { key: 'withTime', label: 'Con hora', type: 'boolean', default: false },
+  {
+    key: 'presetSet',
+    label: 'Periodos predefinidos',
+    type: 'select',
+    options: Object.keys(PRESET_SETS),
+    default: 'por defecto',
+    playgroundOnly: true,
+  },
+  { key: 'clearable', label: 'Botón de borrar', type: 'boolean', default: true },
+  { key: 'placeholder', label: 'Placeholder', type: 'string', default: '' },
+  LIMIT_FIELD,
+]
+
+const SEARCH_SCHEMA: PropField[] = [
+  ...fieldFields('Buscar estación o municipio'),
+  { key: 'placeholder', label: 'Placeholder', type: 'string', default: 'p. ej. Aranjuez' },
+  {
+    key: 'debounce',
+    label: 'Debounce (ms)',
+    type: 'number',
+    default: 300,
+    min: 0,
+    max: 2000,
+    step: 50,
+  },
+  { key: 'minChars', label: 'Caracteres mínimos', type: 'number', default: 2, min: 1, max: 5 },
+  { key: 'clearable', label: 'Botón de borrar', type: 'boolean', default: true },
+  { key: 'noResultsText', label: 'Texto sin resultados', type: 'string', default: '' },
+  {
+    key: 'latency',
+    label: 'Latencia simulada (ms)',
+    type: 'number',
+    default: 400,
+    min: 0,
+    max: 3000,
+    step: 100,
+    playgroundOnly: true,
+  },
+  {
+    key: 'fail',
+    label: 'Simular error del servidor',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+  },
+]
+
 export const formsEntries: RegistryEntry[] = [
   {
     id: 'as-forms-demo',
@@ -398,7 +507,7 @@ export const formsEntries: RegistryEntry[] = [
     ],
     staticProps: { options: DEMO_STATIONS, modelValue: null },
     toProps: (values) => {
-      const props = formsToProps()(values)
+      const props = formsToProps([], true, 280)(values)
       // Al cambiar "múltiple" en el editor, el valor pasa de uno a array y al revés.
       const value = props.modelValue
       if (props.multiple && !Array.isArray(value)) props.modelValue = value == null ? [] : [value]
@@ -482,5 +591,107 @@ export const formsEntries: RegistryEntry[] = [
           '\n  <MiControl :id="id" :aria-describedby="describedBy" :aria-invalid="invalid" />\n',
       })(values)}`,
     component: FormFieldDemo,
+  },
+  {
+    id: 'as-date-picker',
+    name: 'ASDatePicker',
+    category: 'forms',
+    description:
+      'Fecha (y hora opcional) que se escribe con el formato corto del idioma o se elige en un calendario accesible, con min/max.',
+    propsSchema: DATE_PICKER_SCHEMA,
+    events: [
+      MODEL_EVENT('Date | null', 'Fecha elegida o confirmada (Intro o al salir del campo).'),
+    ],
+    staticProps: { modelValue: null },
+    toProps: (values) => {
+      const { limit: _limit, ...props } = formsToProps([], true, 400)(values)
+      return { ...props, ...limitProps(values.limit) }
+    },
+    toSnippet: formsToSnippet('ASDatePicker', DATE_PICKER_SCHEMA, {
+      extra: ['v-model="fecha"'],
+    }),
+    notes:
+      'Escribe "5/10/2026" e Intro, o abre el calendario (Alt+↓ desde el campo). En la rejilla: flechas, Inicio/Fin, RePág/AvPág (con Mayús, año), Intro elige y Escape cierra. Cambia el idioma a EN para ver el formato y la semana de en-GB.',
+    component: ASDatePicker,
+    bindings: modelBindings(),
+  },
+  {
+    id: 'as-date-range-picker',
+    name: 'ASDateRangePicker',
+    category: 'forms',
+    description:
+      'Periodo con atajos ("Últimas 24 h", "Últimos 7 días", "Año hidrológico actual"...) y calendario para marcar inicio y fin.',
+    propsSchema: DATE_RANGE_SCHEMA,
+    events: [
+      MODEL_EVENT('{ start: Date, end: Date } | null'),
+      {
+        name: 'preset-selected',
+        payload: 'string',
+        description: 'Id del periodo predefinido aplicado.',
+      },
+    ],
+    staticProps: { modelValue: null },
+    toProps: (values) => {
+      const props = { ...formsToProps([], true, 420)(values), ...limitProps(values.limit) }
+      props.presets = PRESET_SETS[values.presetSet as string] ?? PRESET_SETS['por defecto']
+      delete props.presetSet
+      delete props.limit
+      return props
+    },
+    toSnippet: (values) =>
+      formsToSnippet('ASDateRangePicker', DATE_RANGE_SCHEMA, {
+        extra: [
+          'v-model="periodo"',
+          ...(values.presetSet === 'por defecto'
+            ? []
+            : [`:presets="${PRESET_SNIPPETS[values.presetSet as string]}"`]),
+        ],
+      })(values),
+    notes:
+      'Un periodo predefinido se aplica al pulsarlo. En el calendario, el primer clic marca el inicio y el segundo el fin (en cualquier orden); "Aplicar" lo confirma. El año hidrológico empieza el 1 de octubre.',
+    component: ASDateRangePicker,
+    bindings: (values, log) => ({
+      ...modelBindings()(values, log),
+      onPresetSelected: (id) => log('preset-selected', id),
+    }),
+  },
+  {
+    id: 'as-search-input',
+    name: 'ASSearchInput',
+    category: 'forms',
+    description:
+      'Buscador con sugerencias asíncronas de una función fetchSuggestions que aporta el proyecto: debounce, cancelación, grupos y resaltado.',
+    propsSchema: SEARCH_SCHEMA,
+    events: [
+      MODEL_EVENT('string', 'Texto al escribir, al elegir una sugerencia o al vaciar.'),
+      { name: 'select', payload: 'SearchSuggestion', description: 'Sugerencia elegida.' },
+      { name: 'submit', payload: 'string', description: 'Intro sin sugerencia activa.' },
+      { name: 'error', payload: 'unknown', description: 'fetchSuggestions falló.' },
+    ],
+    staticProps: { modelValue: '' },
+    toProps: (values) => {
+      const props = formsToProps()(values)
+      props.style = 'max-width: 360px; margin-bottom: 280px'
+      props.fetchSuggestions = demoFetchSuggestions(Number(values.latency), Boolean(values.fail))
+      delete props.latency
+      delete props.fail
+      return props
+    },
+    toSnippet: formsToSnippet('ASSearchInput', SEARCH_SCHEMA, {
+      extra: [
+        'v-model="texto"',
+        ':fetch-suggestions="(q, signal) => api.buscar(q, { signal })"',
+        '@select="centrarEn($event.data)"',
+      ],
+    }),
+    notes:
+      'Escribe "ara" o "tal": el ejemplo busca en estaciones y municipios con una latencia simulada. Si escribes rápido, la búsqueda anterior se cancela. ↓/↑ recorren, Intro elige (o emite submit sin sugerencia activa), Escape cierra y después vacía.',
+    component: ASSearchInput,
+    bindings: (values, log) => ({
+      ...modelBindings()(values, log),
+      onSelect: (suggestion) => log('select', suggestion),
+      onSubmit: (query) => log('submit', query),
+      onError: (error) => log('error', String(error)),
+    }),
   },
 ]

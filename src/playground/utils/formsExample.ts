@@ -1,5 +1,7 @@
 import type { PropField } from '../propTypes'
 import type { SelectGroup, SelectOption } from '@/forms/types/common'
+import type { DateRangePreset } from '@/forms/types/DateRangePickerProps'
+import type { SearchSuggestion } from '@/forms/types/SearchInputProps'
 
 /**
  * Datos y adaptadores del playground para las primitivas de formulario.
@@ -90,14 +92,15 @@ type Values = Record<string, unknown>
  * nombre del ejemplo a su trazado. Los campos (no los botones) se limitan de
  * ancho para que no ocupen todo el lienzo.
  */
-export function formsToProps(iconKeys: string[] = [], field = true) {
+export function formsToProps(iconKeys: string[] = [], field = true, room = 0) {
   return (values: Values): Values => {
     const props: Values = {}
     for (const [key, value] of Object.entries(values)) {
       if (value === '') continue
       props[key] = iconKeys.includes(key) ? DEMO_ICONS[value as string]?.path : value
     }
-    if (field) props.style = 'max-width: 360px'
+    // `room`: hueco bajo el campo para que su desplegable quepa en el lienzo sin scroll.
+    if (field) props.style = `max-width: 360px; margin-bottom: ${room}px`
     return props
   }
 }
@@ -143,4 +146,59 @@ export function formsToSnippet(
 
 function kebab(value: string): string {
   return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+}
+
+/** Índice de ejemplo de `ASSearchInput`: estaciones (de `DEMO_STATIONS`) y municipios. */
+const SEARCH_INDEX: SearchSuggestion[] = [
+  ...DEMO_STATIONS.flatMap((item) => ('options' in item ? item.options : [item])).map((option) => ({
+    id: option.value,
+    label: option.label,
+    description: option.description,
+    group: 'Estaciones',
+    icon: DEMO_ICONS.estacion!.path,
+  })),
+  ...[
+    'Aranjuez',
+    'Toledo',
+    'Talavera de la Reina',
+    'Alcalá de Henares',
+    'Ávila',
+    'Guadalajara',
+  ].map((name, index) => ({
+    id: `M${index}`,
+    label: name,
+    description: 'Municipio',
+    group: 'Municipios',
+  })),
+]
+
+/**
+ * `fetchSuggestions` de ejemplo: busca en el índice sin mayúsculas ni tildes,
+ * con una latencia simulada que respeta la cancelación (como haría `fetch`).
+ */
+export function demoFetchSuggestions(latency: number, fail: boolean) {
+  const normalize = (text: string) =>
+    text
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+  return (query: string, signal: AbortSignal) =>
+    new Promise<SearchSuggestion[]>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (fail) reject(new Error('Servidor de ejemplo caído'))
+        else
+          resolve(SEARCH_INDEX.filter((item) => normalize(item.label).includes(normalize(query))))
+      }, latency)
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer)
+        reject(new DOMException('Cancelada', 'AbortError'))
+      })
+    })
+}
+
+/** Periodo propio de ejemplo para `ASDateRangePicker`. */
+export const DEMO_CUSTOM_PRESET: DateRangePreset = {
+  id: 'avenida2025',
+  label: 'Avenida de marzo de 2025',
+  range: () => ({ start: new Date(2025, 2, 3), end: new Date(2025, 2, 12, 23, 59) }),
 }

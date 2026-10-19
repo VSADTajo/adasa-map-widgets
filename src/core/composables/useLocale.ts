@@ -37,6 +37,12 @@ export interface LocaleContext {
   locale: Readonly<Ref<LocaleCode>>
   /** Etiqueta BCP 47 del idioma activo (p. ej. `'es-ES'`), para usar `Intl` directamente. */
   intlLocale: Readonly<Ref<string>>
+  /**
+   * Locale de date-fns del idioma activo (`undefined` si el idioma no lo
+   * define), para leer o interpretar fechas con sus patrones (`P`, `p`...) y
+   * saber en qué día empieza la semana.
+   */
+  dateFnsLocale: Readonly<Ref<DateFnsLocale | undefined>>
   /** Cambia el idioma; uno no definido cae al español. */
   setLocale: (locale: LocaleCode) => void
   /** Texto de la librería en el idioma activo, con `{parámetros}` sustituidos. */
@@ -74,6 +80,7 @@ function createLocaleContext(
   return {
     locale,
     intlLocale,
+    dateFnsLocale: computed(() => definition.value.dateFns),
     setLocale: (next) => {
       locale.value = next
     },
