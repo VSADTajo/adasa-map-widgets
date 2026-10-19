@@ -13,25 +13,30 @@ export interface TooltipRow {
  * menos de medio paso de muestreo de esa serie. Así una serie horaria y otra
  * cada 15 minutos aparecen juntas en el tooltip aunque sus instantes no
  * coincidan exactamente.
+ *
+ * Busca sobre los puntos tal cual (sin copiar sus X): se llama en cada
+ * movimiento del cursor, y con series de 100 000 puntos copiarlas se nota.
  */
-function nearestIndex(xs: (number | string)[], x: number | string): number {
-  if (xs.length === 0) return -1
-  if (typeof x === 'string' || typeof xs[0] === 'string') return xs.indexOf(x)
-  const values = xs as number[]
+function nearestIndex(
+  points: readonly (readonly [number | string, ...unknown[]])[],
+  x: number | string,
+): number {
+  if (points.length === 0) return -1
+  if (typeof x === 'string' || typeof points[0]![0] === 'string') {
+    return points.findIndex(([px]) => px === x)
+  }
+  const at = (index: number) => points[index]![0] as number
   let low = 0
-  let high = values.length - 1
+  let high = points.length - 1
   while (low < high) {
     const mid = (low + high) >> 1
-    if (values[mid]! < x) low = mid + 1
+    if (at(mid) < x) low = mid + 1
     else high = mid
   }
-  const candidates = [low - 1, low].filter((i) => i >= 0 && i < values.length)
-  const best = candidates.reduce((a, b) =>
-    Math.abs(values[a]! - x) <= Math.abs(values[b]! - x) ? a : b,
-  )
+  const best = low > 0 && Math.abs(at(low - 1) - x) <= Math.abs(at(low) - x) ? low - 1 : low
   // Con un solo punto no hay paso de muestreo: solo vale el instante exacto.
-  const step = values.length > 1 ? Math.abs(values[1]! - values[0]!) : 0
-  return Math.abs(values[best]! - x) <= step / 2 ? best : -1
+  const step = points.length > 1 ? Math.abs(at(1) - at(0)) : 0
+  return Math.abs(at(best) - x) <= step / 2 ? best : -1
 }
 
 function rowFor(
@@ -41,10 +46,7 @@ function rowFor(
 ): TooltipRow | null {
   const axis = spec.yAxes[series.yAxisIndex]!
   if (series.type === 'range') {
-    const index = nearestIndex(
-      series.ranges.map(([px]) => px),
-      x,
-    )
+    const index = nearestIndex(series.ranges, x)
     const point = series.ranges[index]
     if (!point || point[1] === null || point[2] === null) return null
     return {
@@ -54,10 +56,7 @@ function rowFor(
       text: `${axis.formatValue(point[1])} – ${axis.formatValue(point[2])}`,
     }
   }
-  const index = nearestIndex(
-    series.points.map(([px]) => px),
-    x,
-  )
+  const index = nearestIndex(series.points, x)
   const value = series.points[index]?.[1]
   if (value === undefined || value === null) return null
   return {

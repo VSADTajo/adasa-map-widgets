@@ -23,9 +23,13 @@ export default defineConfig({
     globals: false,
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/map/**'],
-      exclude: ['**/*.spec.ts', '**/*.d.ts', '**/index.ts', '**/types/**'],
+      include: ['src/core/**', 'src/map/**', 'src/charts/**'],
+      exclude: ['**/*.spec.ts', '**/*.fixtures.ts', '**/*.d.ts', '**/index.ts', '**/types/**'],
       reporter: ['text-summary', 'html'],
+      // El dominio de gráficas no puede bajar del 80 % (el CI corre test:coverage).
+      thresholds: {
+        'src/charts/**': { statements: 80, branches: 80, functions: 80, lines: 80 },
+      },
       reportsDirectory: 'coverage',
     },
   },

@@ -49,6 +49,7 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | Barra de herramientas | Común (ASChart): Descargar PNG y Restablecer zoom | Común (ASChart) | Común (ASChart); el zoom por arrastre sigue activo sin el toolbar nativo |
 | `x-click`          | Instante exacto bajo el cursor              | Instante exacto bajo el cursor                                    | Calculado a partir de la posición del ratón                  |
 | Exportar PNG       | Nativo, con la leyenda HTML compuesta encima | Se componen los paneles, con la leyenda encima                   | Se componen los paneles, con la leyenda encima               |
+| Series grandes (5 × 100 000 puntos) | Fluido: dibuja una muestra LTTB (`sampling`) | Fluido | **Lento**: un SVG de 500 000 puntos; cada movimiento del cursor ~0,5 s ([pruebas](../rendimiento-graficas.md)) |
 | Exportar SVG       | **Vectorial**: la misma opción se redibuja con el renderizador SVG (modo SSR) | **Raster**: Chart.js solo dibuja en canvas, así que el SVG contiene la imagen de cada panel | **Vectorial**: el SVG nativo de cada panel |
 | Tramas (`patterns`) | Tesela común como patrón de imagen         | Tesela común como `CanvasPattern`                                 | Tesela común como relleno `image`                             |
 | Cursor desde el teclado | Cruceta y tooltip                      | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda (el tooltip no se puede abrir desde código); el anuncio al lector de pantalla es el mismo |

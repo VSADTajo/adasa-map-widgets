@@ -1,5 +1,12 @@
 import type { AlertLevel } from '@/core/types/theme'
-import type { ChartLibrary, ChartProps, ChartSeries, ChartYAxis } from './chart'
+import type {
+  ChartAnnotations,
+  ChartEmits,
+  ChartProps,
+  ChartSeries,
+  ChartXAxisConfig,
+  ChartYAxis,
+} from './chart'
 
 /** Punto de una serie hidrológica: `[instante, valor]`. `null` deja un hueco. */
 export type HydroPoint = [Date, number | null]
@@ -47,6 +54,8 @@ export type HydroBand = 'p10-p90' | 'p25-p75'
 /** Props de `ASHydrographChart`. */
 export interface HydrographProps extends Pick<
   ChartProps,
+  | 'chartLibrary'
+  | 'currentTime'
   | 'tooltip'
   | 'legend'
   | 'legendValues'
@@ -56,9 +65,7 @@ export interface HydrographProps extends Pick<
   | 'patterns'
   | 'description'
   | 'dataTable'
-  | 'currentTime'
   | 'syncGroup'
-  | 'height'
   | 'animation'
   | 'loading'
   | 'emptyText'
@@ -67,8 +74,8 @@ export interface HydrographProps extends Pick<
   | 'ariaLabel'
   | 'nativeOptions'
 > {
-  /** Motor de gráficas (ver `ASChart`). @default 'echarts' */
-  chartLibrary?: ChartLibrary
+  /** Alto total (px, o CSS si es string). Mayor que en `ASChart` porque tiene dos paneles. @default 420 */
+  height?: number | string
   /** Caudal o nivel: panel inferior, en línea. */
   discharge: HydroVariable
   /** Qué representa `discharge`: unidad y título por defecto. @default 'flow' */
@@ -90,10 +97,19 @@ export interface HydrographProps extends Pick<
   /** Umbrales de aviso del punto de control, sobre el eje de caudal/nivel. */
   thresholds?: HydroThreshold[]
   /**
-   * Instante "ahora": línea vertical que separa observado de previsto.
-   * `false` la oculta. @default la hora actual
+   * Instante "ahora": línea vertical que separa observado de previsto. Los
+   * mismos valores que en `ASChart` (`true` = la hora actual, `false` la
+   * oculta), pero aquí se muestra por defecto: sin ella no se distingue el
+   * observado del previsto. @default true
    */
-  now?: Date | false
+  now?: Date | boolean
+  /** Eje de tiempo: título, formato de las fechas y límites (siempre es temporal). */
+  xAxis?: Omit<ChartXAxisConfig, 'type'>
+  /**
+   * Anotaciones adicionales, como en `ASChart` (p. ej. un episodio en X). Las
+   * de Y van por defecto sobre el eje de caudal/nivel; los umbrales, mejor en `thresholds`.
+   */
+  annotations?: ChartAnnotations
   /** Bandas de incertidumbre a dibujar. @default ['p10-p90', 'p25-p75'] */
   bands?: HydroBand[]
   /** Series adicionales (por defecto sobre el eje de caudal/nivel), p. ej. otra magnitud en un eje extra. */
@@ -116,3 +132,6 @@ export interface HydrographProps extends Pick<
    */
   yAxisOverrides?: Record<string, Partial<Omit<ChartYAxis, 'id'>>>
 }
+
+/** Eventos de `ASHydrographChart`: los mismos que `ASChart`. */
+export type HydrographEmits = ChartEmits

@@ -1,6 +1,6 @@
 # @vsadtajo/adasa-ui
 
-Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye el dominio de **mapas** (agnóstico del motor: Leaflet o MapLibre), y crecerá por dominios con gráficas, tablas, detalle, layout y formularios (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
+Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye los dominios de **mapas** (agnóstico del motor: Leaflet o MapLibre) y **gráficas** (ECharts, Chart.js o ApexCharts), y crecerá por dominios con tablas, detalle, layout y formularios (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
 
 ## Dominios y entry points
 
@@ -14,6 +14,23 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
+
+## Componentes
+
+| Componente                                                              | Import    | Qué es                                                                       | Depende de                          |
+| ----------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- | ----------------------------------- |
+| [`ASMap`](src/map/components/ASMap.vue)                                 | `/map`    | Contenedor de mapa con capas y mapas base                                    | `leaflet` o `maplibre-gl` (a elegir) |
+| [`ASMapTimeControls`](src/map/components/ASMapTimeControls.vue)         | `/map`    | Reproducción de una línea de tiempo (play/pause, paso a paso, slider)        | —                                   |
+| [`ASMapTimeRangeControls`](src/map/components/ASMapTimeRangeControls.vue) | `/map`  | Selección de un rango de tiempo con dos manejadores                          | —                                   |
+| [`ASMapDayIntervalControls`](src/map/components/ASMapDayIntervalControls.vue) | `/map` | Intervalos horarios por día, coloreados por aviso                         | —                                   |
+| [`ASMapBasemapsSelector`](src/map/components/ASMapBasemapsSelector.vue) | `/map`    | Selector de mapa base con miniaturas                                         | —                                   |
+| [`ASMapScale`](src/map/components/ASMapScale.vue)                       | `/map`    | Escala del mapa (regla graduada o razón numérica)                            | —                                   |
+| [`ASMapLegend`](src/map/components/ASMapLegend.vue)                     | `/map`    | Leyenda de las capas dinámicas                                               | —                                   |
+| [`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)         | `/map`    | Grupo de botones de selección única                                          | —                                   |
+| [`ASChart`](src/charts/components/ASChart.vue)                          | `/charts` | Gráfica cartesiana: líneas, barras, áreas, bandas y dispersión; 1–4 ejes Y, paneles | `echarts`, `chart.js` o `apexcharts` (a elegir) |
+| [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación y caudal/nivel, observado y previsto, umbrales     | el motor de `ASChart`               |
+
+Los widgets de control `ASMap*` no dependen de ninguna librería de mapas; las dependencias de la última columna son `peerDependencies` opcionales que se instalan solo si se usa ese motor.
 
 ## Componentes del dominio `map`
 
@@ -71,6 +88,46 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
   :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
 />
 ```
+
+### Props, eventos y métodos
+
+Las dos gráficas comparten nombres, tipos y valores por defecto: `ASHydrographChart` es una configuración de `ASChart`, y todo lo que no es propio del hidrograma se le pasa tal cual.
+
+| Prop                         | `ASChart`                     | `ASHydrographChart`        | Para qué                                                    |
+| ---------------------------- | ----------------------------- | -------------------------- | ----------------------------------------------------------- |
+| `chart-library`              | `'echarts'`                   | `'echarts'`                | Motor: `'echarts'`, `'chartjs'` o `'apexcharts'`            |
+| `series` / `discharge`, `precipitation` | obligatoria        | `discharge` obligatoria    | Datos                                                       |
+| `x-axis`                     | `{ type: 'time' }`            | siempre temporal           | Título, formato de fechas y límites del eje X               |
+| `y-axes` / `extra-y-axes`    | un eje automático             | los del hidrograma         | De 1 a 4 ejes Y                                             |
+| `annotations`                | —                             | —                          | Umbrales e intervalos (en el hidrograma, además de `thresholds`) |
+| `now`                        | `false`                       | **`true`**                 | Línea "Ahora" (`true` = la hora actual, o una fecha)        |
+| `current-time`               | —                             | —                          | Línea del instante seleccionado (`v-model:current-time`)    |
+| `sync-group`                 | —                             | —                          | Comparte cursor, tooltip y zoom con otras gráficas          |
+| `tooltip`                    | `true`                        | `true`                     | Tooltip (`'shared'` o `'item'`)                              |
+| `legend`, `legend-values`    | automática, `false`           | automática, `false`        | Leyenda y valores bajo el cursor                            |
+| `zoom`                       | `false`                       | `false`                    | Zoom horizontal (y barra en ECharts)                        |
+| `toolbar`, `file-name`       | solo "Restablecer zoom" con zoom, `'grafica'` | igual      | PNG, SVG, CSV, pantalla completa                            |
+| `patterns`                   | `false`                       | `false`                    | Tramas para daltonismo                                      |
+| `aria-label`, `description`  | generadas                     | generadas                  | Nombre y descripción accesibles                             |
+| `data-table`                 | `true`                        | `true`                     | Tabla oculta para lectores de pantalla                      |
+| `height`                     | `320`                         | **`420`** (dos paneles)    | Alto en px o CSS                                            |
+| `animation`, `loading`, `empty-text`, `error`, `theme`, `native-options` | iguales | iguales | Estados, tema y vía de escape al motor               |
+
+**Eventos** (los mismos en las dos): `point-click` `{ seriesId, x, y }`, `x-click` `{ x }`, `time-select` `{ time }`, `update:current-time`, `range-change` `{ start, end }` y `ready` `{ library, instance }`.
+
+**Métodos** (con `ref`, tipo `ChartExposed`, los mismos en las dos): `exportImage(format?)`, `exportData(options?)`, `download(format)`, `toggleFullscreen()`, `resetZoom()`, `getInstance()` y `refresh()`.
+
+### Rendimiento
+
+Probado con **5 series de 100 000 puntos** ([resultados completos](docs/rendimiento-graficas.md), `npm run perf:charts`):
+
+| 5 × 100 000 puntos       | ECharts | Chart.js | ApexCharts |
+| ------------------------ | ------: | -------: | ---------: |
+| Montar y primer dibujo   |  0,9 s  |   0,9 s  |     1,7 s  |
+| Mover el cursor (paso)   |  33 ms  |   33 ms  |    542 ms  |
+| Exportar CSV (5 MB)      |  1,1 s  |   1,4 s  |     1,4 s  |
+
+Para series grandes, usa ECharts (el motor por defecto) o Chart.js, y pasa los datos en un `shallowRef`: con `ref`, montar tarda el doble.
 
 ### Exportar
 
@@ -303,10 +360,11 @@ formatNumber(12345.6) // "12.345,6"
 | `npm run lint`             | ESLint sobre todo el proyecto.                                                                                |
 | `npm run lint:fix`         | ESLint con auto-fix.                                                                                          |
 | `npm run format`           | Formatea con Prettier.                                                                                        |
-| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir).                                                                  |
+| `npm run type-check`       | Chequeo de tipos con `vue-tsc` (sin emitir), de la app (`tsconfig.app.json`) y de las configs (`tsconfig.node.json`). |
 | `npm run test`             | Tests (Vitest + @vue/test-utils + jsdom), co-locados como `*.spec.ts`.                                        |
 | `npm run test:watch`       | Tests en modo vigilancia.                                                                                     |
-| `npm run test:coverage`    | Tests con informe de cobertura en `coverage/`.                                                                |
+| `npm run test:coverage`    | Tests con informe de cobertura en `coverage/`. Falla si `src/charts` baja del 80 %.                          |
+| `npm run perf:charts`      | Prueba de rendimiento de las gráficas en el navegador ([resultados](docs/rendimiento-graficas.md)).          |
 
 ## Playground
 

@@ -1,6 +1,7 @@
 import type { ChartSeries, ChartSeriesType } from '@/charts/types/chart'
 import type { ResolvedChartSpec, SpecLocale } from './resolveSpec'
 import { tooltipRows } from './tooltip'
+import { extent } from './extent'
 
 /**
  * Textos accesibles generados a partir de la especificación: el nombre de
@@ -49,15 +50,18 @@ export function chartAriaLabel(
  */
 export function chartDescription(spec: ResolvedChartSpec, t: Translate): string {
   const sentences: string[] = []
-  const xs = spec.series
-    .flatMap((series) => [...series.points, ...series.ranges].map(([x]) => x))
-    .filter((x) => typeof x === 'string' || Number.isFinite(x))
-  if (xs.length) {
-    const ordered = spec.xAxis.type === 'category' ? xs : [...xs].sort((a, b) => +a - +b)
+  const xs = spec.series.flatMap((series) => [...series.points, ...series.ranges].map(([x]) => x))
+  const range: [number | string, number | string] | undefined =
+    spec.xAxis.type === 'category'
+      ? xs.length
+        ? [xs[0]!, xs[xs.length - 1]!]
+        : undefined
+      : extent(xs as number[])
+  if (range) {
     sentences.push(
       t('chart.describeX', {
-        from: spec.xAxis.formatTooltip(ordered[0]!),
-        to: spec.xAxis.formatTooltip(ordered[ordered.length - 1]!),
+        from: spec.xAxis.formatTooltip(range[0]),
+        to: spec.xAxis.formatTooltip(range[1]),
       }),
     )
   }
@@ -65,14 +69,14 @@ export function chartDescription(spec: ResolvedChartSpec, t: Translate): string 
   for (const series of spec.series) {
     const axis = spec.yAxes[series.yAxisIndex]!
     if (series.type === 'range') {
-      const lows = series.ranges.map(([, low]) => low).filter((v): v is number => v !== null)
-      const highs = series.ranges.map(([, , high]) => high).filter((v): v is number => v !== null)
-      if (!lows.length || !highs.length) continue
+      const lows = extent(series.ranges.map(([, low]) => low))
+      const highs = extent(series.ranges.map(([, , high]) => high))
+      if (!lows || !highs) continue
       sentences.push(
         t('chart.describeRange', {
           name: series.name,
-          min: axis.formatValue(Math.min(...lows)),
-          max: axis.formatValue(Math.max(...highs)),
+          min: axis.formatValue(lows[0]),
+          max: axis.formatValue(highs[1]),
         }),
       )
       continue

@@ -17,6 +17,32 @@ function isMissing(value: number | null | undefined): value is null | undefined 
   return value === null || value === undefined || Number.isNaN(value)
 }
 
+/**
+ * Formateadores de Intl reutilizados por idioma y opciones. Crear un
+ * `Intl.NumberFormat` cuesta mucho más que usarlo: sin caché, exportar el
+ * CSV de 500 000 valores o dibujar miles de etiquetas se nota (ver
+ * docs/rendimiento-graficas.md).
+ */
+const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat>()
+
+function cached<T extends Intl.NumberFormat | Intl.DateTimeFormat>(
+  kind: 'number' | 'date',
+  locale: string,
+  options: object,
+  create: () => T,
+): T {
+  const key = `${kind}|${locale}|${JSON.stringify(options)}`
+  let formatter = formatters.get(key) as T | undefined
+  if (!formatter) {
+    formatter = create()
+    formatters.set(key, formatter)
+  }
+  return formatter
+}
+
+const numberFormat = (locale: string, options: Intl.NumberFormatOptions) =>
+  cached('number', locale, options, () => new Intl.NumberFormat(locale, options))
+
 export interface FormatNumberOptions extends Intl.NumberFormatOptions {
   /** Etiqueta BCP 47 (p. ej. `'es-ES'`). @default 'es-ES' */
   locale?: string
@@ -33,7 +59,7 @@ export function formatNumber(
   { locale = 'es-ES', ...options }: FormatNumberOptions = {},
 ): string {
   if (isMissing(value)) return MISSING_VALUE
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 2, ...options }).format(value)
+  return numberFormat(locale, { maximumFractionDigits: 2, ...options }).format(value)
 }
 
 /** Formatos de fecha predefinidos (Intl). */
@@ -108,7 +134,13 @@ export function formatDate(
     return formatWithPattern(value, dateFormat.pattern, { locale: dateFnsLocale })
   }
   const options = typeof dateFormat === 'string' ? DATE_PRESETS[dateFormat] : dateFormat
-  return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(value)
+  const dateOptions = { ...options, timeZone }
+  return cached(
+    'date',
+    locale,
+    dateOptions,
+    () => new Intl.DateTimeFormat(locale, dateOptions),
+  ).format(value)
 }
 
 type DurationUnit = 'day' | 'hour' | 'minute' | 'second'
@@ -216,12 +248,12 @@ export function formatUnit(
   const numberOptions = { maximumFractionDigits: decimals, ...options }
 
   if (unit === '%') {
-    return new Intl.NumberFormat(locale, { ...numberOptions, style: 'percent' }).format(value / 100)
+    return numberFormat(locale, { ...numberOptions, style: 'percent' }).format(value / 100)
   }
   if (unit === '°C') {
     // Intl separa con un espacio normal en algunos locales: se cambia por uno
     // duro para que número y unidad no se partan en dos líneas.
-    return new Intl.NumberFormat(locale, { ...numberOptions, style: 'unit', unit: 'celsius' })
+    return numberFormat(locale, { ...numberOptions, style: 'unit', unit: 'celsius' })
       .format(value)
       .replace(/ /g, NBSP)
   }
