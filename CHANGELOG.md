@@ -1,5 +1,64 @@
 # @vsadtajo/adasa-ui
 
+## 0.5.0
+
+### Minor Changes
+
+- 9292e38: Fechas y búsqueda en `@vsadtajo/adasa-ui/forms`:
+
+  - **`ASDatePicker`**: fecha (y hora con `with-time`) que se escribe con el formato corto del idioma o se elige en un calendario accesible (patrón "date picker dialog" de WAI-ARIA, manejo completo con teclado). Admite `min` y `max`, y marca como error lo que no es una fecha válida.
+  - **`ASDateRangePicker`**: periodo `{ start, end }` con periodos predefinidos configurables (`today`, `last24h`, `last7d`, `last30d`, `hydroYear` o propios) y calendario de inicio y fin, con hora opcional. Emite además `preset-selected`.
+  - **`ASSearchInput`**: buscador con sugerencias asíncronas de `fetchSuggestions(query, signal)`, con `debounce`, `min-chars`, cancelación de la petición anterior, grupos, resaltado de lo buscado y anuncio del estado para lectores de pantalla. Emite `select` y `submit`.
+  - **`hydrologicalYearStart(date)`**: inicio del año hidrológico (1 de octubre).
+  - **`useLocale()`** expone además `dateFnsLocale`, el locale de date-fns del idioma activo.
+
+- a6823e8: Nuevo dominio de formularios, `@vsadtajo/adasa-ui/forms`, con las primitivas de formulario sin framework de UI. Todas son controladas (`v-model`), accesibles (etiqueta asociada, ayuda y error en `aria-describedby`, foco visible y teclado) y toman los colores de los tokens.
+
+  - **`ASButton`**: variantes `primary`, `secondary`, `ghost` y `danger`, tamaños `sm`/`md`/`lg`, icono y `loading` (mantiene el foco y el ancho, `aria-busy`).
+  - **`ASIconButton`**: botón solo con icono, con `label` obligatorio; con `pressed`, interruptor (`v-model:pressed`).
+  - **`ASInput`**: etiqueta, ayuda, error, iconos o slots a los lados, unidad, botón de borrar y `type="number"` con coma decimal.
+  - **`ASSelect`**: combobox WAI-ARIA con búsqueda, selección múltiple con chips, opciones agrupadas y teclado completo.
+  - **`ASCheckbox`** (booleano o grupo, indeterminado), **`ASSwitch`** y **`ASRadioGroup`**.
+  - **`ASFormField`**: etiqueta, ayuda y error para controles propios del proyecto.
+
+  En la raíz:
+
+  - **`ASIcon`**: los iconos son trazados SVG en el formato de `@mdi/js`, sin depender de él (ver "Iconos" en el README).
+  - Tokens `--as-color-danger-contrast` y `--as-control-height-sm/md/lg`, también en `readTokens()`.
+
+- 621aa78: Nuevo dominio de layout, `@vsadtajo/adasa-ui/layout`, con la estructura de los visores de mapa. Abre y cierra como los visores SAIH, sin Vuetify.
+
+  - **`ASAppShell`**:
+    - barra corporativa arriba;
+    - barra de iconos a la izquierda;
+    - panel de sección de 320 px, que empuja el contenido y, al cambiar de sección, se cierra y se reabre a los 280 ms;
+    - panel de detalle que entra por la derecha y tapa el contenido desde el borde de los menús (por ahora, un slot vacío con su botón de cerrar).
+
+    La sección abierta y el detalle van por `v-model:active-section` y `v-model:detail-open`.
+
+  - **Diseño móvil** (por debajo de `breakpoint`, medido sobre el propio layout):
+    - la barra va abajo;
+    - el menú de secciones se abre encima de ella;
+    - cada sección sube desde abajo, con un asa para ampliarla;
+    - el detalle ocupa toda la pantalla;
+    - el buscador se abre con un botón de la barra.
+  - **Piezas sueltas**: `ASAppTopBar`, `ASAppRail` y `ASAppPanelHeader`.
+  - **Tokens del color corporativo de cada proyecto**: `--as-app-chrome`, `--as-app-chrome-text`, `--as-app-chrome-text-muted` y `--as-app-chrome-active`, y para los paneles `--as-app-panel-bg`, `--as-app-panel-text` y `--as-app-panel-surface`. Por defecto, los de los visores SAIH; también están en `readTokens()` (`app`).
+
+  Además, `ASMap` se reajusta cuando cambia el tamaño de su contenedor (antes, solo al cambiar la ventana): un panel que empuja el mapa ya no lo deja descuadrado.
+
+- 292e736: Cierre de la fase de primitivas y formularios: los widgets del mapa reutilizan las primitivas donde encajan, sin cambiar su API ni su aspecto.
+
+  - **`ASMapTimeControls` y `ASMapTimeRangeControls`**: sus botones (anterior, reproducir/pausar, siguiente y los de mover el inicio y el fin del rango) son ahora `ASIconButton`. Se ven igual: mismos iconos, tamaño, hover y anillo de foco.
+  - **`ASIconButton`**: nuevo slot `icon` para un SVG propio (p. ej. un icono de trazo), con lo que la prop `icon` pasa a ser opcional.
+  - **Fronteras entre dominios**: `map` puede importar de `forms` (ADR 0000). `forms` no tiene dependencias externas, así que `/map` sigue sin arrastrar ningún paquete ajeno a los mapas.
+
+  No se migran, porque las primitivas no les aportan nada sin cambiar su aspecto:
+  - `ASMapButtonToggle`: grupo segmentado con color de acento.
+  - `ASMapBasemapsSelector`: menú de miniaturas.
+  - `ASMapDayIntervalControls`: pastillas coloreadas por nivel de aviso.
+  - `ASMapLegend`: botón de plegar con flecha de texto.
+
 ## 0.3.0
 
 ### Minor Changes
