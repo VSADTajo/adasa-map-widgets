@@ -52,6 +52,11 @@ const RULES = {
       'apexcharts',
     ],
   },
+  // El layout no depende de ningún paquete: el mapa (o lo que sea) va en su slot.
+  './layout': {
+    domains: ['core', 'layout'],
+    packages: [],
+  },
 }
 
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g

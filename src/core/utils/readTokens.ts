@@ -109,6 +109,15 @@ export function readTokens(element: Element = document.documentElement): ThemeTo
         surfaceMuted: color('overlay-surface-muted'),
         border: color('overlay-border'),
       },
+      app: {
+        chrome: color('app-chrome'),
+        chromeText: color('app-chrome-text'),
+        chromeTextMuted: color('app-chrome-text-muted'),
+        chromeActive: color('app-chrome-active'),
+        panelBg: color('app-panel-bg'),
+        panelText: color('app-panel-text'),
+        panelSurface: color('app-panel-surface'),
+      },
       data: {
         categorical: Array.from({ length: 8 }, (_, i) => color(`data-cat-${i + 1}`)),
         sequential: SEQUENTIAL_STEPS.map((step) => color(`data-seq-${step}`)),

@@ -57,6 +57,31 @@ describe('tokens.css: contraste WCAG 2.1 AA contra --as-color-surface', () => {
       },
     )
 
+    it('layout: el texto de la barra corporativa llega a 4.5:1, también sobre el elemento activo', () => {
+      const chrome = token('app-chrome', mode)
+      const active = composite(token('app-chrome-active', mode), chrome)
+      for (const background of [chrome, active]) {
+        expect(contrastRatio(token('app-chrome-text', mode), background)).toBeGreaterThanOrEqual(
+          4.5,
+        )
+      }
+    })
+
+    it('layout: los iconos no activos de la barra llegan a 3:1', () => {
+      const chrome = token('app-chrome', mode)
+      const icon = composite(token('app-chrome-text-muted', mode), chrome)
+      expect(contrastRatio(icon, chrome)).toBeGreaterThanOrEqual(3)
+    })
+
+    it.each(['app-panel-bg', 'app-panel-surface'])(
+      'layout: el texto de los paneles llega a 4.5:1 sobre --as-%s',
+      (background) => {
+        expect(
+          contrastRatio(token('app-panel-text', mode), token(background, mode)),
+        ).toBeGreaterThanOrEqual(4.5)
+      },
+    )
+
     it('la rampa secuencial se aleja de la superficie de forma monótona (100 → 700)', () => {
       const steps = Array.from({ length: 13 }, (_, i) => `data-seq-${100 + i * 50}`)
       const ratios = steps.map((name) => contrastRatio(token(name, mode), surface(mode)))

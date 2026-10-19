@@ -80,6 +80,16 @@ export const es = {
   'chart.dataLower': '{name}, inferior',
   'chart.dataUpper': '{name}, superior',
 
+  'layout.sections': 'Secciones',
+  'layout.menu': 'Menú',
+  'layout.closePanel': 'Cerrar panel',
+  'layout.detail': 'Detalle',
+  'layout.closeDetail': 'Cerrar detalle',
+  'layout.search': 'Buscar',
+  'layout.closeSearch': 'Cerrar búsqueda',
+  'layout.expandSheet': 'Ampliar panel',
+  'layout.collapseSheet': 'Reducir panel',
+
   'hydrograph.discharge': 'Caudal',
   'hydrograph.level': 'Nivel',
   'hydrograph.precipitation': 'Precipitación',
@@ -169,6 +179,16 @@ export const en: Messages = {
   'chart.dataX': 'X',
   'chart.dataLower': '{name}, lower',
   'chart.dataUpper': '{name}, upper',
+
+  'layout.sections': 'Sections',
+  'layout.menu': 'Menu',
+  'layout.closePanel': 'Close panel',
+  'layout.detail': 'Details',
+  'layout.closeDetail': 'Close details',
+  'layout.search': 'Search',
+  'layout.closeSearch': 'Close search',
+  'layout.expandSheet': 'Expand panel',
+  'layout.collapseSheet': 'Collapse panel',
 
   'hydrograph.discharge': 'Discharge',
   'hydrograph.level': 'Level',
