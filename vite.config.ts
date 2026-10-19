@@ -33,6 +33,7 @@ const entries = {
   map: 'src/map/index.ts',
   charts: 'src/charts/index.ts',
   layout: 'src/layout/index.ts',
+  forms: 'src/forms/index.ts',
 }
 
 /**
@@ -51,6 +52,7 @@ export default defineConfig({
         'src/map/**/*',
         'src/charts/**/*',
         'src/layout/**/*',
+        'src/forms/**/*',
       ],
       exclude: ['src/playground/**/*', 'src/**/*.spec.ts', 'src/**/*.fixtures.ts'],
       rollupTypes: true,

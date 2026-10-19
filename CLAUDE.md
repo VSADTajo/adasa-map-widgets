@@ -16,8 +16,9 @@ Librería corporativa ADASA de componentes **Vue 3 + TypeScript** (`@vsadtajo/ad
 ```
 src/
 ├── index.ts          # Entry raíz `@vsadtajo/adasa-ui`: solo reexporta core
-├── core/             # Tema (useTheme), styles/tokens.css, useClickOutside, utils/resolveNamespace
+├── core/             # Tema (useTheme), styles/tokens.css, i18n, icons/ + ASIcon, useClickOutside, utils/
 ├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync, data, describe, patterns), engines/ (echarts, chartjs, apexcharts), types/
+├── forms/            # Entry `/forms`: primitivas de formulario (ASButton, ASInput, ASSelect, ASCheckbox...)
 ├── layout/           # Entry `/layout`: ASAppShell (layout de aplicación de mapa) y sus piezas ASAppTopBar, ASAppRail, ASAppPanelHeader
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
@@ -56,6 +57,14 @@ Cada dominio (`core`, `map`, `charts` y los futuros `table`, `forms`, `detail`, 
    - Clases CSS con prefijo `as-` en estilo BEM (`as-button-toggle--top-left`).
 3. **Exports**: en `src/<dominio>/index.ts`, tanto el componente (`export { default as X } from './components/X.vue'`) como sus tipos (`export type {...} from './types/XProps'`).
 4. Accesibilidad: roles y `aria-*` correctos, manejo con teclado y foco visible (`--as-focus-ring`).
+
+### Iconos
+
+- **Un icono es un trazado SVG**: el atributo `d` de un `<path>` en una caja de 24 × 24, el formato de `@mdi/js`. Toda prop de icono (`icon`, `prefixIcon`, `AppSection.icon`...) es un `string` con ese trazado, y se pinta con `ASIcon` (`@/core/components/ASIcon.vue`), que usa `currentColor`.
+- **La librería no depende de `@mdi/js`** ni de ninguna fuente o sprite de iconos: cada proyecto importa solo los que usa (`import { mdiFilter } from '@mdi/js'`) y no hay peticiones extra ni problemas de CSP.
+- **Set interno mínimo** en `src/core/icons/icons.ts` (`ICONS`, de Material Design Icons): solo entra un icono si lo usa un componente de la librería. No se exporta.
+- **Slot como vía de escape** (`#icon`, `#prefix`, `#suffix`...) para lo que no sea un trazado de un color: logos, SVG multicolor, imágenes.
+- Decorativo por defecto (`aria-hidden`): el nombre accesible lo pone el control que lo contiene. Un botón solo con icono exige `label` (`ASIconButton`).
 
 Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (number = px, string tal cual), `theme` y, si aplica, `accentColor`.
 

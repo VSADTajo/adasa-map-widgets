@@ -19,7 +19,8 @@
     "src/core/**/*",
     "src/map/**/*",
     "src/charts/**/*",
-    "src/layout/**/*"
+    "src/layout/**/*",
+    "src/forms/**/*"
   ],
   "exclude": ["src/playground/**/*", "src/**/*.spec.ts", "src/**/*.fixtures.ts"]
 }

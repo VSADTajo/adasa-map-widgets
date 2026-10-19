@@ -1,6 +1,6 @@
 # @vsadtajo/adasa-ui
 
-Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye los dominios de **mapas** (agnóstico del motor: Leaflet o MapLibre) y **gráficas** (ECharts, Chart.js o ApexCharts), y crecerá por dominios con tablas, detalle, layout y formularios (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
+Librería corporativa **ADASA** de componentes **Vue 3 + TypeScript**: el punto de entrada común de los proyectos web de la corporación. Hoy incluye los dominios de **mapas** (agnóstico del motor: Leaflet o MapLibre), **gráficas** (ECharts, Chart.js o ApexCharts), **layout** y **formularios**, y crecerá por dominios con tablas y detalle (ver [`docs/adr/0000-estructura-paquete.md`](docs/adr/0000-estructura-paquete.md)). Estándar interno de [VSADTajo](https://github.com/VSADTajo): paquete privado, distribuido vía GitHub Packages (no está en el registro público de npm).
 
 ## Dominios y entry points
 
@@ -8,10 +8,11 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 
 | Import                         | Contenido                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) |
+| `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) y `ASIcon` |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas (`ASAppTopBar`, `ASAppRail`, `ASAppPanelHeader`): la estructura de las aplicaciones de mapa |
+| `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup` y `ASFormField` |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
 Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o MapLibre. Medido en un proyecto de prueba, añade ~1 kB al bundle frente a una app que solo usa Vue.
@@ -34,6 +35,15 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
 | [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
 | [`ASAppPanelHeader`](src/layout/components/ASAppPanelHeader.vue)        | `/layout` | Cabecera de panel: título y botón de cerrar con flecha                       | —                                   |
+| [`ASButton`](src/forms/components/ASButton.vue)                         | `/forms`  | Botón primary / secondary / ghost / danger, con icono y estado de carga      | —                                   |
+| [`ASIconButton`](src/forms/components/ASIconButton.vue)                 | `/forms`  | Botón cuadrado solo con icono; opcionalmente interruptor (`v-model:pressed`) | —                                   |
+| [`ASInput`](src/forms/components/ASInput.vue)                           | `/forms`  | Campo de texto o número: iconos, unidad, borrar, coma decimal                | —                                   |
+| [`ASSelect`](src/forms/components/ASSelect.vue)                         | `/forms`  | Desplegable con búsqueda, selección múltiple con chips y grupos              | —                                   |
+| [`ASCheckbox`](src/forms/components/ASCheckbox.vue)                     | `/forms`  | Casilla booleana o de grupo, con estado indeterminado                        | —                                   |
+| [`ASSwitch`](src/forms/components/ASSwitch.vue)                         | `/forms`  | Interruptor de encendido y apagado                                           | —                                   |
+| [`ASRadioGroup`](src/forms/components/ASRadioGroup.vue)                 | `/forms`  | Opciones de selección única                                                  | —                                   |
+| [`ASFormField`](src/forms/components/ASFormField.vue)                   | `/forms`  | Etiqueta, ayuda y error enlazados a cualquier control                        | —                                   |
+| [`ASIcon`](src/core/components/ASIcon.vue)                              | raíz      | Icono SVG a partir de su trazado (formato `@mdi/js`)                         | —                                   |
 
 Los widgets de control `ASMap*` no dependen de ninguna librería de mapas; las dependencias de la última columna son `peerDependencies` opcionales que se instalan solo si se usa ese motor.
 
@@ -298,6 +308,39 @@ const detalle = computed({
 
 Los textos e iconos de la barra tienen que seguir contrastando con el color nuevo: el test de `tokens.css` comprueba los valores por defecto.
 
+## Formularios (`@vsadtajo/adasa-ui/forms`)
+
+Primitivas de formulario sin framework de UI, todas **controladas** (`v-model`) y accesibles: etiqueta asociada, ayuda y error en `aria-describedby`, `aria-invalid`, foco visible y manejo completo con teclado. Toman los colores de los tokens, así que siguen el tema y la marca del proyecto.
+
+```vue
+<script setup lang="ts">
+import { mdiFilter } from '@mdi/js'
+import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/forms'
+</script>
+
+<template>
+  <form @submit.prevent="aplicar">
+    <ASSelect v-model="cuenca" label="Cuenca" :options="cuencas" searchable required :error="errores.cuenca" />
+    <ASSelect v-model="estaciones" label="Estaciones" :options="porRio" multiple searchable clearable />
+    <ASInput v-model="umbral" type="number" label="Umbral" unit="m³/s" :min="0" :step="10" />
+    <ASCheckbox v-model="soloAvisos" label="Solo estaciones con aviso activo" />
+    <ASButton type="submit" variant="primary" :icon="mdiFilter">Aplicar filtro</ASButton>
+  </form>
+</template>
+```
+
+- **Props comunes de los campos**: `label`, `hint`, `error` (texto, o `true` para marcarlo sin mensaje), `required`, `disabled`, `size` (`sm`/`md`/`lg`: 28, 36 y 44 px, tokens `--as-control-height-*`), `id` (si no, se genera) y `theme`.
+- **`ASInput` con `type="number"`** emite `number | null`, admite coma o punto decimal al escribir (no depende del idioma del navegador) y muestra el valor con el separador del idioma activo. ↑/↓ suman o restan `step` dentro de `min`/`max`.
+- **`ASSelect`** sigue el patrón combobox de WAI-ARIA:
+  - opciones sueltas o en grupos (`{ label, options }`);
+  - `multiple` con chips (`max-chips` resume el resto en "+N");
+  - `searchable` sin mayúsculas ni tildes, o con `filter` propio, y el evento `search` para pedir opciones al servidor;
+  - teclado: ↑/↓, Inicio/Fin, RePág/AvPág, Intro, Escape (no cierra el panel que lo contiene), Tab y Retroceso. Sin búsqueda, escribir salta a la opción que empieza por esas letras.
+- **Tema**: sin prop `theme` ni `provideTheme`, no fuerzan ninguno y heredan el del contenedor (un formulario en un panel oscuro se ve oscuro).
+- **Controles propios**: `ASFormField` da a cualquier control la misma etiqueta, ayuda y error, y le pasa por el slot el `id` y el `aria-describedby`.
+
+**Iconos.** Todo prop de icono es el trazado SVG de 24 × 24 que exporta `@mdi/js` (`import { mdiFilter } from '@mdi/js'`). La librería no depende de `@mdi/js` ni de ninguna fuente de iconos: cada proyecto importa solo los que usa. Para logos o SVG multicolor, los componentes tienen slots (`#icon`, `#prefix`, `#suffix`), y `ASIcon` pinta un trazado igual que lo hace la librería.
+
 ## Estructura
 
 ```
@@ -305,6 +348,7 @@ src/
 ├── index.ts          # Entry raíz: reexporta core
 ├── core/             # Tema, tokens (styles/tokens.css) y utilidades comunes. No depende de ningún dominio
 ├── map/              # Entry /map: components/, composables/, layers/, legend/, types/, utils/
+├── charts/  layout/  forms/   # Entries /charts, /layout y /forms, con la misma forma interna
 └── playground/       # App interactiva: galería de componentes + compositor de widgets sobre un mapa
     ├── registry.ts              # Registro único de componentes (galería + compositor)
     └── utils/widgetRegistry.ts  # Lista del compositor, derivada de registry.ts

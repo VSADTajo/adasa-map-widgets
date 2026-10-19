@@ -84,6 +84,9 @@ export interface ThemeTokens {
   colorTextMuted: string
   colorBorder: string
   colorDanger: string
+  colorDangerContrast: string
+  /** Alto de los controles de formulario por tamaño (botones, inputs, selects). */
+  controlHeight: Record<'sm' | 'md' | 'lg', string>
   /** Radio por defecto (`--as-radius`, = `radii.md`). */
   radius: string
   spacingUnit: string

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useLocale } from '@/core/composables/useLocale'
 import type { AppPanelHeaderEmits, AppPanelHeaderProps } from '@/layout/types/AppPanelHeaderProps'
-import { ICONS } from '@/layout/utils/icons'
-import AppIcon from './AppIcon.vue'
+import { ICONS } from '@/core/icons/icons'
+import ASIcon from '@/core/components/ASIcon.vue'
 
 /**
  * Cabecera de un panel de sección: título y botón redondo para cerrarlo,
@@ -36,7 +36,7 @@ const { t } = useLocale()
       :title="props.closeLabel ?? t('layout.closePanel')"
       @click="emit('close')"
     >
-      <AppIcon :path="props.direction === 'down' ? ICONS.arrowDown : ICONS.arrowLeft" :size="22" />
+      <ASIcon :path="props.direction === 'down' ? ICONS.arrowDown : ICONS.arrowLeft" :size="22" />
     </button>
   </div>
 </template>
