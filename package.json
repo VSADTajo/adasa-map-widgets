@@ -1,6 +1,6 @@
 {
   "name": "@vsadtajo/adasa-ui",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Librería corporativa ADASA de componentes Vue 3 + TypeScript: mapas (agnósticos del motor: Leaflet, MapLibre...) y, por dominios, gráficas, tablas, detalle, layout y formularios.",
   "license": "UNLICENSED",
   "repository": {

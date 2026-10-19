@@ -9,8 +9,11 @@ import type { ButtonVariant, ControlSize } from './common'
  * ```
  */
 export interface IconButtonProps {
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon: string
+  /**
+   * Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). Opcional si se usa
+   * el slot `icon` (un SVG propio, p. ej. de trazo en vez de relleno).
+   */
+  icon?: string
   /** Nombre accesible (`aria-label`) y tooltip nativo (`title`). Obligatorio: el botón no tiene texto. */
   label: string
   /**
