@@ -289,7 +289,12 @@ describe('ASHydrographChart · acciones propias de la barra', () => {
         items: [{ type: 'button', id: 'simulacion', label: 'Elegir simulación', icon: 'M0 0' }],
       },
     })
-    expect(toolButtons(wrapper).at(-1)).toBe('Elegir simulación')
+    expect(toolButtons(wrapper)).toEqual([
+      'Elegir simulación',
+      'Previsiones',
+      'Ocultar percentiles',
+      'Enfocar umbral',
+    ])
     await wrapper.find('button[aria-label="Elegir simulación"]').trigger('click')
     expect(wrapper.emitted('toolbar-action')).toEqual([[{ id: 'simulacion' }]])
     wrapper.unmount()

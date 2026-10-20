@@ -46,7 +46,7 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | Tooltip compartido | Uno, con las series de todos los paneles    | Uno (HTML propio), con las series de todos los paneles            | Uno por panel, con las series de ese panel                   |
 | Leyenda            | HTML común (igual en los tres)              | HTML común (igual en los tres)                                    | HTML común (igual en los tres)                               |
 | Zoom               | Rueda, arrastre y barra (`zoom.slider`)     | Rueda / pellizco, Mayús + arrastre para desplazar y botón "Restablecer zoom"; **sin barra** | Selección con el ratón y barra de herramientas; **sin barra de zoom** |
-| Barra de herramientas | Común (ASChart): Descargar PNG y Restablecer zoom | Común (ASChart) | Común (ASChart); el zoom por arrastre sigue activo sin el toolbar nativo |
+| Barra de herramientas | Común (ASChart, HTML de la librería): iconos, menú de descargas, elementos propios y acciones del hidrograma | Común (ASChart) | Común (ASChart); el zoom por arrastre sigue activo sin el toolbar nativo |
 | `x-click`          | Instante exacto bajo el cursor              | Instante exacto bajo el cursor                                    | Calculado a partir de la posición del ratón                  |
 | Exportar PNG       | Nativo, con la leyenda HTML compuesta encima | Se componen los paneles, con la leyenda encima                   | Se componen los paneles, con la leyenda encima               |
 | Series grandes (5 × 100 000 puntos) | Fluido: dibuja una muestra LTTB (`sampling`) | Fluido | **Lento**: un SVG de 500 000 puntos; cada movimiento del cursor ~0,5 s ([pruebas](../rendimiento-graficas.md)) |

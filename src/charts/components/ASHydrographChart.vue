@@ -192,7 +192,11 @@ const builtInItems = computed<ChartToolbarItem[]>(() => {
   return items
 })
 
-/** La configuración de `ASChart`: sin las claves propias y con los elementos propios delante. */
+/**
+ * La configuración de `ASChart`: sin las claves propias, con los elementos
+ * del proyecto primero y después las acciones del hidrograma (las de la
+ * librería, descargas y pantalla completa, van a la derecha).
+ */
 const chartToolbar = computed<boolean | ChartToolbarConfig | undefined>(() => {
   const config = toolbarConfig.value
   if (!config) return props.toolbar as boolean | undefined
@@ -202,7 +206,7 @@ const chartToolbar = computed<boolean | ChartToolbarConfig | undefined>(() => {
     bandsToggle: _bands,
     ...rest
   } = config
-  return { ...rest, items: [...builtInItems.value, ...(rest.items ?? [])] }
+  return { ...rest, items: [...(rest.items ?? []), ...builtInItems.value] }
 })
 
 function onToolbarAction(event: ChartToolbarActionEvent): void {

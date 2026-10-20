@@ -93,7 +93,7 @@ Todo se ajusta por props:
 - umbrales e intervalos como anotaciones (`annotations`), coloreados por nivel de aviso;
 - línea "ahora" (`now`);
 - nombre y color de cada serie (`series[i].name` / `.color`; también `'var(--as-data-cat-N)'`) y en qué eje va (`series[i].yAxis`);
-- barra de herramientas (`toolbar`), igual en los tres motores: descargar PNG, SVG y CSV, restablecer zoom y pantalla completa;
+- barra de herramientas (`toolbar`), igual en los tres motores: restablecer zoom, descargas (PNG, SVG, CSV) y pantalla completa, más elementos propios del proyecto;
 - tramas en los rellenos (`patterns`) para no depender del color;
 - leyenda arriba, abajo o a un lado (`legend="bottom"`), con los valores bajo el cursor si se activa `legend-values` (con `:tooltip="false"`, en vez del tooltip);
 - `tooltip`, `legend`, `zoom`, `height` y `animation`;
@@ -133,7 +133,7 @@ Las dos gráficas comparten nombres, tipos y valores por defecto: `ASHydrographC
 | `tooltip`                    | `true`                        | `true`                     | Tooltip (`'shared'` o `'item'`)                              |
 | `legend`, `legend-values`    | automática, `false`           | automática, `false`        | Leyenda y valores bajo el cursor                            |
 | `zoom`                       | `false`                       | `false`                    | Zoom horizontal (y barra en ECharts)                        |
-| `toolbar`, `file-name`       | solo "Restablecer zoom" con zoom, `'grafica'` | igual      | PNG, SVG, CSV, pantalla completa                            |
+| `toolbar`, `file-name`       | solo "Restablecer zoom" con zoom, `'grafica'` | igual      | descargas, pantalla completa, elementos propios y, en el hidrograma, sus acciones |
 | `patterns`                   | `false`                       | `false`                    | Tramas para daltonismo                                      |
 | `aria-label`, `description`  | generadas                     | generadas                  | Nombre y descripción accesibles                             |
 | `data-table`                 | `true`                        | `true`                     | Tabla oculta para lectores de pantalla                      |
@@ -156,11 +156,51 @@ Probado con **5 series de 100 000 puntos** ([resultados completos](docs/rendimie
 
 Para series grandes, usa ECharts (el motor por defecto) o Chart.js, y pasa los datos en un `shallowRef`: con `ref`, montar tarda el doble.
 
+### Barra de herramientas
+
+Con `toolbar`, la gráfica muestra a la derecha, como iconos con su nombre accesible y tooltip:
+- "Restablecer zoom" (si hay `zoom`);
+- un menú "Descargar" con PNG, SVG y CSV;
+- pantalla completa.
+
+Un objeto elige cuáles: `:toolbar="{ svg: false, fullscreen: false }"`. Con `downloadMenu: false`, las descargas son un botón por formato. Los archivos se llaman como diga `file-name` (por defecto, `grafica`).
+
+**Elementos propios** (`toolbar.items`), a la izquierda, para lo que cada visor necesite. Son controlados: la barra emite `toolbar-action` y `toolbar-change`, y el proyecto actualiza su estado y los items.
+
+| `type`   | Qué es                                                                 | Evento                                   |
+| -------- | ---------------------------------------------------------------------- | ---------------------------------------- |
+| `button` | Botón (solo icono si lleva `icon`); con `pressed`, interruptor          | `toolbar-action` `{ id }`                |
+| `select` | Menú de casillas (`multiple`, con `selectAll` y `showCount`) o de radios | `toolbar-change` `{ id, value }`         |
+| `menu`   | Menú de acciones; las opciones con `pressed` se ven marcadas            | `toolbar-action` `{ id, itemId }`        |
+| `chip`   | Etiqueta (p. ej. la fecha de la simulación), `tone: 'primary'` la destaca | —                                      |
+| `info`   | Datos destacados: pares etiqueta / valor con unidad, con el formato del idioma | —                                 |
+
+Todo elemento admite `disabled` y `disabledReason` (el tooltip que explica por qué). Para lo que no encaje, los slots `#toolbar-start` y `#toolbar-end`.
+
+```vue
+<ASHydrographChart
+  :discharge="caudal"
+  :toolbar="{
+    items: [
+      { type: 'chip', id: 'simulacion', label: '20 oct, 06:00', tone: 'primary' },
+      { type: 'select', id: 'lluvia', label: 'Lluvia', icon: mdiCloudOutline, value: lluvia, showCount: true,
+        options: [{ value: 'harmonie', label: 'Harmonie' }, { value: 'eps', label: 'EPS' }] },
+    ],
+  }"
+  @toolbar-change="({ id, value }) => id === 'lluvia' && (lluvia = value)"
+/>
+```
+
+**Acciones propias del hidrograma.** Con `toolbar`, `ASHydrographChart` añade tres, que solo aparecen si tienen sentido con los datos y se desactivan una a una (`focusThreshold`, `forecastSelector` y `bandsToggle`, a `false`):
+- **Enfocar umbral**: cada pulsación deja solo un umbral, de menor a mayor, y el eje se ajusta a los datos y a ese umbral. Tras el último, vuelve a todos (evento `threshold-focus`).
+- **Previsiones**: casillas para elegir las fuentes que se ven, en los dos paneles (`v-model:visible-forecasts`). Ocultar una no cambia el color de las demás.
+- **Percentiles**: muestra u oculta las bandas (`v-model:bands`).
+
+Funcionan sin escribir nada; con `v-model`, el proyecto conoce y controla su estado. El ejemplo completo está en el playground, en "ASHydrographChart: barra a medida".
+
 ### Exportar
 
-Con `toolbar`, la gráfica muestra los botones PNG, SVG, CSV y pantalla completa (y "Restablecer zoom" si hay `zoom`). Un objeto elige cuáles: `:toolbar="{ svg: false, fullscreen: false }"`. Los archivos se llaman como diga `file-name` (por defecto, `grafica`).
-
-Lo mismo se puede hacer desde fuera, con una `ref` (tipo `ChartExposed`). Sirve igual para `ASChart` y para `ASHydrographChart`:
+Las descargas de la barra también se pueden hacer desde fuera, con una `ref` (tipo `ChartExposed`). Sirve igual para `ASChart` y para `ASHydrographChart`:
 
 ```ts
 const chart = ref<ChartExposed>()
