@@ -7,6 +7,7 @@ import ASMapBasemapsSelector from '@/map/components/ASMapBasemapsSelector.vue'
 import ASMapScale from '@/map/components/ASMapScale.vue'
 import ASMapLegend from '@/map/components/ASMapLegend.vue'
 import ASMapButtonToggle from '@/map/components/ASMapButtonToggle.vue'
+import { buildSnippet } from './propTypes'
 import type { ComponentDoc, EventDoc, LayerOptionField, PropField } from './propTypes'
 import type { DayIntervalAlert } from '@/map/types/DayIntervalProps'
 import type {
@@ -25,6 +26,7 @@ import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import AppShellDemo from './components/AppShellDemo.vue'
 import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
 import { formsEntries } from './registryForms'
+import { mapCodeExamples } from './utils/mapCodeExamples'
 import { detailEntries } from './registryDetail'
 import {
   CHART_SERIES_FIELDS,
@@ -66,6 +68,11 @@ export interface RegistryEntry extends ComponentDoc {
    * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
    */
   toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /**
+   * Ejemplos de uso completos, bajo el snippet de las props (que no enseña
+   * cómo pasar datos complejos ni cómo combinar el componente con otros).
+   */
+  examples?: CodeExample[]
   /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
   toSnippet?: (values: Record<string, unknown>) => string
   /**
@@ -73,6 +80,14 @@ export interface RegistryEntry extends ComponentDoc {
    * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
    */
   composer?: ComposerConfig
+}
+
+/** Ejemplo de uso de un componente, con su explicación. */
+export interface CodeExample {
+  title: string
+  /** Qué enseña y lo que hay que saber para adaptarlo. */
+  description?: string
+  code: string
 }
 
 /** Cómo aparece una entrada de la galería en el compositor sobre mapa. */
@@ -320,6 +335,115 @@ const chartBindings = (
     onReady: (event: unknown) => log('ready', { library: (event as { library: string }).library }),
   }) as LiveBindings
 
+/** Props editables de ASMap en el playground. */
+const MAP_SCHEMA: PropField[] = [
+  {
+    key: 'mapLibrary',
+    label: 'Motor de mapas',
+    type: 'select',
+    options: ['leaflet', 'maplibre'],
+    default: 'leaflet',
+    description: 'Leaflet y MapLibre GL JS son peerDependencies opcionales.',
+  },
+  {
+    key: 'center',
+    label: 'Centro (lat, lng)',
+    type: 'string',
+    default: '40.4168, -3.7038',
+    docType: '[number, number]',
+    description:
+      'Obligatoria. Centro inicial en [latitud, longitud] (WGS84). Con v-model:center se actualiza al hacer pan. Aquí se escribe "lat, lng".',
+  },
+  {
+    key: 'zoom',
+    label: 'Zoom',
+    type: 'number',
+    default: 6,
+    min: 0,
+    max: 18,
+    step: 1,
+    description: 'Obligatoria. Nivel de zoom inicial; con v-model:zoom se actualiza.',
+  },
+  {
+    key: 'minZoom',
+    label: 'Zoom mínimo',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 18,
+    step: 1,
+  },
+  {
+    key: 'maxZoom',
+    label: 'Zoom máximo',
+    type: 'number',
+    default: 19,
+    min: 1,
+    max: 22,
+    step: 1,
+  },
+  {
+    key: 'interactive',
+    label: 'Interactivo',
+    type: 'boolean',
+    default: true,
+    description:
+      'Si se desactiva, el usuario no puede hacer pan/zoom/click (mapa de solo lectura).',
+  },
+  { key: 'zoomControl', label: 'Control de zoom', type: 'boolean', default: true },
+  { key: 'attributionControl', label: 'Control de atribución', type: 'boolean', default: true },
+  {
+    key: 'pitch',
+    label: 'Inclinación 3D (pitch)',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 60,
+    step: 5,
+    description: 'Solo con motor MapLibre; Leaflet es 2D y la ignora.',
+  },
+  {
+    key: 'bearing',
+    label: 'Rotación (bearing)',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 360,
+    step: 15,
+    description: 'Solo con motor MapLibre.',
+  },
+  {
+    key: 'basemap',
+    label: 'Basemap activo (v-model)',
+    type: 'select',
+    options: basemapExamples.map((basemap) => basemap.id),
+    default: 'osm',
+    description:
+      'Id de uno de los `basemaps` (los de este ejemplo). Sin él, el primero. Para un selector visual, ASMapBasemapsSelector en el "Compositor sobre mapa".',
+  },
+]
+
+const MAP_SCHEMA_FOR_SNIPPET = MAP_SCHEMA.filter((field) => field.key !== 'center')
+
+/** Centro por defecto de los ejemplos de ASMap: Madrid. */
+const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038]
+
+/** "lat, lng" del editor → `[lat, lng]`. Un texto mal escrito vuelve al centro por defecto. */
+function parseCenter(value: unknown): [number, number] {
+  if (Array.isArray(value)) return value as [number, number]
+  const [lat, lng] = String(value)
+    .split(',')
+    .map((part) => Number(part.trim()))
+  const valid = (n: number | undefined, limit: number) =>
+    n !== undefined && Number.isFinite(n) && Math.abs(n) <= limit
+  return valid(lat, 90) && valid(lng, 180) ? [lat!, lng!] : DEFAULT_CENTER
+}
+
+/** `[lat, lng]` → "lat, lng" con 4 decimales (~10 m), para el editor y el snippet. */
+function formatCenter([lat, lng]: [number, number]): string {
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+}
+
 export const registry: RegistryEntry[] = [
   {
     id: 'as-map',
@@ -327,73 +451,7 @@ export const registry: RegistryEntry[] = [
     category: 'mapping',
     description:
       'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS, COG, MVT — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
-    propsSchema: [
-      {
-        key: 'mapLibrary',
-        label: 'Motor de mapas',
-        type: 'select',
-        options: ['leaflet', 'maplibre'],
-        default: 'leaflet',
-        description: 'Leaflet y MapLibre GL JS son peerDependencies opcionales.',
-      },
-      { key: 'zoom', label: 'Zoom', type: 'number', default: 6, min: 0, max: 18, step: 1 },
-      {
-        key: 'minZoom',
-        label: 'Zoom mínimo',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 18,
-        step: 1,
-      },
-      {
-        key: 'maxZoom',
-        label: 'Zoom máximo',
-        type: 'number',
-        default: 19,
-        min: 1,
-        max: 22,
-        step: 1,
-      },
-      {
-        key: 'interactive',
-        label: 'Interactivo',
-        type: 'boolean',
-        default: true,
-        description:
-          'Si se desactiva, el usuario no puede hacer pan/zoom/click (mapa de solo lectura).',
-      },
-      { key: 'zoomControl', label: 'Control de zoom', type: 'boolean', default: true },
-      { key: 'attributionControl', label: 'Control de atribución', type: 'boolean', default: true },
-      {
-        key: 'pitch',
-        label: 'Inclinación 3D (pitch)',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 60,
-        step: 5,
-        description: 'Solo con motor MapLibre; Leaflet es 2D y la ignora.',
-      },
-      {
-        key: 'bearing',
-        label: 'Rotación (bearing)',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 360,
-        step: 15,
-        description: 'Solo con motor MapLibre.',
-      },
-      {
-        key: 'basemap',
-        label: 'Basemap activo (id)',
-        type: 'string',
-        default: 'osm',
-        description:
-          'Id de `basemaps`: "osm", "topo", "positron", "dark-matter" o "satellite". Campo de texto simple; para un selector visual real usa `ASMapBasemapsSelector` en el "Compositor sobre mapa".',
-      },
-    ],
+    propsSchema: MAP_SCHEMA,
     events: [
       {
         name: 'map-ready',
@@ -455,17 +513,23 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: {
-      center: [40.4168, -3.7038],
       layers: [layerExamples[0]!.config],
       basemaps: basemapExamples,
     },
+    examples: mapCodeExamples,
+    toProps: (values) => ({ ...values, center: parseCenter(values.center) }),
+    toSnippet: (values) =>
+      buildSnippet('ASMap', MAP_SCHEMA_FOR_SNIPPET, { ...values, center: undefined }).replace(
+        '<ASMap',
+        `<ASMap\n  :center="[${formatCenter(parseCenter(values.center))}]"`,
+      ),
     notes:
-      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/Tiles usa el modo "Compositor sobre mapa", o mira la categoría "Layers" para la documentación completa de cada tipo. `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); prueba a escribir su id ("osm", "topo", "positron", "dark-matter" o "satellite") en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
+      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/Tiles usa el modo "Compositor sobre mapa", o mira la categoría "Layers" para la documentación completa de cada tipo. `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); elige uno en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
     component: ASMap,
     bindings: (values, log) =>
       ({
         'onUpdate:center': (center) => {
-          values.center = center
+          values.center = formatCenter(center as [number, number])
           log('update:center', center)
         },
         'onUpdate:zoom': (zoom) => {

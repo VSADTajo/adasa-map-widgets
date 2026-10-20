@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { PropField } from '../propTypes'
 import type { RegistryEntry } from '../registry'
 
 const props = defineProps<{ entry: RegistryEntry }>()
@@ -8,6 +9,27 @@ const props = defineProps<{ entry: RegistryEntry }>()
 const componentProps = computed(() =>
   props.entry.propsSchema.filter((field) => !field.playgroundOnly),
 )
+
+/**
+ * Tipo a documentar, en partes: el declarado (`docType`) o, en un select, sus
+ * opciones como unión de literales (`'a' | 'b'`), para ver todos los valores
+ * posibles y no solo el de por defecto. La opción vacía del editor ("sin
+ * valor") no es un valor. En partes para que una unión larga solo se parta
+ * entre opciones, nunca en mitad de una.
+ */
+function typeParts(field: PropField): string[] {
+  if (field.docType) return [field.docType]
+  if (field.type === 'select' && field.options?.length) {
+    return field.options
+      .filter((option) => option !== '')
+      .map((option) => (/^-?\d+(\.\d+)?$/.test(option) ? option : `'${option}'`))
+  }
+  return [field.type]
+}
+
+function defaultOf(field: PropField): string {
+  return field.default === '' ? '—' : String(field.default)
+}
 </script>
 
 <template>
@@ -25,8 +47,9 @@ const componentProps = computed(() =>
       <thead>
         <tr>
           <th>Prop</th>
-          <th>Tipo</th>
+          <th>Tipo / valores</th>
           <th>Default</th>
+          <th>Descripción</th>
         </tr>
       </thead>
       <tbody>
@@ -34,10 +57,18 @@ const componentProps = computed(() =>
           <td>
             <code>{{ field.key }}</code>
           </td>
-          <td>{{ field.type }}</td>
           <td>
-            <code>{{ String(field.default) }}</code>
+            <code class="pg-docs__type">
+              <template v-for="(part, index) in typeParts(field)" :key="part">
+                <template v-if="index > 0"> | </template>
+                <span class="pg-docs__type-part">{{ part }}</span>
+              </template>
+            </code>
           </td>
+          <td>
+            <code>{{ defaultOf(field) }}</code>
+          </td>
+          <td>{{ field.description ?? '' }}</td>
         </tr>
       </tbody>
     </table>
@@ -162,6 +193,15 @@ const componentProps = computed(() =>
   padding: 4px 6px;
   border-bottom: 1px solid var(--pg-border);
   vertical-align: top;
+}
+
+/* Las uniones largas ('osm' | 'topo' | ...) parten línea en los separadores. */
+.pg-docs__type {
+  white-space: normal;
+}
+
+.pg-docs__type-part {
+  white-space: nowrap;
 }
 
 .pg-docs__empty {

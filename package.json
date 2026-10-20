@@ -75,7 +75,7 @@
   ],
   "scripts": {
     "dev": "vite --config vite.config.playground.ts",
-    "build": "npm run type-check && vite build --config vite.config.ts",
+    "build": "npm run type-check && node --max-old-space-size=4096 node_modules/vite/bin/vite.js build --config vite.config.ts",
     "check:entries": "node scripts/check-entries.mjs",
     "build:playground": "npm run type-check && vite build --config vite.config.playground.ts",
     "preview:playground": "vite preview --config vite.config.playground.ts --outDir dist-playground",

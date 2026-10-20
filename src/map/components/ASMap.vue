@@ -321,6 +321,15 @@ const emit = defineEmits<{
 
 const containerEl = ref<HTMLDivElement | null>(null)
 const mapInstance = shallowRef<L.Map | MapLibreMap | null>(null)
+
+/**
+ * El mapa se está moviendo porque cambiaron las props (`v-model:center` o
+ * `zoom`), no el usuario. Ese movimiento no se vuelve a emitir: Leaflet
+ * ajusta el centro a la rejilla de píxeles, y emitirlo pisaría el valor que
+ * acaba de poner el proyecto con otro ligeramente distinto. Solo vale `true`
+ * durante el `setView`/`jumpTo` síncrono del watcher de `center`/`zoom`.
+ */
+let movingFromProps = false
 /** Textos en el idioma de `provideLocale` (español por defecto). */
 const { t } = useLocale()
 
@@ -379,14 +388,15 @@ async function createLeafletMap(el: HTMLDivElement): Promise<L.Map> {
 
   if (!props.interactive) disableLeafletInteractions(map)
 
+  map.on('zoomend', () => {
+    const zoom = map.getZoom()
+    if (zoom !== props.zoom && !movingFromProps) emit('update:zoom', zoom)
+  })
   map.on('moveend', () => {
+    if (movingFromProps) return
     const center = map.getCenter()
     const next: [number, number] = [center.lat, center.lng]
     if (!isSameCenter(next, props.center)) emit('update:center', next)
-  })
-  map.on('zoomend', () => {
-    const zoom = map.getZoom()
-    if (zoom !== props.zoom) emit('update:zoom', zoom)
   })
   map.on('click', (event: L.LeafletMouseEvent) => {
     // Los clicks sobre un feature cortan su propagación en `bindFeatureClick`
@@ -433,14 +443,15 @@ async function createMaplibreMap(el: HTMLDivElement): Promise<MapLibreMap> {
     map.addControl(new maplibregl.NavigationControl())
   }
 
+  map.on('zoomend', () => {
+    const zoom = map.getZoom()
+    if (zoom !== props.zoom && !movingFromProps) emit('update:zoom', zoom)
+  })
   map.on('moveend', () => {
+    if (movingFromProps) return
     const center = map.getCenter()
     const next: [number, number] = [center.lat, center.lng]
     if (!isSameCenter(next, props.center)) emit('update:center', next)
-  })
-  map.on('zoomend', () => {
-    const zoom = map.getZoom()
-    if (zoom !== props.zoom) emit('update:zoom', zoom)
   })
   map.on('pitchend', () => {
     const pitch = map.getPitch()
@@ -581,10 +592,16 @@ watch([() => props.center, () => props.zoom], ([nextCenter, nextZoom]) => {
   const current = map.getCenter()
   if (isSameCenter([current.lat, current.lng], nextCenter) && map.getZoom() === nextZoom) return
 
-  if (props.mapLibrary === 'leaflet') {
-    ;(map as L.Map).setView(nextCenter, nextZoom)
-  } else {
-    ;(map as MapLibreMap).jumpTo({ center: [nextCenter[1], nextCenter[0]], zoom: nextZoom })
+  // Sin animación, el movimiento (y sus moveend/zoomend) termina dentro de esta llamada.
+  movingFromProps = true
+  try {
+    if (props.mapLibrary === 'leaflet') {
+      ;(map as L.Map).setView(nextCenter, nextZoom, { animate: false })
+    } else {
+      ;(map as MapLibreMap).jumpTo({ center: [nextCenter[1], nextCenter[0]], zoom: nextZoom })
+    }
+  } finally {
+    movingFromProps = false
   }
 })
 

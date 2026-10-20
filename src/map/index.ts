@@ -6,7 +6,7 @@
  */
 
 export { default as ASMap } from './components/ASMap.vue'
-export type { ASMapProps } from './components/ASMap.vue'
+export type { ASMapProps, BasemapOption } from './components/ASMap.vue'
 export { default as ASMapTimeControls } from './components/ASMapTimeControls.vue'
 export { default as ASMapTimeRangeControls } from './components/ASMapTimeRangeControls.vue'
 export { default as ASMapDayIntervalControls } from './components/ASMapDayIntervalControls.vue'
