@@ -14,6 +14,7 @@ export { default as ASRadioGroup } from './components/ASRadioGroup.vue'
 export { default as ASDatePicker } from './components/ASDatePicker.vue'
 export { default as ASDateRangePicker } from './components/ASDateRangePicker.vue'
 export { default as ASSearchInput } from './components/ASSearchInput.vue'
+export { default as ASMenu } from './components/ASMenu.vue'
 
 export { hydrologicalYearStart } from './utils/dates'
 
@@ -52,3 +53,13 @@ export type {
   SearchInputProps,
   SearchSuggestion,
 } from './types/SearchInputProps'
+export type {
+  MenuActionItem,
+  MenuCheckboxItem,
+  MenuEmits,
+  MenuEntry,
+  MenuItem,
+  MenuProps,
+  MenuRadioItem,
+  MenuSeparator,
+} from './types/MenuProps'
