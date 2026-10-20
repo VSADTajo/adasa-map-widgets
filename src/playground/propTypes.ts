@@ -18,6 +18,13 @@ export interface PropField {
   /** Explicación corta de qué hace la prop (se muestra como ayuda inline). */
   description?: string
   /**
+   * Tipo de la prop tal como lo declara el componente (`'[number, number]'`,
+   * `'Date | null'`...), para la tabla de documentación, cuando el control
+   * del editor no lo refleja (p. ej. un texto "lat, lng" para `center`). Sin
+   * él, un select muestra sus opciones (`'a' | 'b'`) y el resto, su `type`.
+   */
+  docType?: string
+  /**
    * Control que solo existe en el playground (p. ej. "número de ejes"): lo
    * convierte `toProps` en props reales, así que no se lista como prop del componente.
    */
