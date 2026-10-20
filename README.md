@@ -546,7 +546,7 @@ formatNumber(12345.6) // "12.345,6"
 | Script                     | Descripción                                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `npm run dev`              | Playground interactivo en modo desarrollo (importa el código fuente).                                         |
-| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`, un entry por dominio) en `dist/`.                     |
+| `npm run build`            | Type-check + build de la librería (ESM + CJS + `.d.ts`, un entry por dominio) en `dist/`. Corre con 4 GB de memoria para Node: juntar los `.d.ts` de los seis entries no cabe en los ~2 GB por defecto. |
 | `npm run check:entries`    | Tras el build: comprueba que cada entry solo alcanza sus dominios y paquetes permitidos, e imprime su tamaño. |
 | `npm run build:playground` | Build estático del playground en `dist-playground/`.                                                          |
 | `npm run lint`             | ESLint sobre todo el proyecto.                                                                                |
