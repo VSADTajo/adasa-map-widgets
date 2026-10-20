@@ -4,12 +4,24 @@ let instanceCount = 0
 </script>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useSlots } from 'vue'
+import { ICONS } from '@/core/icons/icons'
 import { useLocale } from '@/core/composables/useLocale'
+import ASButton from '@/forms/components/ASButton.vue'
+import ASIconButton from '@/forms/components/ASIconButton.vue'
+import ASMenu from '@/forms/components/ASMenu.vue'
+import type { MenuItem } from '@/forms/types/MenuProps'
+import ChartToolbarItems from './ChartToolbarItems.vue'
 import { useChart } from '@/charts/core/useChart'
 import { chartDataTable } from '@/charts/core/data'
 import { chartAnnouncement, chartAriaLabel, chartDescription } from '@/charts/core/describe'
-import type { ChartEmits, ChartExposed, ChartImageFormat, ChartProps } from '@/charts/types/chart'
+import type {
+  ChartEmits,
+  ChartExposed,
+  ChartImageFormat,
+  ChartProps,
+  ChartToolbarItem,
+} from '@/charts/types/chart'
 
 /**
  * Gráfica cartesiana (líneas, barras, áreas, bandas y dispersión sobre un
@@ -105,10 +117,20 @@ async function toggleFullscreen(): Promise<void> {
 }
 
 // ── Barra de herramientas ──
-/** Acciones visibles (por defecto, solo "Restablecer zoom" con zoom). */
+const slots = useSlots()
+
+/** Acciones visibles (por defecto, solo "Restablecer zoom" con zoom) y elementos propios. */
 const toolbarActions = computed(() => {
   const hasZoom = Boolean(props.zoom)
-  const none = { png: false, svg: false, csv: false, resetZoom: false, fullscreen: false }
+  const none = {
+    png: false,
+    svg: false,
+    csv: false,
+    resetZoom: false,
+    fullscreen: false,
+    downloadMenu: true,
+    items: [] as ChartToolbarItem[],
+  }
   if (props.toolbar === false) return none
   if (props.toolbar === undefined) return { ...none, resetZoom: hasZoom }
   const config = props.toolbar === true ? {} : props.toolbar
@@ -118,12 +140,34 @@ const toolbarActions = computed(() => {
     csv: config.csv ?? true,
     resetZoom: (config.resetZoom ?? true) && hasZoom,
     fullscreen: (config.fullscreen ?? true) && fullscreenSupported.value,
+    downloadMenu: config.downloadMenu ?? true,
+    items: config.items ?? [],
   }
 })
 const hasDownloads = computed(
   () => toolbarActions.value.png || toolbarActions.value.svg || toolbarActions.value.csv,
 )
-const showToolbar = computed(() => Object.values(toolbarActions.value).some(Boolean))
+/** Descargas visibles, como opciones del menú (o un botón cada una con `downloadMenu: false`). */
+const downloadItems = computed<MenuItem[]>(() =>
+  (
+    [
+      ['png', t('chart.downloadPng')],
+      ['svg', t('chart.downloadSvg')],
+      ['csv', t('chart.downloadCsv')],
+    ] as const
+  )
+    .filter(([format]) => toolbarActions.value[format])
+    .map(([id, label]) => ({ id, label })),
+)
+const showToolbar = computed(
+  () =>
+    props.toolbar !== false &&
+    (toolbarActions.value.resetZoom ||
+      hasDownloads.value ||
+      toolbarActions.value.fullscreen ||
+      toolbarActions.value.items.length > 0 ||
+      Boolean(slots['toolbar-start'] || slots['toolbar-end'])),
+)
 
 async function download(format: ChartImageFormat | 'csv'): Promise<void> {
   let url: string
@@ -270,55 +314,56 @@ defineExpose(exposed)
     :aria-busy="props.loading || undefined"
   >
     <div v-if="showToolbar" class="as-chart__toolbar" role="group" :aria-label="t('chart.toolbar')">
-      <button
-        v-if="toolbarActions.resetZoom"
-        type="button"
-        class="as-chart__tool"
-        @click="resetZoom()"
-      >
-        {{ t('chart.resetZoom') }}
-      </button>
-      <span v-if="hasDownloads" class="as-chart__tool-label" aria-hidden="true">
-        {{ t('chart.download') }}
-      </span>
-      <button
-        v-if="toolbarActions.png"
-        type="button"
-        class="as-chart__tool"
-        :aria-label="t('chart.downloadPng')"
-        :title="t('chart.downloadPng')"
-        @click="download('png')"
-      >
-        PNG
-      </button>
-      <button
-        v-if="toolbarActions.svg"
-        type="button"
-        class="as-chart__tool"
-        :aria-label="t('chart.downloadSvg')"
-        :title="t('chart.downloadSvg')"
-        @click="download('svg')"
-      >
-        SVG
-      </button>
-      <button
-        v-if="toolbarActions.csv"
-        type="button"
-        class="as-chart__tool"
-        :aria-label="t('chart.downloadCsv')"
-        :title="t('chart.downloadCsv')"
-        @click="download('csv')"
-      >
-        CSV
-      </button>
-      <button
-        v-if="toolbarActions.fullscreen"
-        type="button"
-        class="as-chart__tool"
-        @click="toggleFullscreen"
-      >
-        {{ isFullscreen ? t('chart.exitFullscreen') : t('chart.fullscreen') }}
-      </button>
+      <div class="as-chart__toolbar-start">
+        <slot name="toolbar-start" />
+        <ChartToolbarItems
+          v-if="toolbarActions.items.length"
+          :items="toolbarActions.items"
+          @action="emit('toolbar-action', $event)"
+          @change="emit('toolbar-change', $event)"
+        />
+      </div>
+      <div class="as-chart__toolbar-end">
+        <slot name="toolbar-end" />
+        <ASIconButton
+          v-if="toolbarActions.resetZoom"
+          :icon="ICONS.zoomReset"
+          :label="t('chart.resetZoom')"
+          size="sm"
+          @click="resetZoom()"
+        />
+        <ASMenu
+          v-if="hasDownloads && toolbarActions.downloadMenu"
+          :label="t('chart.downloadMenu')"
+          :icon="ICONS.download"
+          icon-only
+          size="sm"
+          align="end"
+          :items="downloadItems"
+          @select="download($event.id as ChartImageFormat | 'csv')"
+        />
+        <template v-else-if="hasDownloads">
+          <ASButton
+            v-for="item in downloadItems"
+            :key="item.id"
+            variant="ghost"
+            size="sm"
+            :icon="ICONS.download"
+            :aria-label="item.label"
+            :title="item.label"
+            @click="download(item.id as ChartImageFormat | 'csv')"
+          >
+            {{ item.id.toUpperCase() }}
+          </ASButton>
+        </template>
+        <ASIconButton
+          v-if="toolbarActions.fullscreen"
+          :icon="isFullscreen ? ICONS.fullscreenExit : ICONS.fullscreen"
+          :label="isFullscreen ? t('chart.exitFullscreen') : t('chart.fullscreen')"
+          size="sm"
+          @click="toggleFullscreen"
+        />
+      </div>
     </div>
     <!--
       Área de datos: con el foco, las flechas mueven el cursor (role="application"
@@ -391,36 +436,29 @@ defineExpose(exposed)
   background: var(--as-color-surface, light-dark(#ffffff, #1e293b));
 }
 
+/* Los elementos del proyecto a la izquierda y los de la librería a la derecha;
+   si no caben, pasan a otra línea. */
 .as-chart__toolbar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: var(--as-space-2, 8px);
   padding-bottom: var(--as-space-1, 4px);
 }
 
-.as-chart__tool-label {
-  font-size: var(--as-font-size-xs, 0.75rem);
-  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+.as-chart__toolbar-start,
+.as-chart__toolbar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--as-space-1, 4px);
 }
 
-.as-chart__tool {
-  padding: 2px 10px;
-  border: 1px solid var(--as-color-border, light-dark(#cbd5e1, #475569));
-  border-radius: var(--as-radius-sm, 4px);
-  background: var(--as-color-surface, light-dark(#ffffff, #1e293b));
-  color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
-  font: inherit;
-  font-size: var(--as-font-size-xs, 0.75rem);
-  cursor: pointer;
+.as-chart__toolbar-end {
+  margin-left: auto;
 }
 
-.as-chart__tool:hover {
-  background: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
-}
-
-.as-chart__tool:focus-visible,
 .as-chart__body:focus-visible {
   outline: none;
   box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);

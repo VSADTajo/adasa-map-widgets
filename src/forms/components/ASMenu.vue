@@ -214,6 +214,8 @@ defineExpose({
     >
       <template v-if="!props.iconOnly || props.badge !== undefined">
         <span v-if="!props.iconOnly">{{ props.label }}</span>
+        <!-- Espacio real: separa nombre y contador también para los lectores de pantalla. -->
+        {{ !props.iconOnly && props.badge !== undefined ? ' ' : '' }}
         <span v-if="props.badge !== undefined" class="as-menu__badge">{{ props.badge }}</span>
       </template>
     </ASButton>
