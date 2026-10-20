@@ -26,6 +26,7 @@ import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import AppShellDemo from './components/AppShellDemo.vue'
 import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
 import { formsEntries } from './registryForms'
+import { mapCodeExamples } from './utils/mapCodeExamples'
 import { detailEntries } from './registryDetail'
 import {
   CHART_SERIES_FIELDS,
@@ -67,6 +68,11 @@ export interface RegistryEntry extends ComponentDoc {
    * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
    */
   toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /**
+   * Ejemplos de uso completos, bajo el snippet de las props (que no enseña
+   * cómo pasar datos complejos ni cómo combinar el componente con otros).
+   */
+  examples?: CodeExample[]
   /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
   toSnippet?: (values: Record<string, unknown>) => string
   /**
@@ -74,6 +80,14 @@ export interface RegistryEntry extends ComponentDoc {
    * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
    */
   composer?: ComposerConfig
+}
+
+/** Ejemplo de uso de un componente, con su explicación. */
+export interface CodeExample {
+  title: string
+  /** Qué enseña y lo que hay que saber para adaptarlo. */
+  description?: string
+  code: string
 }
 
 /** Cómo aparece una entrada de la galería en el compositor sobre mapa. */
@@ -502,6 +516,7 @@ export const registry: RegistryEntry[] = [
       layers: [layerExamples[0]!.config],
       basemaps: basemapExamples,
     },
+    examples: mapCodeExamples,
     toProps: (values) => ({ ...values, center: parseCenter(values.center) }),
     toSnippet: (values) =>
       buildSnippet('ASMap', MAP_SCHEMA_FOR_SNIPPET, { ...values, center: undefined }).replace(

@@ -231,6 +231,13 @@ const code = computed(
               <EventLog :entries="logEntries" />
               <h3 class="pg-card__subheading">Código</h3>
               <CodePreview :code="code" />
+              <template v-for="example in entry.examples ?? []" :key="example.title">
+                <h3 class="pg-card__subheading">{{ example.title }}</h3>
+                <p v-if="example.description" class="pg-card__example-note">
+                  {{ example.description }}
+                </p>
+                <CodePreview :code="example.code" />
+              </template>
             </section>
 
             <section class="pg-card" aria-label="Editor de props">
@@ -467,5 +474,11 @@ const code = computed(
   font-size: 0.72rem;
   font-weight: 500;
   vertical-align: middle;
+}
+.pg-card__example-note {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--pg-text-muted);
 }
 </style>
