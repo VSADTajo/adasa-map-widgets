@@ -4,6 +4,7 @@ import type {
   ChartEmits,
   ChartProps,
   ChartSeries,
+  ChartToolbarConfig,
   ChartXAxisConfig,
   ChartYAxis,
 } from './chart'
@@ -51,6 +52,32 @@ export interface HydroThreshold {
 
 export type HydroBand = 'p10-p90' | 'p25-p75'
 
+/**
+ * Barra de herramientas del hidrograma: la de `ASChart` más tres acciones
+ * propias, activas por defecto (cada una solo si tiene sentido con los datos).
+ */
+export interface HydrographToolbarConfig extends ChartToolbarConfig {
+  /**
+   * "Enfocar umbral": cada pulsación deja solo un umbral (de menor a mayor)
+   * y ajusta el eje a los datos y a ese umbral; tras el último vuelve a
+   * todos. Solo con `thresholds`.
+   * @default true
+   */
+  focusThreshold?: boolean
+  /**
+   * Selector de las previsiones que se ven (casillas con "Todas" y
+   * contador). Cambia `visibleForecasts`. Solo con previsiones.
+   * @default true
+   */
+  forecastSelector?: boolean
+  /**
+   * Botón que muestra u oculta los percentiles. Cambia `bands`. Solo si
+   * alguna previsión trae percentiles.
+   * @default true
+   */
+  bandsToggle?: boolean
+}
+
 /** Props de `ASHydrographChart`. */
 export interface HydrographProps extends Pick<
   ChartProps,
@@ -60,7 +87,6 @@ export interface HydrographProps extends Pick<
   | 'legend'
   | 'legendValues'
   | 'zoom'
-  | 'toolbar'
   | 'fileName'
   | 'patterns'
   | 'description'
@@ -76,6 +102,17 @@ export interface HydrographProps extends Pick<
 > {
   /** Alto total (px, o CSS si es string). Mayor que en `ASChart` porque tiene dos paneles. @default 420 */
   height?: number | string
+  /**
+   * Barra de herramientas: la de `ASChart` (`true` o su configuración) más
+   * las acciones propias del hidrograma (ver `HydrographToolbarConfig`).
+   * @default solo "Restablecer zoom", y solo si hay `zoom`
+   */
+  toolbar?: boolean | HydrographToolbarConfig
+  /**
+   * Ids de las previsiones que se dibujan (`v-model:visible-forecasts`), en
+   * los dos paneles. Sin él, todas. Los colores no cambian al ocultar una.
+   */
+  visibleForecasts?: string[]
   /** Caudal o nivel: panel inferior, en línea. */
   discharge: HydroVariable
   /** Qué representa `discharge`: unidad y título por defecto. @default 'flow' */
@@ -110,7 +147,10 @@ export interface HydrographProps extends Pick<
    * de Y van por defecto sobre el eje de caudal/nivel; los umbrales, mejor en `thresholds`.
    */
   annotations?: ChartAnnotations
-  /** Bandas de incertidumbre a dibujar. @default ['p10-p90', 'p25-p75'] */
+  /**
+   * Bandas de incertidumbre a dibujar (`v-model:bands` con el botón de
+   * percentiles de la barra). `[]` las oculta. @default ['p10-p90', 'p25-p75']
+   */
   bands?: HydroBand[]
   /** Series adicionales (por defecto sobre el eje de caudal/nivel), p. ej. otra magnitud en un eje extra. */
   extraSeries?: ChartSeries[]
@@ -133,5 +173,12 @@ export interface HydrographProps extends Pick<
   yAxisOverrides?: Record<string, Partial<Omit<ChartYAxis, 'id'>>>
 }
 
-/** Eventos de `ASHydrographChart`: los mismos que `ASChart`. */
-export type HydrographEmits = ChartEmits
+/** Eventos de `ASHydrographChart`: los de `ASChart` y los de sus acciones propias. */
+export interface HydrographEmits extends ChartEmits {
+  /** El selector de previsiones cambió las visibles (para `v-model:visible-forecasts`). */
+  'update:visibleForecasts': [ids: string[]]
+  /** El botón de percentiles los mostró u ocultó (para `v-model:bands`). */
+  'update:bands': [bands: HydroBand[]]
+  /** "Enfocar umbral": el umbral enfocado, o `null` al volver a todos. */
+  'threshold-focus': [threshold: HydroThreshold | null]
+}
