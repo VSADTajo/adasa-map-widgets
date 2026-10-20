@@ -25,6 +25,7 @@ import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import AppShellDemo from './components/AppShellDemo.vue'
 import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
 import { formsEntries } from './registryForms'
+import { detailEntries } from './registryDetail'
 import {
   CHART_SERIES_FIELDS,
   HYDROGRAPH_SERIES_FIELDS,
@@ -1614,6 +1615,7 @@ export const registry: RegistryEntry[] = [
     }),
   },
   ...formsEntries,
+  ...detailEntries,
 ]
 
 export function getEntry(id: string): RegistryEntry | undefined {

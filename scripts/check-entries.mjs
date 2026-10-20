@@ -62,6 +62,12 @@ const RULES = {
     domains: ['core', 'forms'],
     packages: [],
   },
+  // El detalle no usa gráficas por ahora: si un día lo hace, tendrá que
+  // seguir sin arrastrar motores (ver ADR 0000).
+  './detail': {
+    domains: ['core', 'forms', 'detail'],
+    packages: [],
+  },
 }
 
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g

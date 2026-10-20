@@ -44,6 +44,11 @@
       "import": "./dist/forms.js",
       "require": "./dist/forms.cjs"
     },
+    "./detail": {
+      "types": "./dist/detail.d.ts",
+      "import": "./dist/detail.js",
+      "require": "./dist/detail.cjs"
+    },
     "./style.css": "./dist/style.css"
   },
   "typesVersions": {
@@ -59,6 +64,9 @@
       ],
       "forms": [
         "./dist/forms.d.ts"
+      ],
+      "detail": [
+        "./dist/detail.d.ts"
       ]
     }
   },
