@@ -21,6 +21,7 @@ import ASAppDrawer from './ASAppDrawer.vue'
 import ASAppMobileMenu from './ASAppMobileMenu.vue'
 import ASAppRail from './ASAppRail.vue'
 import ASAppTopBar from './ASAppTopBar.vue'
+import { provideAppShellContext } from '@/layout/composables/useAppShellContext'
 
 /**
  * Layout de aplicación de mapa: el contenido principal (el mapa) ocupa
@@ -97,6 +98,8 @@ const id = `as-app-shell-${++instanceCount}`
 const root = ref<HTMLElement | null>(null)
 const width = ref(Infinity)
 const mobile = computed(() => width.value < props.breakpoint)
+// Las piezas de los slots (marca, buscador, menú de usuario) se adaptan solas al móvil.
+provideAppShellContext({ mobile })
 let observer: ResizeObserver | undefined
 onMounted(() => {
   if (!root.value || typeof ResizeObserver === 'undefined') return
