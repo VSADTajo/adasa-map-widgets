@@ -42,6 +42,13 @@ const props = withDefaults(defineProps<MenuProps>(), {
 })
 
 const emit = defineEmits<MenuEmits>()
+
+defineSlots<{
+  /** Contenido del botón, en lugar del icono, el texto y el contador (p. ej. un avatar). */
+  trigger?(): unknown
+  /** Cabecera fija arriba del menú, no elegible (p. ej. el nombre y el correo del usuario). */
+  header?(): unknown
+}>()
 const theme = useResolvedTheme(() => props.theme, null)
 const menuId = useFieldId(() => undefined, 'as-menu')
 
@@ -212,7 +219,8 @@ defineExpose({
       @click="toggle"
       @keydown="onTriggerKeydown"
     >
-      <template v-if="!props.iconOnly || props.badge !== undefined">
+      <template v-if="$slots.trigger" #default><slot name="trigger" /></template>
+      <template v-else-if="!props.iconOnly || props.badge !== undefined" #default>
         <span v-if="!props.iconOnly">{{ props.label }}</span>
         <!-- Espacio real: separa nombre y contador también para los lectores de pantalla. -->
         {{ !props.iconOnly && props.badge !== undefined ? ' ' : '' }}
@@ -230,6 +238,9 @@ defineExpose({
       :aria-label="props.label"
       @keydown="onMenuKeydown"
     >
+      <li v-if="$slots.header" class="as-menu__header" role="presentation">
+        <slot name="header" />
+      </li>
       <template v-for="entry in props.items" :key="entry.id">
         <li v-if="entry.type === 'separator'" class="as-menu__separator" role="separator" />
         <li
@@ -358,6 +369,10 @@ defineExpose({
 .as-menu__item--disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.as-menu__header {
+  margin: calc(var(--as-space-1, 4px) * -1) calc(var(--as-space-1, 4px) * -1) var(--as-space-1, 4px);
 }
 
 .as-menu__separator {

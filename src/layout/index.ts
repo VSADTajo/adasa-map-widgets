@@ -14,6 +14,7 @@ export { default as ASAppBottomSheet } from './components/ASAppBottomSheet.vue'
 export { default as ASAppMobileMenu } from './components/ASAppMobileMenu.vue'
 export { default as ASAppBrand } from './components/ASAppBrand.vue'
 export { default as ASAppSearch } from './components/ASAppSearch.vue'
+export { default as ASAppUserMenu } from './components/ASAppUserMenu.vue'
 
 export { useAppShellContext, type AppShellContext } from './composables/useAppShellContext'
 
@@ -36,3 +37,9 @@ export type {
   AppMobileMenuProps,
 } from './types/AppPanelsProps'
 export type { AppBrandProps, AppLogo } from './types/AppBrandProps'
+export type {
+  AppLanguage,
+  AppUser,
+  AppUserMenuEmits,
+  AppUserMenuProps,
+} from './types/AppUserMenuProps'
