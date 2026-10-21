@@ -19,6 +19,8 @@ export interface FormFieldProps extends FieldProps {
    * @default 'div'
    */
   as?: 'div' | 'fieldset'
+  /** Oculta la etiqueta a la vista; sigue asociada al control como su nombre accesible. */
+  hideLabel?: boolean
 }
 
 /** Props del slot por defecto de `ASFormField`, para enlazar el control. */

@@ -9,8 +9,9 @@ import type {
   SearchInputEmits,
   SearchInputProps,
   SearchSuggestion,
+  SearchSuggestionSlotProps,
 } from '@/forms/types/SearchInputProps'
-import { normalizeText } from '@/forms/utils/field'
+import { normalizeText, readableTextOn } from '@/forms/utils/field'
 import ASFormField from './ASFormField.vue'
 
 /**
@@ -24,6 +25,11 @@ import ASFormField from './ASFormField.vue'
  * recorren, Intro elige (o, sin sugerencia activa, emite `submit` con el
  * texto), Escape cierra la lista y, con ella cerrada, vacía el campo. Un
  * texto oculto anuncia "Buscando…" y el número de resultados.
+ *
+ * Cada sugerencia puede traer etiquetas (`tags`), botones de acción
+ * (`actions`, p. ej. "Centrar en el mapa"; Mayús + Intro ejecuta la primera)
+ * y un aviso de no disponible (`unavailable`). Para un diseño libre, el slot
+ * `suggestion`.
  *
  * @example
  * ```vue
@@ -49,6 +55,11 @@ const props = withDefaults(defineProps<SearchInputProps>(), {
   clearable: true,
   noResultsText: undefined,
 })
+
+defineSlots<{
+  /** Contenido de una sugerencia, a medida (sustituye etiqueta, descripción, etiquetas y acciones). */
+  suggestion?(props: SearchSuggestionSlotProps): unknown
+}>()
 
 const emit = defineEmits<SearchInputEmits>()
 const { t } = useLocale()
@@ -202,7 +213,9 @@ function onKeydown(event: KeyboardEvent): void {
     case 'Enter': {
       const item = isOpen.value ? ordered.value[activeIndex.value] : undefined
       event.preventDefault()
-      if (item) choose(item.suggestion)
+      const action = item?.suggestion.actions?.find((a) => !a.disabled)
+      if (item && event.shiftKey && action) runAction(action.id, item.suggestion)
+      else if (item) choose(item.suggestion)
       else {
         close()
         emit('submit', text.value)
@@ -224,6 +237,10 @@ function onKeydown(event: KeyboardEvent): void {
     case 'Tab':
       close()
   }
+}
+
+function runAction(actionId: string, suggestion: SearchSuggestion): void {
+  emit('suggestion-action', { actionId, suggestion })
 }
 
 function clear(): void {
@@ -266,6 +283,7 @@ defineExpose({
     v-slot="{ describedBy, invalid }"
     class="as-search-input"
     :label="props.label"
+    :hide-label="props.hideLabel"
     :hint="props.hint"
     :error="props.error"
     :required="props.required"
@@ -347,28 +365,77 @@ defineExpose({
               class="as-listbox__option"
               :class="{
                 'as-listbox__option--active': ordered[activeIndex]?.index === index,
+                'as-search-input__option--unavailable': suggestion.unavailable,
               }"
               role="option"
               :aria-selected="ordered[activeIndex]?.index === index"
               @click="choose(suggestion)"
             >
-              <ASIcon
-                v-if="suggestion.icon"
-                class="as-listbox__option-icon"
-                :path="suggestion.icon"
-                :size="18"
-              />
-              <span class="as-listbox__option-text">
-                <span>
-                  <template v-for="(part, i) in highlight(suggestion.label)" :key="i">
-                    <mark v-if="part.match" class="as-search-input__match">{{ part.text }}</mark>
-                    <template v-else>{{ part.text }}</template>
-                  </template>
+              <slot
+                name="suggestion"
+                :suggestion="suggestion"
+                :active="ordered[activeIndex]?.index === index"
+                :parts="highlight(suggestion.label)"
+              >
+                <ASIcon
+                  v-if="suggestion.icon"
+                  class="as-listbox__option-icon"
+                  :path="suggestion.icon"
+                  :size="18"
+                />
+                <span class="as-listbox__option-text">
+                  <span class="as-search-input__label">
+                    <span>
+                      <template v-for="(part, i) in highlight(suggestion.label)" :key="i">
+                        <mark v-if="part.match" class="as-search-input__match">{{
+                          part.text
+                        }}</mark>
+                        <template v-else>{{ part.text }}</template>
+                      </template>
+                    </span>
+                    <span
+                      v-for="tag in suggestion.tags ?? []"
+                      :key="tag.label"
+                      class="as-search-input__tag"
+                      :style="
+                        tag.color
+                          ? { background: tag.color, color: readableTextOn(tag.color) }
+                          : undefined
+                      "
+                    >
+                      {{ tag.label }}
+                    </span>
+                  </span>
+                  <small v-if="suggestion.description" class="as-listbox__description">
+                    {{ suggestion.description }}
+                  </small>
                 </span>
-                <small v-if="suggestion.description" class="as-listbox__description">
-                  {{ suggestion.description }}
-                </small>
-              </span>
+                <span
+                  v-if="suggestion.unavailable"
+                  class="as-search-input__unavailable"
+                  :title="suggestion.unavailableReason"
+                >
+                  <ASIcon :path="ICONS.alertCircle" :size="16" />
+                  <span v-if="suggestion.unavailableReason" class="as-control-box__sr-only">
+                    {{ suggestion.unavailableReason }}
+                  </span>
+                </span>
+                <!-- Atajos para el ratón: con el teclado, Mayús + Intro ejecuta la primera. -->
+                <button
+                  v-for="action in suggestion.actions ?? []"
+                  :key="action.id"
+                  type="button"
+                  class="as-control-box__button as-search-input__action"
+                  tabindex="-1"
+                  :aria-label="action.label"
+                  :title="action.label"
+                  :disabled="action.disabled"
+                  @mousedown.prevent
+                  @click.stop="runAction(action.id, suggestion)"
+                >
+                  <ASIcon :path="action.icon" :size="16" />
+                </button>
+              </slot>
             </li>
           </ul>
         </li>
@@ -424,6 +491,37 @@ defineExpose({
   background: none;
   color: inherit;
   font-weight: var(--as-font-weight-bold, 700);
+}
+
+.as-search-input__label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--as-space-2, 8px);
+  align-items: center;
+}
+
+.as-search-input__tag {
+  padding: 0 6px;
+  border-radius: var(--as-radius-full, 9999px);
+  background: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
+  font-size: var(--as-font-size-xs, 0.75rem);
+  font-weight: var(--as-font-weight-semibold, 600);
+  line-height: 1.6;
+}
+
+/* No disponible: se puede elegir, pero se ve atenuada y con el aviso. */
+.as-search-input__option--unavailable .as-listbox__option-text {
+  opacity: 0.6;
+}
+
+.as-search-input__unavailable {
+  display: flex;
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+}
+
+.as-search-input__action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .as-search-input__spinner {

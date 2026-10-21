@@ -59,11 +59,18 @@ const slotProps = computed<FormFieldSlotProps>(() => ({
       v-if="props.as === 'fieldset' && props.label"
       :id="slotProps.labelId"
       class="as-form-field__label"
+      :class="{ 'as-form-field__label--hidden': props.hideLabel }"
     >
       {{ props.label
       }}<span v-if="props.required" class="as-form-field__required" aria-hidden="true">*</span>
     </legend>
-    <label v-else-if="props.label" :id="slotProps.labelId" :for="id" class="as-form-field__label">
+    <label
+      v-else-if="props.label"
+      :id="slotProps.labelId"
+      :for="id"
+      class="as-form-field__label"
+      :class="{ 'as-form-field__label--hidden': props.hideLabel }"
+    >
       {{ props.label
       }}<span v-if="props.required" class="as-form-field__required" aria-hidden="true">*</span>
     </label>
@@ -106,6 +113,17 @@ const slotProps = computed<FormFieldSlotProps>(() => ({
 
 .as-form-field--sm .as-form-field__label {
   font-size: var(--as-font-size-xs, 0.75rem);
+}
+
+/* Oculta a la vista, pero no a los lectores de pantalla. */
+.as-form-field__label--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .as-form-field__required {

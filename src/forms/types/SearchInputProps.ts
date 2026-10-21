@@ -1,5 +1,25 @@
 import type { FieldProps } from './common'
 
+/** Etiqueta de una sugerencia (tipo de estación, origen...). */
+export interface SearchSuggestionTag {
+  label: string
+  /**
+   * Color de fondo (hex o rgb). El texto se pone blanco u oscuro, el que más
+   * contraste. Sin él, el gris de la superficie.
+   */
+  color?: string
+}
+
+/** Acción de una sugerencia (p. ej. "Centrar en el mapa"), con su botón de icono. */
+export interface SearchSuggestionAction {
+  id: string
+  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
+  icon: string
+  /** Nombre accesible y tooltip. */
+  label: string
+  disabled?: boolean
+}
+
 /** Sugerencia de `ASSearchInput` (una estación, un municipio, una dirección...). */
 export interface SearchSuggestion<T = unknown> {
   /** Identificador único entre las sugerencias. */
@@ -14,6 +34,26 @@ export interface SearchSuggestion<T = unknown> {
   group?: string
   /** Datos del proyecto (coordenadas, la entidad completa...), que vuelven en `select`. */
   data?: T
+  /** Etiquetas junto al nombre (p. ej. "Aforo", "Punto SAIH"). */
+  tags?: SearchSuggestionTag[]
+  /**
+   * Botones de acción a la derecha (emiten `suggestion-action`). Con el
+   * teclado, Mayús + Intro ejecuta la primera de la sugerencia activa.
+   */
+  actions?: SearchSuggestionAction[]
+  /** Se puede elegir, pero se ve atenuada con un aviso (p. ej. "no visible en el mapa"). */
+  unavailable?: boolean
+  /** Por qué no está disponible: tooltip del aviso y texto para lectores de pantalla. */
+  unavailableReason?: string
+}
+
+/** Props del slot `suggestion` de `ASSearchInput`, para pintar una sugerencia a medida. */
+export interface SearchSuggestionSlotProps {
+  suggestion: SearchSuggestion
+  /** Es la activa del teclado. */
+  active: boolean
+  /** La etiqueta en trozos, con lo buscado marcado (`match: true`). */
+  parts: { text: string; match: boolean }[]
 }
 
 /**
@@ -63,6 +103,8 @@ export interface SearchInputProps extends FieldProps {
   clearable?: boolean
   /** Texto cuando no hay sugerencias. Por defecto, "Sin resultados para «…»". */
   noResultsText?: string
+  /** Oculta la etiqueta a la vista (sigue siendo el nombre accesible), p. ej. en una barra. */
+  hideLabel?: boolean
 }
 
 /** Eventos de `ASSearchInput`. */
@@ -75,4 +117,6 @@ export interface SearchInputEmits {
   submit: [query: string]
   /** `fetchSuggestions` falló (no se emite al cancelar una petición). */
   error: [error: unknown]
+  /** Se pulsó una acción de una sugerencia (o Mayús + Intro sobre la activa). */
+  'suggestion-action': [event: { actionId: string; suggestion: SearchSuggestion }]
 }

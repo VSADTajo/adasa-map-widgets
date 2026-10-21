@@ -1,3 +1,5 @@
+import { contrastRatio } from '@/core/utils/contrast'
+
 /**
  * `aria-describedby` de un control: la ayuda y el error que pinta
  * `FieldMessages`, más los ids extra que aporte el control (p. ej. la unidad
@@ -31,6 +33,20 @@ export function parseDecimal(text: string): number | null {
   const clean = text.replace(/\s/g, '').replace(',', '.')
   if (!/^-?\d*\.?\d*$/.test(clean) || !/\d/.test(clean)) return null
   return Number(clean)
+}
+
+/**
+ * Color de texto (blanco u oscuro) que más contrasta con `background`. Si
+ * el color no se puede leer (p. ej. `var(--x)`), `undefined`: hereda.
+ */
+export function readableTextOn(background: string): string | undefined {
+  try {
+    return contrastRatio('#ffffff', background) >= contrastRatio('#0f172a', background)
+      ? '#ffffff'
+      : '#0f172a'
+  } catch {
+    return undefined
+  }
 }
 
 /** Texto sin mayúsculas ni tildes, para buscar "rio" y encontrar "Río". */

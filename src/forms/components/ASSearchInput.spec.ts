@@ -193,4 +193,111 @@ describe('ASSearchInput', () => {
     expect(input(wrapper).element.value).toBe('')
     expect(document.activeElement).toBe(input(wrapper).element)
   })
+
+  describe('etiquetas, acciones y no disponibles', () => {
+    const rich: SearchSuggestion[] = [
+      {
+        id: 'E01',
+        label: 'Aranjuez',
+        tags: [
+          { label: 'Aforo', color: '#ffd54f' },
+          { label: 'Punto SAIH', color: '#1d283a' },
+          { label: 'Sin color' },
+        ],
+        actions: [
+          { id: 'centrar', icon: 'M0 0', label: 'Centrar en el mapa' },
+          { id: 'ficha', icon: 'M0 0', label: 'Abrir ficha', disabled: true },
+        ],
+      },
+      {
+        id: 'E02',
+        label: 'Arganda',
+        unavailable: true,
+        unavailableReason: 'No visible en el mapa con el modelo actual',
+        actions: [{ id: 'centrar', icon: 'M0 0', label: 'Centrar en el mapa', disabled: true }],
+      },
+    ]
+
+    async function mountRich() {
+      const { wrapper } = mountSearch(vi.fn(async () => rich))
+      await type(wrapper, 'ar')
+      await settle()
+      return wrapper
+    }
+
+    it('etiquetas con su color y el texto que más contrasta', async () => {
+      const wrapper = await mountRich()
+      const tags = wrapper.findAll('[role="option"]')[0]!.findAll('.as-search-input__tag')
+      expect(tags.map((tag) => tag.text())).toEqual(['Aforo', 'Punto SAIH', 'Sin color'])
+      // Amarillo claro → texto oscuro; azul marino → texto blanco; sin color, el del tema.
+      expect(tags[0]!.attributes('style')).toContain('color: rgb(15, 23, 42)')
+      expect(tags[1]!.attributes('style')).toContain('color: rgb(255, 255, 255)')
+      expect(tags[2]!.attributes('style')).toBeUndefined()
+      wrapper.unmount()
+    })
+
+    it('el botón de una acción emite suggestion-action sin elegir la sugerencia', async () => {
+      const wrapper = await mountRich()
+      const [centrar, ficha] = wrapper.findAll('[role="option"]')[0]!.findAll('button')
+      expect(centrar!.attributes()).toMatchObject({
+        'aria-label': 'Centrar en el mapa',
+        tabindex: '-1',
+      })
+      expect(ficha!.attributes('disabled')).toBeDefined()
+      await centrar!.trigger('click')
+      expect(wrapper.emitted('suggestion-action')).toEqual([
+        [{ actionId: 'centrar', suggestion: rich[0] }],
+      ])
+      expect(wrapper.emitted('select')).toBeUndefined()
+      wrapper.unmount()
+    })
+
+    it('Mayús + Intro ejecuta la primera acción habilitada de la activa; sin ninguna, elige', async () => {
+      const wrapper = await mountRich()
+      await input(wrapper).trigger('keydown', { key: 'ArrowDown' })
+      await input(wrapper).trigger('keydown', { key: 'Enter', shiftKey: true })
+      expect(wrapper.emitted('suggestion-action')).toEqual([
+        [{ actionId: 'centrar', suggestion: rich[0] }],
+      ])
+      await input(wrapper).trigger('keydown', { key: 'ArrowDown' })
+      await input(wrapper).trigger('keydown', { key: 'Enter', shiftKey: true })
+      // Arganda solo tiene una acción deshabilitada: Mayús + Intro la elige.
+      expect(wrapper.emitted('select')).toEqual([[rich[1]]])
+      wrapper.unmount()
+    })
+
+    it('no disponible: se ve atenuada, con el motivo en el tooltip y para lectores de pantalla', async () => {
+      const wrapper = await mountRich()
+      const option = wrapper.findAll('[role="option"]')[1]!
+      expect(option.classes()).toContain('as-search-input__option--unavailable')
+      expect(option.find('.as-search-input__unavailable').attributes('title')).toBe(
+        'No visible en el mapa con el modelo actual',
+      )
+      expect(option.text()).toContain('No visible en el mapa con el modelo actual')
+      wrapper.unmount()
+    })
+
+    it('slot suggestion para un diseño propio', async () => {
+      const wrapper = mount(ASSearchInput, {
+        props: { label: 'Buscar', fetchSuggestions: vi.fn(async () => rich) },
+        slots: {
+          suggestion: `<template #suggestion="{ suggestion, parts }">
+            <b class="mia">{{ suggestion.label }} · {{ parts.length }}</b>
+          </template>`,
+        },
+        attachTo: document.body,
+      })
+      await type(wrapper as never, 'ar')
+      await settle()
+      expect(wrapper.findAll('.mia').map((b) => b.text())).toEqual(['Aranjuez · 2', 'Arganda · 2'])
+      wrapper.unmount()
+    })
+  })
+
+  it('hideLabel: la etiqueta no se ve pero sigue asociada al campo', () => {
+    const { wrapper } = mountSearch(undefined, { hideLabel: true })
+    const label = wrapper.find('label')
+    expect(label.classes()).toContain('as-form-field__label--hidden')
+    expect(label.attributes('for')).toBe('b')
+  })
 })
