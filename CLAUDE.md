@@ -20,7 +20,7 @@ src/
 ├── charts/           # Entry `/charts`: components/, core/ (resolveSpec, tooltip, hydrograph, useChart, sync, data, describe, patterns), engines/ (echarts, chartjs, apexcharts), types/
 ├── forms/            # Entry `/forms`: primitivas (ASButton, ASInput, ASSelect...), fechas (ASDatePicker, ASDateRangePicker) y ASSearchInput; styles/ con los CSS compartidos (control-box, listbox, popover)
 ├── detail/           # Entry `/detail`: ficha de estación (ASDetailHeader, ASCard, ASStatusBadge) y tarjetas hidrológicas; utils/hydro.ts (alertLevelOf, summarizeSeries...)
-├── layout/           # Entry `/layout`: ASAppShell (layout de aplicación de mapa) y sus piezas ASAppTopBar, ASAppRail, ASAppPanelHeader
+├── layout/           # Entry `/layout`: ASAppShell, que coordina sus piezas ASApp* (TopBar, Brand, Search, UserMenu, Rail, Drawer, DetailPanel, BottomSheet, MobileMenu, PanelHeader); composables/useAppShellContext
 ├── map/              # Entry `/map`
 │   ├── index.ts      # Única API pública del dominio (componentes, composables, layers, legend y tipos)
 │   ├── components/   # ASMap + widgets ASMap*
