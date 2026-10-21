@@ -15,6 +15,10 @@ import type {
 } from '@/layout/types/AppShellProps'
 import { ICONS } from '@/core/icons/icons'
 import ASIcon from '@/core/components/ASIcon.vue'
+import ASAppBottomSheet from './ASAppBottomSheet.vue'
+import ASAppDetailPanel from './ASAppDetailPanel.vue'
+import ASAppDrawer from './ASAppDrawer.vue'
+import ASAppMobileMenu from './ASAppMobileMenu.vue'
 import ASAppRail from './ASAppRail.vue'
 import ASAppTopBar from './ASAppTopBar.vue'
 
@@ -37,6 +41,10 @@ import ASAppTopBar from './ASAppTopBar.vue'
  *
  * Es controlado: la sección abierta y el detalle van por `v-model`, así que
  * el proyecto decide si los enlaza con la URL (ver el README).
+ *
+ * Coordina piezas que también se pueden usar sueltas para montar un layout
+ * propio: `ASAppTopBar`, `ASAppRail`, `ASAppDrawer` (panel de sección),
+ * `ASAppDetailPanel`, y en móvil `ASAppMobileMenu` y `ASAppBottomSheet`.
  *
  * @example
  * ```vue
@@ -128,7 +136,6 @@ watch(
   },
 )
 
-const visibleSections = computed(() => props.sections.filter((section) => !section.hidden))
 const currentSection = computed<AppSection | undefined>(() =>
   props.sections.find((section) => section.id === shownSection.value),
 )
@@ -149,9 +156,8 @@ const detailLeft = computed(() =>
   mobile.value ? 0 : props.railWidth + (panelOpen.value ? props.drawerWidth : 0),
 )
 
-// ── Móvil: menú, panel que sube y buscador ──
+// ── Móvil: menú y buscador ──
 const menuOpen = ref(false)
-const sheetExpanded = ref(false)
 const searchOpen = ref(false)
 
 function chooseFromMenu(sectionId: string): void {
@@ -161,9 +167,6 @@ function chooseFromMenu(sectionId: string): void {
 watch(mobile, () => {
   menuOpen.value = false
   searchOpen.value = false
-})
-watch(panelOpen, (open) => {
-  if (!open) sheetExpanded.value = false
 })
 
 /** Escape cierra lo que esté encima: menú o buscador, luego el detalle y por último el panel. */
@@ -196,8 +199,6 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
     :class="[theme ? `as-${theme}` : undefined, { 'as-app-shell--mobile': mobile }]"
     :style="{
       height: props.height,
-      '--as-app-shell-rail': `${props.railWidth}px`,
-      '--as-app-shell-drawer': `${props.drawerWidth}px`,
     }"
     @keydown="onKeydown"
   >
@@ -243,16 +244,14 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
           :controls="`${id}-panel`"
           @toggle="toggleSection"
         />
-        <div class="as-app-shell__drawer" :class="{ 'as-app-shell__drawer--open': panelOpen }">
-          <aside
-            :id="`${id}-panel`"
-            class="as-app-shell__panel"
-            :aria-label="currentSection?.label"
-            :inert="!panelOpen || undefined"
-          >
-            <slot v-if="sectionSlotProps" name="section" v-bind="sectionSlotProps" />
-          </aside>
-        </div>
+        <ASAppDrawer
+          :id="`${id}-panel`"
+          :open="panelOpen"
+          :width="props.drawerWidth"
+          :label="currentSection?.label"
+        >
+          <slot v-if="sectionSlotProps" name="section" v-bind="sectionSlotProps" />
+        </ASAppDrawer>
       </template>
 
       <main class="as-app-shell__main">
@@ -261,52 +260,16 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
 
       <!-- Móvil: menú de secciones encima de la barra, y el panel que sube -->
       <template v-if="mobile">
-        <div v-if="menuOpen" class="as-app-shell__backdrop" @click="menuOpen = false" />
-        <nav
+        <ASAppMobileMenu
           :id="`${id}-menu`"
-          class="as-app-shell__menu"
-          :class="{ 'as-app-shell__menu--open': menuOpen }"
-          :aria-label="t('layout.sections')"
-          :inert="!menuOpen || undefined"
-        >
-          <ul>
-            <li v-for="section in visibleSections" :key="section.id">
-              <button
-                type="button"
-                class="as-app-shell__menu-item"
-                :class="{ 'as-app-shell__menu-item--active': section.id === props.activeSection }"
-                :aria-pressed="section.id === props.activeSection"
-                @click="chooseFromMenu(section.id)"
-              >
-                <ASIcon :path="section.icon" />
-                {{ section.label }}
-              </button>
-            </li>
-          </ul>
-        </nav>
-        <aside
-          :id="`${id}-panel`"
-          class="as-app-shell__sheet"
-          :class="{
-            'as-app-shell__sheet--open': panelOpen,
-            'as-app-shell__sheet--expanded': sheetExpanded,
-          }"
-          :aria-label="currentSection?.label"
-          :inert="!panelOpen || undefined"
-        >
-          <button
-            type="button"
-            class="as-app-shell__handle"
-            :aria-label="sheetExpanded ? t('layout.collapseSheet') : t('layout.expandSheet')"
-            :aria-expanded="sheetExpanded"
-            @click="sheetExpanded = !sheetExpanded"
-          >
-            <span aria-hidden="true" />
-          </button>
-          <div class="as-app-shell__sheet-content">
-            <slot v-if="sectionSlotProps" name="section" v-bind="sectionSlotProps" />
-          </div>
-        </aside>
+          v-model:open="menuOpen"
+          :sections="props.sections"
+          :active-section="props.activeSection"
+          @select="chooseFromMenu"
+        />
+        <ASAppBottomSheet :id="`${id}-panel`" :open="panelOpen" :label="currentSection?.label">
+          <slot v-if="sectionSlotProps" name="section" v-bind="sectionSlotProps" />
+        </ASAppBottomSheet>
         <div v-if="searchOpen" class="as-app-shell__mobile-search">
           <div class="as-app-shell__mobile-search-field"><slot name="search" /></div>
           <button
@@ -322,33 +285,23 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
       </template>
 
       <!-- Detalle: tapa el contenido desde el borde de los menús -->
-      <aside
-        class="as-app-shell__detail"
-        :class="{ 'as-app-shell__detail--open': props.detailOpen }"
-        :style="{ left: `${detailLeft}px` }"
-        :aria-label="props.detailLabel ?? t('layout.detail')"
-        :inert="!props.detailOpen || undefined"
+      <ASAppDetailPanel
+        :open="props.detailOpen"
+        :offset="detailLeft"
+        :label="props.detailLabel"
+        :close-button="props.detailCloseButton"
+        @close="closeDetail"
       >
-        <button
-          v-if="props.detailCloseButton"
-          type="button"
-          class="as-app-shell__detail-close"
-          :aria-label="t('layout.closeDetail')"
-          :title="t('layout.closeDetail')"
-          @click="closeDetail"
-        >
-          <ASIcon :path="ICONS.close" />
-        </button>
         <slot name="detail" />
-      </aside>
+      </ASAppDetailPanel>
     </div>
   </div>
 </template>
 
 <style scoped>
 .as-app-shell {
-  /* Duración de todas las aperturas y cierres (la de los visores SAIH). */
-  --as-app-shell-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Duración de todas las aperturas y cierres de las piezas (la de los visores SAIH). */
+  --as-app-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -381,66 +334,8 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
   z-index: 0;
 }
 
-/* ── Panel de sección (escritorio): empuja el contenido ── */
-.as-app-shell__drawer {
-  position: relative;
-  flex: none;
-  width: 0;
-  overflow: hidden;
-  transition: width var(--as-app-shell-transition);
-}
-
-.as-app-shell__drawer--open {
-  width: var(--as-app-shell-drawer);
-}
-
-.as-app-shell__panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--as-app-shell-drawer);
-  overflow-y: auto;
-  background: var(--as-app-panel-bg, light-dark(#e7e7e7, #212121));
-}
-
-/* ── Detalle: entra por la derecha ── */
-.as-app-shell__detail {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  overflow-y: auto;
-  background: var(--as-app-panel-bg, light-dark(#e7e7e7, #212121));
-  box-shadow: var(--as-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
-  transform: translateX(100%);
-  visibility: hidden;
-  transition:
-    transform var(--as-app-shell-transition),
-    left var(--as-app-shell-transition),
-    visibility 0s linear 0.2s;
-}
-
-.as-app-shell__detail--open {
-  transform: none;
-  visibility: visible;
-  transition:
-    transform var(--as-app-shell-transition),
-    left var(--as-app-shell-transition);
-}
-
-.as-app-shell__detail-close {
-  position: sticky;
-  top: var(--as-space-2, 8px);
-  float: right;
-  z-index: 1;
-  margin: var(--as-space-2, 8px);
-}
-
-/* ── Botones de la barra y del detalle ── */
-.as-app-shell__bar-button,
-.as-app-shell__detail-close {
+/* ── Botones de la barra (menú y buscador en móvil) ── */
+.as-app-shell__bar-button {
   display: grid;
   place-items: center;
   width: 40px;
@@ -466,144 +361,6 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
   outline-offset: 2px;
 }
 
-.as-app-shell__detail-close {
-  background: var(--as-app-chrome, #1d283a);
-  color: var(--as-app-chrome-text, #ffffff);
-}
-
-.as-app-shell__detail-close:focus-visible {
-  outline: none;
-  box-shadow: var(--as-focus-ring, 0 0 0 2px #2563eb);
-}
-
-/* ── Móvil: menú de secciones, encima de la barra ── */
-.as-app-shell__backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-}
-
-.as-app-shell__menu {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 4;
-  max-height: 100%;
-  overflow-y: auto;
-  background: var(--as-app-chrome, #1d283a);
-  color: var(--as-app-chrome-text, #ffffff);
-  box-shadow: var(--as-shadow-md, 0 4px 12px rgba(0, 0, 0, 0.2));
-  transform: translateY(100%);
-  visibility: hidden;
-  transition:
-    transform var(--as-app-shell-transition),
-    visibility 0s linear 0.2s;
-}
-
-.as-app-shell__menu--open {
-  transform: none;
-  visibility: visible;
-  transition: transform var(--as-app-shell-transition);
-}
-
-.as-app-shell__menu ul {
-  margin: 0;
-  padding: var(--as-space-2, 8px);
-  list-style: none;
-}
-
-.as-app-shell__menu-item {
-  display: flex;
-  align-items: center;
-  gap: var(--as-space-4, 16px);
-  width: 100%;
-  min-height: 48px;
-  padding: 0 var(--as-space-3, 12px);
-  border: none;
-  border-radius: var(--as-radius-sm, 4px);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: var(--as-font-weight-semibold, 600);
-  text-align: left;
-  cursor: pointer;
-}
-
-.as-app-shell__menu-item:hover,
-.as-app-shell__menu-item--active {
-  background: var(--as-app-chrome-active, rgba(255, 255, 255, 0.16));
-}
-
-.as-app-shell__menu-item:focus-visible {
-  outline: 2px solid var(--as-app-chrome-text, #ffffff);
-  outline-offset: -2px;
-}
-
-/* ── Móvil: panel de la sección, que sube desde abajo ── */
-.as-app-shell__sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  height: 60%;
-  border-radius: var(--as-radius-lg, 12px) var(--as-radius-lg, 12px) 0 0;
-  background: var(--as-app-panel-bg, light-dark(#e7e7e7, #212121));
-  box-shadow: var(--as-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
-  transform: translateY(100%);
-  visibility: hidden;
-  transition:
-    transform var(--as-app-shell-transition),
-    height var(--as-app-shell-transition),
-    visibility 0s linear 0.2s;
-}
-
-.as-app-shell__sheet--open {
-  transform: none;
-  visibility: visible;
-  transition:
-    transform var(--as-app-shell-transition),
-    height var(--as-app-shell-transition);
-}
-
-.as-app-shell__sheet--expanded {
-  height: 100%;
-  border-radius: 0;
-}
-
-.as-app-shell__handle {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 100%;
-  height: 24px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.as-app-shell__handle span {
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
-}
-
-.as-app-shell__handle:focus-visible {
-  outline: none;
-  box-shadow: inset var(--as-focus-ring, 0 0 0 2px #2563eb);
-}
-
-.as-app-shell__sheet-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
 /* ── Móvil: buscador, encima de la barra ── */
 .as-app-shell__mobile-search {
   position: absolute;
@@ -625,7 +382,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
 
 @media (prefers-reduced-motion: reduce) {
   .as-app-shell {
-    --as-app-shell-transition: 0s;
+    --as-app-transition: 0s;
   }
 }
 </style>

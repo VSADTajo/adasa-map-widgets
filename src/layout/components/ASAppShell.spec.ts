@@ -86,24 +86,20 @@ describe('ASAppShell · escritorio', () => {
       'Mapas base',
     ])
     expect(wrapper.find('.as-app-shell__main .mapa').exists()).toBe(true)
-    expect(wrapper.find('.as-app-shell__drawer').classes()).not.toContain(
-      'as-app-shell__drawer--open',
-    )
+    expect(wrapper.find('.as-app-drawer').classes()).not.toContain('as-app-drawer--open')
   })
 
   it('pulsar una sección abre su panel; pulsarla otra vez lo cierra', async () => {
     const { wrapper, activeSection } = mountShell()
     await wrapper.findAll('.as-app-rail__item')[0]!.trigger('click')
     expect(activeSection.value).toBe('capas')
-    expect(wrapper.find('.as-app-shell__drawer').classes()).toContain('as-app-shell__drawer--open')
+    expect(wrapper.find('.as-app-drawer').classes()).toContain('as-app-drawer--open')
     expect(wrapper.find('.panel').text()).toBe('Capas')
     expect(wrapper.findAll('.as-app-rail__item')[0]!.attributes('aria-pressed')).toBe('true')
 
     await wrapper.findAll('.as-app-rail__item')[0]!.trigger('click')
     expect(activeSection.value).toBeNull()
-    expect(wrapper.find('.as-app-shell__drawer').classes()).not.toContain(
-      'as-app-shell__drawer--open',
-    )
+    expect(wrapper.find('.as-app-drawer').classes()).not.toContain('as-app-drawer--open')
     // El contenido se queda mientras el panel sale (no desaparece de golpe).
     expect(wrapper.find('.panel').exists()).toBe(true)
   })
@@ -111,15 +107,15 @@ describe('ASAppShell · escritorio', () => {
   it('cambiar de sección cierra el panel y lo reabre con la nueva a los 280 ms', async () => {
     const { wrapper } = mountShell({ activeSection: 'capas' })
     await wrapper.findAll('.as-app-rail__item')[1]!.trigger('click')
-    const drawer = () => wrapper.find('.as-app-shell__drawer').classes()
-    expect(drawer()).not.toContain('as-app-shell__drawer--open')
+    const drawer = () => wrapper.find('.as-app-drawer').classes()
+    expect(drawer()).not.toContain('as-app-drawer--open')
     expect(wrapper.find('.panel').text()).toBe('Capas')
     vi.advanceTimersByTime(279)
     await nextTick()
-    expect(drawer()).not.toContain('as-app-shell__drawer--open')
+    expect(drawer()).not.toContain('as-app-drawer--open')
     vi.advanceTimersByTime(1)
     await nextTick()
-    expect(drawer()).toContain('as-app-shell__drawer--open')
+    expect(drawer()).toContain('as-app-drawer--open')
     expect(wrapper.find('.panel').text()).toBe('Avisos')
   })
 
@@ -131,21 +127,21 @@ describe('ASAppShell · escritorio', () => {
 
   it('el detalle empieza tras los menús: con el panel abierto, tras los dos', async () => {
     const { wrapper } = mountShell({ detailOpen: true })
-    const detail = () => wrapper.find('.as-app-shell__detail')
-    expect(detail().classes()).toContain('as-app-shell__detail--open')
+    const detail = () => wrapper.find('.as-app-detail-panel')
+    expect(detail().classes()).toContain('as-app-detail-panel--open')
     expect(detail().attributes('style')).toContain('left: 56px')
     await wrapper.findAll('.as-app-rail__item')[0]!.trigger('click')
     expect(detail().attributes('style')).toContain('left: 376px')
     // Abrir el panel no cierra el detalle.
-    expect(detail().classes()).toContain('as-app-shell__detail--open')
+    expect(detail().classes()).toContain('as-app-detail-panel--open')
   })
 
   it('el detalle se cierra con su botón y los paneles cerrados son inertes', async () => {
     const { wrapper, detailOpen } = mountShell({ detailOpen: true })
-    expect(wrapper.find('.as-app-shell__panel').attributes('inert')).toBeDefined()
-    await wrapper.find('.as-app-shell__detail-close').trigger('click')
+    expect(wrapper.find('.as-app-drawer__panel').attributes('inert')).toBeDefined()
+    await wrapper.find('.as-app-detail-panel__close').trigger('click')
     expect(detailOpen.value).toBe(false)
-    expect(wrapper.find('.as-app-shell__detail').attributes('inert')).toBeDefined()
+    expect(wrapper.find('.as-app-detail-panel').attributes('inert')).toBeDefined()
   })
 
   it('Escape cierra primero el detalle y después el panel', async () => {
@@ -181,29 +177,29 @@ describe('ASAppShell · móvil', () => {
     const menuButton = wrapper.find('[aria-label="Menú"]')
     await menuButton.trigger('click')
     expect(menuButton.attributes('aria-expanded')).toBe('true')
-    const items = wrapper.findAll('.as-app-shell__menu-item')
+    const items = wrapper.findAll('.as-app-mobile-menu__item')
     expect(items.map((item) => item.text())).toEqual(['Capas', 'Avisos', 'Mapas base'])
     await items[0]!.trigger('click')
     expect(activeSection.value).toBe('capas')
-    expect(wrapper.find('.as-app-shell__menu').classes()).not.toContain('as-app-shell__menu--open')
-    expect(wrapper.find('.as-app-shell__sheet').classes()).toContain('as-app-shell__sheet--open')
+    expect(wrapper.find('.as-app-mobile-menu').classes()).not.toContain('as-app-mobile-menu--open')
+    expect(wrapper.find('.as-app-bottom-sheet').classes()).toContain('as-app-bottom-sheet--open')
     expect(wrapper.find('.panel').text()).toBe('Capas (móvil)')
   })
 
   it('el asa amplía y reduce el panel, y al cerrarlo vuelve a su tamaño', async () => {
     const { wrapper, activeSection } = mountShell({ activeSection: 'capas' })
     await nextTick()
-    const handle = wrapper.find('.as-app-shell__handle')
+    const handle = wrapper.find('.as-app-bottom-sheet__handle')
     expect(handle.attributes('aria-label')).toBe('Ampliar panel')
     await handle.trigger('click')
-    expect(wrapper.find('.as-app-shell__sheet').classes()).toContain(
-      'as-app-shell__sheet--expanded',
+    expect(wrapper.find('.as-app-bottom-sheet').classes()).toContain(
+      'as-app-bottom-sheet--expanded',
     )
     expect(handle.attributes('aria-label')).toBe('Reducir panel')
     activeSection.value = null
     await nextTick()
-    expect(wrapper.find('.as-app-shell__sheet').classes()).not.toContain(
-      'as-app-shell__sheet--expanded',
+    expect(wrapper.find('.as-app-bottom-sheet').classes()).not.toContain(
+      'as-app-bottom-sheet--expanded',
     )
   })
 
@@ -212,17 +208,17 @@ describe('ASAppShell · móvil', () => {
     await nextTick()
     await wrapper.find('[aria-label="Menú"]').trigger('click')
     await wrapper.find('.as-app-shell').trigger('keydown', { key: 'Escape' })
-    expect(wrapper.find('.as-app-shell__menu').classes()).not.toContain('as-app-shell__menu--open')
+    expect(wrapper.find('.as-app-mobile-menu').classes()).not.toContain('as-app-mobile-menu--open')
     await wrapper.find('[aria-label="Menú"]').trigger('click')
-    await wrapper.find('.as-app-shell__backdrop').trigger('click')
-    expect(wrapper.find('.as-app-shell__menu').classes()).not.toContain('as-app-shell__menu--open')
+    await wrapper.find('.as-app-mobile-menu__backdrop').trigger('click')
+    expect(wrapper.find('.as-app-mobile-menu').classes()).not.toContain('as-app-mobile-menu--open')
   })
 
   it('el detalle ocupa toda la pantalla, siempre con su botón de cerrar', async () => {
     const { wrapper } = mountShell({ detailOpen: true })
     await nextTick()
-    expect(wrapper.find('.as-app-shell__detail').attributes('style')).toContain('left: 0px')
-    expect(wrapper.find('.as-app-shell__detail-close').exists()).toBe(true)
+    expect(wrapper.find('.as-app-detail-panel').attributes('style')).toContain('left: 0px')
+    expect(wrapper.find('.as-app-detail-panel__close').exists()).toBe(true)
   })
 })
 
