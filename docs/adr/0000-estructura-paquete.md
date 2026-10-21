@@ -74,12 +74,14 @@ Cada dominio tiene su `index.ts` como **única API pública** y sus tipos junto 
 | Dominio                          | Puede importar de                |
 | -------------------------------- | -------------------------------- |
 | `core`                           | nada (solo `vue` y `date-fns`)   |
-| `charts`, `table`, `forms`       | `core`                           |
+| `table`, `forms`                 | `core`                           |
+| `charts`                         | `core`, `forms`                  |
 | `map`                            | `core`, `forms`                  |
 | `detail`                         | `core`, `forms`, `charts`        |
 | `layout`                         | `core`, `forms`                  |
 
 - `map` puede usar las primitivas de `forms` (T3.3: los botones de los controles de tiempo son `ASIconButton`). `forms` no tiene dependencias externas, así que `/map` sigue sin arrastrar ningún paquete que no sea de mapas.
+- `charts` puede usar las primitivas de `forms` (la barra de herramientas usa `ASIconButton` y `ASMenu`). Como `forms` no tiene dependencias externas, `/charts` no arrastra nada que no sea de gráficas.
 - Ningún dominio importa de `map`. La integración con el mapa se hace en el proyecto, a través de props y eventos.
 - Todo lo que `detail` use de `charts` tiene que funcionar sin el motor de gráficas (p. ej. `ASSparkline` en SVG propio, tarea T1.7). Si no, importar `/detail` arrastraría ECharts.
 

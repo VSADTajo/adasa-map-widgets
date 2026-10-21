@@ -42,7 +42,7 @@ const RULES = {
     ],
   },
   './charts': {
-    domains: ['core', 'charts'],
+    domains: ['core', 'forms', 'charts'],
     packages: [
       'echarts',
       'chart.js',

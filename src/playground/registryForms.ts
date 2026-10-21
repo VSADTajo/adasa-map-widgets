@@ -8,6 +8,8 @@ import ASRadioGroup from '@/forms/components/ASRadioGroup.vue'
 import ASDatePicker from '@/forms/components/ASDatePicker.vue'
 import ASDateRangePicker from '@/forms/components/ASDateRangePicker.vue'
 import ASSearchInput from '@/forms/components/ASSearchInput.vue'
+import ASMenu from '@/forms/components/ASMenu.vue'
+import type { MenuEntry, MenuItem } from '@/forms/types/MenuProps'
 import type { DateRangePreset, DateRangePresetId } from '@/forms/types/DateRangePickerProps'
 import FormFieldDemo from './components/FormFieldDemo.vue'
 import FormsDemo from './components/FormsDemo.vue'
@@ -362,6 +364,52 @@ const SEARCH_SCHEMA: PropField[] = [
   },
 ]
 
+/** Opciones de ejemplo de ASMenu: casillas (previsiones), radios (lluvia) y una acción. */
+function demoMenuItems(): MenuEntry[] {
+  return [
+    { id: 'wrf', label: 'WRF', type: 'checkbox', checked: true },
+    { id: 'ecmwf', label: 'ECMWF', type: 'checkbox', checked: false },
+    { id: 'lisflood', label: 'LISFLOOD', type: 'checkbox', checked: false, disabled: true },
+    { type: 'separator', id: 'sep-1' },
+    { id: 'lluvia-wrf', label: 'Lluvia WRF', type: 'radio', checked: true },
+    { id: 'lluvia-ecmwf', label: 'Lluvia ECMWF', type: 'radio', checked: false },
+    { type: 'separator', id: 'sep-2' },
+    { id: 'restablecer', label: 'Restablecer selección', description: 'Vuelve a solo WRF' },
+  ]
+}
+
+const MENU_SCHEMA: PropField[] = [
+  { key: 'label', label: 'Texto / nombre accesible', type: 'string', default: 'Previsiones' },
+  iconField('icon', 'Icono', 'filtro'),
+  { key: 'iconOnly', label: 'Solo icono', type: 'boolean', default: false },
+  {
+    key: 'badge',
+    label: 'Contador',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se calcula aquí con las casillas marcadas.',
+  },
+  {
+    key: 'variant',
+    label: 'Variante',
+    type: 'select',
+    options: VARIANT_OPTIONS,
+    default: 'secondary',
+  },
+  SIZE_FIELD,
+  { key: 'active', label: 'Activo', type: 'boolean', default: false },
+  { key: 'disabled', label: 'Deshabilitado', type: 'boolean', default: false },
+  { key: 'disabledReason', label: 'Motivo (deshabilitado)', type: 'string', default: '' },
+  {
+    key: 'align',
+    label: 'Alineación del menú',
+    type: 'select',
+    options: ['start', 'end'],
+    default: 'start',
+  },
+  THEME_FIELD,
+]
+
 export const formsEntries: RegistryEntry[] = [
   {
     id: 'as-forms-demo',
@@ -574,6 +622,59 @@ export const formsEntries: RegistryEntry[] = [
     }),
     component: ASRadioGroup,
     bindings: modelBindings(),
+  },
+  {
+    id: 'as-menu',
+    name: 'ASMenu',
+    category: 'forms',
+    description:
+      'Botón que despliega un menú de acciones, casillas (el menú sigue abierto) y radios (cierra el menú). Patrón "menu button" de WAI-ARIA.',
+    propsSchema: MENU_SCHEMA,
+    events: [
+      {
+        name: 'select',
+        payload: 'MenuItem',
+        description: 'Opción elegida; el padre actualiza su checked.',
+      },
+      { name: 'open', description: 'Se abrió el menú.' },
+      { name: 'close', description: 'Se cerró el menú.' },
+    ],
+    staticProps: { items: demoMenuItems() },
+    toProps: (values) => {
+      const props = formsToProps(['icon'], false, 300)(values)
+      const items = values.items as MenuEntry[]
+      if (props.badge === undefined) {
+        props.badge = items.filter((i) => i.type === 'checkbox' && i.checked).length
+      }
+      return props
+    },
+    toSnippet: formsToSnippet('ASMenu', MENU_SCHEMA, {
+      iconKeys: ['icon'],
+      extra: [':items="opciones"', '@select="elegir"'],
+    }),
+    notes:
+      'Las casillas y los radios son controlados: el ejemplo actualiza su checked al recibir select. Teclado: ↓/↑ abren y recorren (saltan LISFLOOD, deshabilitada), Inicio/Fin, una letra salta a la opción, Intro o Espacio eligen, Escape cierra.',
+    component: ASMenu,
+    bindings: (values, log) => ({
+      onSelect: (selected) => {
+        const item = selected as MenuItem
+        log('select', item.id)
+        const items = values.items as MenuEntry[]
+        if (item.id === 'restablecer') {
+          values.items = demoMenuItems()
+        } else if (item.type === 'checkbox') {
+          values.items = items.map((i) =>
+            i.id === item.id && i.type === 'checkbox' ? { ...i, checked: !i.checked } : i,
+          )
+        } else if (item.type === 'radio') {
+          values.items = items.map((i) =>
+            i.type === 'radio' ? { ...i, checked: i.id === item.id } : i,
+          )
+        }
+      },
+      onOpen: () => log('open'),
+      onClose: () => log('close'),
+    }),
   },
   {
     id: 'as-form-field',

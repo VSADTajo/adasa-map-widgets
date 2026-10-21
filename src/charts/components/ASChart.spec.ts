@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { provideLocale } from '@/core/composables/useLocale'
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
-import type { ChartExposed, ChartProps } from '@/charts/types/chart'
+import type { ChartExposed, ChartProps, ChartToolbarItem } from '@/charts/types/chart'
 import ASChart from './ASChart.vue'
 
 /**
@@ -206,8 +206,11 @@ describe('ASChart', () => {
 })
 
 describe('ASChart · barra de herramientas', () => {
+  /** Nombres accesibles de los botones de la barra, en orden. */
   const tools = (wrapper: ReturnType<typeof mount>) =>
-    wrapper.findAll('.as-chart__tool').map((button) => button.text())
+    wrapper
+      .findAll('.as-chart__toolbar button')
+      .map((button) => button.attributes('aria-label') ?? button.text())
 
   /** Captura las descargas (el clic en el enlace temporal) sin navegar. */
   function captureDownloads() {
@@ -223,57 +226,86 @@ describe('ASChart · barra de herramientas', () => {
       reader.readAsArrayBuffer(blob)
     })
 
+  /** Abre el menú de descargas y devuelve sus opciones. */
+  async function downloadMenu(wrapper: ReturnType<typeof mount>) {
+    await wrapper.find('button[aria-label="Descargar la gráfica"]').trigger('click')
+    return wrapper.findAll('[role="menu"] [role="menuitem"]')
+  }
+
   it('por defecto no hay barra; con zoom, solo "Restablecer zoom"', () => {
     expect(mount(ASChart, { props: { series } }).find('.as-chart__toolbar').exists()).toBe(false)
     expect(tools(mount(ASChart, { props: { series, zoom: true } }))).toEqual(['Restablecer zoom'])
   })
 
-  it('toolbar muestra PNG, SVG y CSV (y "Restablecer zoom" con zoom), con nombres accesibles', () => {
+  it('toolbar: iconos con nombre accesible y las descargas en un menú', async () => {
     const wrapper = mount(ASChart, { props: { series, toolbar: true, zoom: true } })
-    expect(tools(wrapper)).toEqual(['Restablecer zoom', 'PNG', 'SVG', 'CSV'])
-    expect(
-      wrapper.findAll('.as-chart__tool').map((button) => button.attributes('aria-label')),
-    ).toEqual([undefined, 'Descargar imagen PNG', 'Descargar imagen SVG', 'Descargar datos CSV'])
+    expect(tools(wrapper)).toEqual(['Restablecer zoom', 'Descargar la gráfica'])
+    expect(wrapper.find('button[aria-label="Restablecer zoom"]').attributes('title')).toBe(
+      'Restablecer zoom',
+    )
+    const items = await downloadMenu(wrapper)
+    expect(items.map((item) => item.text())).toEqual([
+      'Descargar imagen PNG',
+      'Descargar imagen SVG',
+      'Descargar datos CSV',
+    ])
   })
 
-  it('toolbar: false la oculta aunque haya zoom; un objeto elige las acciones', () => {
+  it('downloadMenu: false, un botón por formato', () => {
+    const wrapper = mount(ASChart, { props: { series, toolbar: { downloadMenu: false } } })
+    expect(tools(wrapper)).toEqual([
+      'Descargar imagen PNG',
+      'Descargar imagen SVG',
+      'Descargar datos CSV',
+    ])
+    expect(wrapper.findAll('.as-chart__toolbar button').map((b) => b.text())).toEqual([
+      'PNG',
+      'SVG',
+      'CSV',
+    ])
+  })
+
+  it('toolbar: false la oculta aunque haya zoom; un objeto elige las acciones', async () => {
     expect(
       mount(ASChart, { props: { series, toolbar: false, zoom: true } })
         .find('.as-chart__toolbar')
         .exists(),
     ).toBe(false)
-    const custom = { resetZoom: false, svg: false }
-    expect(tools(mount(ASChart, { props: { series, zoom: true, toolbar: custom } }))).toEqual([
-      'PNG',
-      'CSV',
+    const custom = mount(ASChart, {
+      props: { series, zoom: true, toolbar: { resetZoom: false, svg: false } },
+    })
+    expect((await downloadMenu(custom)).map((item) => item.text())).toEqual([
+      'Descargar imagen PNG',
+      'Descargar datos CSV',
     ])
     // `download` (obsoleto) sigue controlando el PNG.
-    expect(tools(mount(ASChart, { props: { series, toolbar: { download: false } } }))).toEqual([
-      'SVG',
-      'CSV',
+    const legacy = mount(ASChart, { props: { series, toolbar: { download: false } } })
+    expect((await downloadMenu(legacy)).map((item) => item.text())).toEqual([
+      'Descargar imagen SVG',
+      'Descargar datos CSV',
     ])
   })
 
   it('"Restablecer zoom" llama al motor', async () => {
     const wrapper = mount(ASChart, { props: { series, zoom: true } })
     await flushPromises()
-    await wrapper.find('.as-chart__tool').trigger('click')
+    await wrapper.find('button[aria-label="Restablecer zoom"]').trigger('click')
     expect(engine.resetZoom).toHaveBeenCalledOnce()
   })
 
   it('PNG y SVG descargan la imagen del motor como grafica.png / grafica.svg', async () => {
     const downloads = captureDownloads()
-    const wrapper = mount(ASChart, { props: { series, toolbar: true } })
+    const wrapper = mount(ASChart, { props: { series, toolbar: true }, attachTo: document.body })
     await flushPromises()
-    const [png, svg] = wrapper.findAll('.as-chart__tool')
-    await png!.trigger('click')
-    await svg!.trigger('click')
+    await (await downloadMenu(wrapper))[0]!.trigger('click')
+    await (await downloadMenu(wrapper))[1]!.trigger('click')
     await flushPromises()
     expect(engine.exportImage.mock.calls).toEqual([['png'], ['svg']])
     expect(downloads().map((link) => [link.download, link.href])).toEqual([
       ['grafica.png', 'data:image/png;base64,x'],
       ['grafica.svg', 'data:image/svg+xml,x'],
     ])
+    wrapper.unmount()
   })
 
   it('CSV descarga los datos con BOM (para Excel) y el nombre de `fileName`', async () => {
@@ -284,9 +316,11 @@ describe('ASChart · barra de herramientas', () => {
       return 'blob:csv'
     })
     URL.revokeObjectURL = vi.fn()
-    const wrapper = mount(ASChart, { props: { series, toolbar: true, fileName: 'caudal' } })
+    const wrapper = mount(ASChart, {
+      props: { series, toolbar: { downloadMenu: false }, fileName: 'caudal' },
+    })
     await flushPromises()
-    await wrapper.findAll('.as-chart__tool')[2]!.trigger('click')
+    await wrapper.find('button[aria-label="Descargar datos CSV"]').trigger('click')
     expect(downloads()[0]!.download).toBe('caudal.csv')
     expect(blobs[0]!.type).toBe('text/csv;charset=utf-8')
     const bytes = new Uint8Array(await readBlob(blobs[0]!))
@@ -309,16 +343,147 @@ describe('ASChart · barra de herramientas', () => {
     document.exitFullscreen = vi.fn(async () => setFullscreen(null))
     const wrapper = mount(ASChart, { props: { series, toolbar: true } })
     await flushPromises()
-    const button = () => wrapper.findAll('.as-chart__tool').at(-1)!
-    expect(button().text()).toBe('Pantalla completa')
+    const button = () => wrapper.findAll('.as-chart__toolbar button').at(-1)!
+    expect(button().attributes('aria-label')).toBe('Pantalla completa')
     await button().trigger('click')
     await flushPromises()
     expect(wrapper.classes()).toContain('as-chart--fullscreen')
-    expect(button().text()).toBe('Salir de pantalla completa')
+    expect(button().attributes('aria-label')).toBe('Salir de pantalla completa')
     await button().trigger('click')
     await flushPromises()
     expect(wrapper.classes()).not.toContain('as-chart--fullscreen')
     Object.defineProperty(document, 'fullscreenEnabled', { value: undefined, configurable: true })
+  })
+
+  describe('elementos propios (toolbar.items)', () => {
+    const items: ChartToolbarItem[] = [
+      { type: 'chip', id: 'sim', label: '19/10 06:00', tone: 'primary' },
+      {
+        type: 'info',
+        id: 'avenida',
+        label: 'Avenida',
+        values: [
+          { label: 'Caudal máximo', value: 123.456, unit: 'm³/s' },
+          { label: 'Volumen', value: 1.2345, unit: 'hm³' },
+        ],
+      },
+      { type: 'button', id: 'simulaciones', label: 'Elegir simulación', icon: 'M0 0' },
+      {
+        type: 'select',
+        id: 'proveedores',
+        label: 'Proveedores',
+        icon: 'M0 0',
+        multiple: true,
+        selectAll: true,
+        showCount: true,
+        value: ['wrf'],
+        options: [
+          { value: 'wrf', label: 'WRF' },
+          { value: 'ecmwf', label: 'ECMWF' },
+          { value: 'lisflood', label: 'LISFLOOD', disabled: true },
+        ],
+      },
+      {
+        type: 'select',
+        id: 'lluvia',
+        label: 'Lluvia',
+        value: 'wrf',
+        showCount: true,
+        options: [
+          { value: 'wrf', label: 'WRF' },
+          { value: 'ecmwf', label: 'ECMWF' },
+        ],
+      },
+      {
+        type: 'menu',
+        id: 'percentiles',
+        label: 'Percentiles',
+        icon: 'M0 0',
+        items: [
+          { id: 'caudal', label: 'Caudales', pressed: true },
+          { id: 'volumen', label: 'Volúmenes', pressed: false },
+        ],
+      },
+    ]
+    const mountItems = () =>
+      mount(ASChart, {
+        props: { series, toolbar: { items, png: false, svg: false, csv: false } },
+        attachTo: document.body,
+      })
+    const text = (element: { text(): string }) => element.text().replace(/\s+/g, ' ')
+
+    it('etiqueta y datos destacados, formateados con el idioma', () => {
+      const wrapper = mountItems()
+      expect(wrapper.find('.as-chart-tools__chip--primary').text()).toBe('19/10 06:00')
+      expect(text(wrapper.find('.as-chart-tools__info'))).toBe(
+        'Avenida Caudal máximo: 123,46 m³/s Volumen: 1,23 hm³',
+      )
+      wrapper.unmount()
+    })
+
+    it('botón: emite toolbar-action con su id', async () => {
+      const wrapper = mountItems()
+      await wrapper.find('button[aria-label="Elegir simulación"]').trigger('click')
+      expect(wrapper.emitted('toolbar-action')).toEqual([[{ id: 'simulaciones' }]])
+      wrapper.unmount()
+    })
+
+    it('select múltiple: contador, "Todas" y el valor nuevo en el orden de las opciones', async () => {
+      const wrapper = mountItems()
+      const trigger = wrapper.find('button[aria-label="Proveedores"]')
+      expect(trigger.text()).toBe('1')
+      await trigger.trigger('click')
+      const options = () =>
+        wrapper.findAll('[role="menu"]')[0]!.findAll('[role="menuitemcheckbox"]')
+      expect(options().map((o) => o.text())).toEqual(['Todas', 'WRF', 'ECMWF', 'LISFLOOD'])
+      expect(options()[0]!.attributes('aria-checked')).toBe('false')
+      await options()[2]!.trigger('click')
+      expect(wrapper.emitted('toolbar-change')!.at(-1)).toEqual([
+        { id: 'proveedores', value: ['wrf', 'ecmwf'] },
+      ])
+      // "Todas" marca las habilitadas (LISFLOOD no).
+      await options()[0]!.trigger('click')
+      expect(wrapper.emitted('toolbar-change')!.at(-1)).toEqual([
+        { id: 'proveedores', value: ['wrf', 'ecmwf'] },
+      ])
+      wrapper.unmount()
+    })
+
+    it('select único: radios y el valor elegido en el botón', async () => {
+      const wrapper = mountItems()
+      const trigger = wrapper
+        .findAll('.as-chart__toolbar button')
+        .find((b) => b.text().includes('Lluvia'))!
+      expect(text(trigger)).toBe('Lluvia WRF')
+      await trigger.trigger('click')
+      await wrapper.findAll('[role="menuitemradio"]')[1]!.trigger('click')
+      expect(wrapper.emitted('toolbar-change')!.at(-1)).toEqual([{ id: 'lluvia', value: 'ecmwf' }])
+      wrapper.unmount()
+    })
+
+    it('menú: opciones marcadas con pressed y toolbar-action con el itemId', async () => {
+      const wrapper = mountItems()
+      await wrapper.find('button[aria-label="Percentiles"]').trigger('click')
+      const options = wrapper.findAll('[role="menu"]').at(-1)!.findAll('[role="menuitemcheckbox"]')
+      expect(options.map((o) => o.attributes('aria-checked'))).toEqual(['true', 'false'])
+      await options[1]!.trigger('click')
+      expect(wrapper.emitted('toolbar-action')).toEqual([
+        [{ id: 'percentiles', itemId: 'volumen' }],
+      ])
+      wrapper.unmount()
+    })
+
+    it('slots toolbar-start y toolbar-end para contenido propio', () => {
+      const wrapper = mount(ASChart, {
+        props: { series, toolbar: { png: false, svg: false, csv: false } },
+        slots: {
+          'toolbar-start': '<span class="mio">A</span>',
+          'toolbar-end': '<span class="fin">B</span>',
+        },
+      })
+      expect(wrapper.find('.as-chart__toolbar-start .mio').exists()).toBe(true)
+      expect(wrapper.find('.as-chart__toolbar-end .fin').exists()).toBe(true)
+    })
   })
 
   it('expone exportImage y exportData para usarlos desde fuera', async () => {

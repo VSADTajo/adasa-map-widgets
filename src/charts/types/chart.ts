@@ -171,6 +171,116 @@ export interface ChartToolbarConfig {
   fullscreen?: boolean
   /** @deprecated Usa `png`. Se mantiene por compatibilidad: `download: false` oculta el PNG. */
   download?: boolean
+  /**
+   * Agrupa las descargas (PNG, SVG, CSV) en un menú "Descargar". Con
+   * `false`, un botón por formato.
+   * @default true
+   */
+  downloadMenu?: boolean
+  /**
+   * Elementos propios del proyecto (botones, selectores, menús, textos), a
+   * la izquierda de los de la librería. Son controlados: la barra emite
+   * `toolbar-action` y `toolbar-change`, y el proyecto actualiza los items.
+   */
+  items?: ChartToolbarItem[]
+}
+
+/** Datos comunes de los elementos de la barra que se pueden pulsar. */
+interface ChartToolbarControl {
+  /** Identificador único en la barra: vuelve en los eventos. */
+  id: string
+  /** Texto, o nombre accesible y tooltip si lleva `icon`. */
+  label: string
+  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). Con él, el botón es solo icono. */
+  icon?: string
+  disabled?: boolean
+  /** Por qué está deshabilitado (tooltip). */
+  disabledReason?: string
+}
+
+/** Botón: emite `toolbar-action` con su `id`. Con `pressed`, es un interruptor. */
+export interface ChartToolbarButton extends ChartToolbarControl {
+  type: 'button'
+  pressed?: boolean
+}
+
+/** Opción de un `ChartToolbarSelect`. */
+export interface ChartToolbarOption {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+/**
+ * Selector: menú de casillas (`multiple`) o de radios. Emite
+ * `toolbar-change` con el valor nuevo.
+ */
+export interface ChartToolbarSelect extends ChartToolbarControl {
+  type: 'select'
+  options: ChartToolbarOption[]
+  /** Valor elegido: un array con `multiple`. */
+  value: string | string[]
+  multiple?: boolean
+  /** Con `multiple`, una opción "Todas" que marca o desmarca todas. */
+  selectAll?: boolean
+  /** Muestra en el botón cuántas opciones hay marcadas (o la elegida, sin `multiple`). */
+  showCount?: boolean
+}
+
+/** Opción de un `ChartToolbarMenu`. */
+export interface ChartToolbarMenuItem {
+  id: string
+  label: string
+  icon?: string
+  description?: string
+  /** Si se pasa, la opción es una casilla marcada o no (p. ej. "Percentiles de caudal"). */
+  pressed?: boolean
+  disabled?: boolean
+}
+
+/** Menú de acciones: emite `toolbar-action` con su `id` y el `itemId` elegido. */
+export interface ChartToolbarMenu extends ChartToolbarControl {
+  type: 'menu'
+  items: ChartToolbarMenuItem[]
+}
+
+/** Etiqueta informativa (p. ej. la fecha de la simulación que se muestra). */
+export interface ChartToolbarChip {
+  type: 'chip'
+  id: string
+  label: string
+  /**
+   * `primary` destaca la etiqueta con el color principal.
+   * @default 'neutral'
+   */
+  tone?: 'neutral' | 'primary'
+}
+
+/** Datos destacados: pares etiqueta/valor, formateados con el idioma activo. */
+export interface ChartToolbarInfo {
+  type: 'info'
+  id: string
+  /** Título del grupo (p. ej. "Avenida"). */
+  label?: string
+  values: { label: string; value: number | null; unit?: string }[]
+}
+
+/** Elemento propio de la barra de herramientas. */
+export type ChartToolbarItem =
+  ChartToolbarButton | ChartToolbarSelect | ChartToolbarMenu | ChartToolbarChip | ChartToolbarInfo
+
+/** Evento `toolbar-action`: botón pulsado u opción de menú elegida. */
+export interface ChartToolbarActionEvent {
+  /** `id` del elemento de la barra. */
+  id: string
+  /** En un menú, `id` de la opción elegida. */
+  itemId?: string
+}
+
+/** Evento `toolbar-change`: valor nuevo de un selector. */
+export interface ChartToolbarChangeEvent {
+  id: string
+  value: string | string[]
 }
 
 /** Formato de `exportImage()`. */
@@ -342,4 +452,8 @@ export interface ChartEmits {
   'time-select': [event: { time: Date }]
   /** Para `v-model:current-time`: el instante elegido con un click. */
   'update:currentTime': [time: Date]
+  /** Se pulsó un botón propio de la barra o una opción de un menú propio (`toolbar.items`). */
+  'toolbar-action': [event: ChartToolbarActionEvent]
+  /** Cambió el valor de un selector propio de la barra (`toolbar.items`). */
+  'toolbar-change': [event: ChartToolbarChangeEvent]
 }

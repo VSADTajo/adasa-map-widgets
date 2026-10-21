@@ -24,6 +24,8 @@ import { basemapExamples } from './utils/basemapExamples'
 import ASChart from '@/charts/components/ASChart.vue'
 import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import AppShellDemo from './components/AppShellDemo.vue'
+import HydrographToolbarDemo from './components/HydrographToolbarDemo.vue'
+import { hydrographToolbarExample } from './utils/chartToolbarExample'
 import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
 import { formsEntries } from './registryForms'
 import { mapCodeExamples } from './utils/mapCodeExamples'
@@ -251,7 +253,7 @@ const CHART_INTERACTION_FIELDS: PropField[] = [
     type: 'boolean',
     default: true,
     description:
-      'Descargar PNG, SVG y CSV, pantalla completa y, con zoom, restablecer zoom. Sin ella, solo aparece "Restablecer zoom" si hay zoom. Lo mismo se puede hacer desde fuera con exportImage(), exportData() y toggleFullscreen().',
+      'Iconos para restablecer zoom (con zoom) y pantalla completa, y un menú "Descargar" con PNG, SVG y CSV. Admite elementos propios (toolbar.items): ver "ASHydrographChart: barra a medida". Sin ella, solo aparece "Restablecer zoom" si hay zoom. También desde fuera: exportImage(), exportData() y toggleFullscreen().',
   },
   {
     key: 'fileName',
@@ -1580,6 +1582,61 @@ export const registry: RegistryEntry[] = [
     notes:
       'Servidor GeoServer público de demostración (ahocevar.com): polígonos reales de los estados de EE. UU. (`topp:states`), limitado a 50 features. Este ejemplo concreto no pasa `editable: true`, así que no emite `feature-selected` (pruébalo en el "Compositor sobre mapa" añadiendo `editable: true` a la config si quieres verlo). Depende de un servidor de terceros — si está caído, verás `layer-error`. Si el servidor es GeoServer (como en este ejemplo), en vez de construir `url`/`typeName` a mano puedes usar el helper `geoServerLayer({ url, workspace, layer, mode: \'wfs\' })` — es justo como se construyó el ejemplo "GeoServer: topp:states" de las capas de ejemplo del compositor.',
   }),
+  {
+    id: 'as-hydrograph-toolbar',
+    name: 'ASHydrographChart: barra a medida',
+    category: 'charts',
+    description:
+      'El hidrograma con la barra de un visor de embalses: simulación elegida, datos de la avenida, fuente de la lluvia, y sus acciones propias (previsiones, percentiles y enfocar umbral) más las descargas.',
+    propsSchema: [
+      {
+        key: 'chartLibrary',
+        label: 'Motor',
+        type: 'select',
+        options: ['echarts', 'chartjs', 'apexcharts'],
+        default: 'echarts',
+        description: 'La barra es la misma con los tres motores: es HTML de la librería.',
+      },
+      THEME_FIELD,
+    ],
+    events: [
+      {
+        name: 'toolbar-action',
+        payload: '{ id, itemId? }',
+        description: 'Botón propio pulsado u opción de un menú propio.',
+      },
+      {
+        name: 'toolbar-change',
+        payload: '{ id, value }',
+        description: 'Valor nuevo de un selector propio (aquí, la lluvia).',
+      },
+      {
+        name: 'update:visibleForecasts',
+        payload: 'string[]',
+        description: 'Selector de previsiones del hidrograma.',
+      },
+      { name: 'update:bands', payload: 'HydroBand[]', description: 'Botón de percentiles.' },
+      {
+        name: 'threshold-focus',
+        payload: 'HydroThreshold | null',
+        description: 'Enfocar umbral: el enfocado, o null al volver a todos.',
+      },
+    ],
+    toProps: (values) =>
+      Object.fromEntries(Object.entries(values).filter(([, value]) => value !== '')),
+    toSnippet: () => hydrographToolbarExample.code,
+    examples: [hydrographToolbarExample],
+    notes:
+      'Prueba: cambia de simulación (el chip), elige la lluvia (los datos de la avenida se recalculan), oculta una previsión (las demás no cambian de color), oculta los percentiles y pulsa "Enfocar umbral" varias veces. Todo se maneja con el teclado: Tab hasta un botón, ↓ abre los menús.',
+    component: HydrographToolbarDemo,
+    bindings: (_values, log) => ({
+      onToolbarAction: (event) => log('toolbar-action', event),
+      onToolbarChange: (event) => log('toolbar-change', event),
+      'onUpdate:visibleForecasts': (ids) => log('update:visibleForecasts', ids),
+      'onUpdate:bands': (bands) => log('update:bands', bands),
+      onThresholdFocus: (threshold) => log('threshold-focus', threshold),
+    }),
+  },
   {
     id: 'as-app-shell',
     name: 'ASAppShell',
