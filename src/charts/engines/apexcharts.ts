@@ -235,7 +235,11 @@ export function toApexOptions(
       stroke: {
         width: panelSeries.map((s) => (s.type === 'range' || s.type === 'bar' ? 0 : s.lineWidth)),
         dashArray: panelSeries.map((s) => DASH[s.lineStyle]),
-        curve: panelSeries.map((s) => (s.step ? 'stepline' : 'straight')),
+        // 'linestep' sube en el punto anterior y sigue en horizontal (el valor ocupa el tramo que
+        // termina en su punto, como `step: 'start'`); 'stepline', al revés.
+        curve: panelSeries.map((s) =>
+          s.step === 'start' ? 'linestep' : s.step ? 'stepline' : 'straight',
+        ),
       },
       // Con `patterns`, los rellenos son la tesela del patrón (con la opacidad ya en ella).
       fill: {

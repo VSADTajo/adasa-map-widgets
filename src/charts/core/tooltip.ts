@@ -20,6 +20,7 @@ export interface TooltipRow {
 function nearestIndex(
   points: readonly (readonly [number | string, ...unknown[]])[],
   x: number | string,
+  step: false | 'start' | 'middle' | 'end' = false,
 ): number {
   if (points.length === 0) return -1
   if (typeof x === 'string' || typeof points[0]![0] === 'string') {
@@ -33,10 +34,19 @@ function nearestIndex(
     if (at(mid) < x) low = mid + 1
     else high = mid
   }
-  const best = low > 0 && Math.abs(at(low - 1) - x) <= Math.abs(at(low) - x) ? low - 1 : low
   // Con un solo punto no hay paso de muestreo: solo vale el instante exacto.
-  const step = points.length > 1 ? Math.abs(at(1) - at(0)) : 0
-  return Math.abs(at(best) - x) <= step / 2 ? best : -1
+  const spacing = points.length > 1 ? Math.abs(at(1) - at(0)) : 0
+  // En una línea escalonada, el valor bajo el cursor es el del escalón que
+  // lo cubre: con `'start'` (cada valor ocupa el tramo que termina en su
+  // punto, como la lluvia de un intervalo) el primer punto en o tras `x`; con
+  // `'end'`, el último en o antes de `x`.
+  if (step === 'start') return at(low) >= x && at(low) - x <= spacing ? low : -1
+  if (step === 'end') {
+    const previous = at(low) <= x ? low : low - 1
+    return previous >= 0 && x - at(previous) <= spacing ? previous : -1
+  }
+  const best = low > 0 && Math.abs(at(low - 1) - x) <= Math.abs(at(low) - x) ? low - 1 : low
+  return Math.abs(at(best) - x) <= spacing / 2 ? best : -1
 }
 
 function rowFor(
@@ -56,7 +66,7 @@ function rowFor(
       text: `${axis.formatValue(point[1])} – ${axis.formatValue(point[2])}`,
     }
   }
-  const index = nearestIndex(series.points, x)
+  const index = nearestIndex(series.points, x, series.step)
   const value = series.points[index]?.[1]
   if (value === undefined || value === null) return null
   return {

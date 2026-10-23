@@ -386,3 +386,25 @@ describe('degradado de un área en los tres motores', () => {
     expect(fill.gradient).toMatchObject({ type: 'vertical', opacityFrom: [0.6], opacityTo: [0.1] })
   })
 })
+
+describe('escalones en ApexCharts', () => {
+  it("step 'start' es 'linestep' (sube en el punto anterior) y el resto, 'stepline'", () => {
+    const stepped = resolveSpec(
+      {
+        series: (['start', 'end'] as const).map((step) => ({
+          id: step,
+          name: step,
+          type: 'line' as const,
+          data: points(1, 2),
+          step,
+        })),
+      },
+      fakeTokens(),
+      fakeLocale,
+    )
+    expect((toApexOptions(stepped, [400], 'g')[0] as Any).stroke.curve).toEqual([
+      'linestep',
+      'stepline',
+    ])
+  })
+})

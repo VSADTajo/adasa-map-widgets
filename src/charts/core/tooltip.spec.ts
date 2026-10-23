@@ -74,3 +74,50 @@ describe("tooltipHtml · solo la fecha (tooltip: 'time')", () => {
     expect(html).not.toContain('m³/s')
   })
 })
+
+describe('tooltipRows · series escalonadas', () => {
+  const stepped = (step: 'start' | 'end') =>
+    resolveSpec(
+      {
+        series: [
+          {
+            id: 'p',
+            name: 'Lluvia',
+            type: 'area',
+            step,
+            data: [
+              [at(0), 1],
+              [at(1), 5],
+              [at(2), 3],
+            ],
+          },
+        ],
+      },
+      fakeTokens(),
+      fakeLocale,
+    )
+  const valueAt = (step: 'start' | 'end', hours: number) =>
+    tooltipRows(stepped(step), at(0).getTime() + hours * HOUR)[0]?.text
+
+  it.each([
+    [0.1, '5'],
+    [0.9, '5'],
+    [1, '5'],
+    [1.5, '3'],
+  ])("step 'start': a las %s h, el valor del escalón que termina después (%s)", (hours, text) => {
+    expect(valueAt('start', hours)).toBe(text)
+  })
+
+  it.each([
+    [0.1, '1'],
+    [0.9, '1'],
+    [1.5, '5'],
+  ])("step 'end': a las %s h, el valor del escalón que empieza antes (%s)", (hours, text) => {
+    expect(valueAt('end', hours)).toBe(text)
+  })
+
+  it('fuera de los datos, sin valor', () => {
+    expect(valueAt('start', 3.5)).toBeUndefined()
+    expect(valueAt('end', -0.5)).toBeUndefined()
+  })
+})
