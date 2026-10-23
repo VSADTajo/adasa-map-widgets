@@ -527,14 +527,21 @@ export const PRECIPITATION_SERIES_DOC: TypeDoc = {
     {
       key: 'display',
       type: "'line' | 'area' | 'bar'",
-      default: "'line' / 'area'",
-      description: 'Línea en observado y área en previsto, por defecto.',
+      default: "'bar'",
+      description:
+        'En columnas que ocupan su intervalo (cada serie con su ancho), en línea o en área.',
     },
     {
       key: 'style',
       type: 'HydroLineStyle',
       default: "{ width: 2, type: 'solid' / 'dashed' }",
       description: 'Color, grosor y trazo.',
+    },
+    {
+      key: 'opacity',
+      type: 'number',
+      default: '0.85 / 0.5',
+      description: 'Opacidad del relleno: observadas casi opacas y previstas semitransparentes.',
     },
     {
       key: 'gradient',

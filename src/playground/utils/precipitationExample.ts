@@ -61,27 +61,41 @@ export const DEMO_PRECIPITATION_THRESHOLDS: PrecipitationThreshold[] = [
   { value: 60, level: 'naranja', axis: 'cumulative', label: '60 mm acumulados' },
 ]
 
+/** Previsiones del ejemplo: cada una con su color (y su acumulado, del mismo color). */
+const FORECASTS = [
+  { id: 'WRF', label: 'WRF (3 días)', color: '#FFA500' },
+  { id: 'ECMWF', label: 'ECMWF (7 días)', color: '#05a873' },
+] as const
+
+const DISPLAYS = ['bar', 'line', 'area']
+
 /** Campos del formulario: qué series hay, sus acumulados y cómo se dibujan. */
 export const PRECIPITATION_FIELDS: PropField[] = [
   {
-    key: 'provider',
-    label: 'Modelo de previsión',
-    type: 'select',
-    options: ['WRF', 'ECMWF'],
-    default: 'WRF',
-    playgroundOnly: true,
-    description: 'También desde el selector de la barra (toolbar.items + toolbar-change).',
-  },
-  {
     key: 'showTelemetry',
-    label: "P. TR (input: 'intensity', cada 10 min)",
+    label: "Observado: P. TR (input: 'intensity', cada 10 min)",
     type: 'boolean',
     default: true,
     playgroundOnly: true,
   },
   {
     key: 'showAreal',
-    label: "P. Areal (input: 'depth', horaria)",
+    label: "Observado: P. Areal (input: 'depth', horaria)",
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+  },
+  {
+    key: 'showWRF',
+    label: 'Previsión: WRF (horaria, 3 días)',
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+    description: 'Las previsiones también se eligen en la barra (selector múltiple).',
+  },
+  {
+    key: 'showECMWF',
+    label: 'Previsión: ECMWF (cada 3 h, 7 días)',
     type: 'boolean',
     default: true,
     playgroundOnly: true,
@@ -102,14 +116,14 @@ export const PRECIPITATION_FIELDS: PropField[] = [
   },
   {
     key: 'forecastCumulative',
-    label: 'Acumulado de la previsión',
+    label: 'Acumulado de cada previsión',
     type: 'boolean',
     default: true,
     playgroundOnly: true,
   },
   {
     key: 'continueObserved',
-    label: 'La previsión continúa el observado',
+    label: 'Las previsiones continúan el observado',
     type: 'boolean',
     default: true,
     playgroundOnly: true,
@@ -117,16 +131,25 @@ export const PRECIPITATION_FIELDS: PropField[] = [
       'cumulative.continueFrom: por defecto, el primer observado con acumulado; false, desde 0.',
   },
   {
-    key: 'forecastDisplay',
-    label: 'Previsión: dibujo (display)',
+    key: 'observedDisplay',
+    label: 'Observados: dibujo (display)',
     type: 'select',
-    options: ['area', 'line', 'bar'],
-    default: 'area',
+    options: DISPLAYS,
+    default: 'bar',
     playgroundOnly: true,
   },
   {
+    key: 'forecastDisplay',
+    label: 'Previsiones: dibujo (display)',
+    type: 'select',
+    options: DISPLAYS,
+    default: 'bar',
+    playgroundOnly: true,
+    description: 'En columnas, semitransparentes; en área, con degradado.',
+  },
+  {
     key: 'forecastGradient',
-    label: 'Previsión: degradado (gradient)',
+    label: 'Previsiones en área: degradado (gradient)',
     type: 'boolean',
     default: true,
     playgroundOnly: true,
@@ -140,9 +163,13 @@ export const PRECIPITATION_FIELDS: PropField[] = [
   },
 ]
 
-/** Las series del ejemplo según el formulario. */
+/** Ids de las previsiones visibles según el formulario. */
+const visibleForecasts = (values: Values) =>
+  FORECASTS.filter((forecast) => values[`show${forecast.id}`]).map((forecast) => forecast.id)
+
+/** Las series del ejemplo según el formulario: dos observados y dos previsiones. */
 export function precipitationSeries(values: Values): PrecipitationSeries[] {
-  const provider = String(values.provider || 'WRF')
+  const observedDisplay = values.observedDisplay as PrecipitationSeries['display']
   return [
     ...(values.showTelemetry
       ? [
@@ -152,6 +179,7 @@ export function precipitationSeries(values: Values): PrecipitationSeries[] {
             values: DEMO_TELEMETRY,
             input: 'intensity' as const,
             intervalMinutes: 10,
+            display: observedDisplay,
             style: { color: '#0066CC' },
             cumulative: Boolean(values.telemetryCumulative),
           },
@@ -163,31 +191,32 @@ export function precipitationSeries(values: Values): PrecipitationSeries[] {
             id: 'areal',
             name: 'P. Areal',
             values: DEMO_AREAL,
+            display: observedDisplay,
             style: { color: '#9C27B0' },
             cumulative: Boolean(values.arealCumulative),
           },
         ]
       : []),
-    {
-      id: 'prevision',
-      name: provider,
-      kind: 'forecast' as const,
-      values: DEMO_FORECASTS[provider]!,
-      display: values.forecastDisplay as PrecipitationSeries['display'],
-      gradient: Boolean(values.forecastGradient),
-      style: { color: '#FFA500' },
-      cumulative: values.forecastCumulative
-        ? {
-            name: 'Acumulat',
-            style: { color: '#14b554' },
-            ...(values.continueObserved ? {} : { continueFrom: false as const }),
-          }
-        : false,
-    },
+    ...FORECASTS.filter((forecast) => values[`show${forecast.id}`]).map(
+      (forecast): PrecipitationSeries => ({
+        id: forecast.id.toLowerCase(),
+        name: forecast.id,
+        kind: 'forecast',
+        values: DEMO_FORECASTS[forecast.id]!,
+        display: values.forecastDisplay as PrecipitationSeries['display'],
+        gradient: Boolean(values.forecastGradient),
+        style: { color: forecast.color },
+        cumulative: values.forecastCumulative
+          ? values.continueObserved
+            ? true
+            : { continueFrom: false }
+          : false,
+      }),
+    ),
   ]
 }
 
-/** El selector de modelo en la barra, como en el widget de ThingsBoard. */
+/** Selector múltiple de previsiones en la barra (con "Todas" y cuántas hay elegidas). */
 export function providerToolbar(values: Values) {
   return values.toolbar === false
     ? false
@@ -195,18 +224,21 @@ export function providerToolbar(values: Values) {
         items: [
           {
             type: 'select' as const,
-            id: 'provider',
-            label: 'Modelo de previsión',
-            value: String(values.provider || 'WRF'),
-            // Muestra en el botón el modelo elegido.
+            id: 'forecasts',
+            label: 'Previsiones',
+            multiple: true,
+            selectAll: true,
             showCount: true,
-            options: [
-              { value: 'WRF', label: 'WRF (3 días)' },
-              { value: 'ECMWF', label: 'ECMWF (7 días)' },
-            ],
+            value: visibleForecasts(values),
+            options: FORECASTS.map((forecast) => ({ value: forecast.id, label: forecast.label })),
           },
         ],
       }
+}
+
+/** Sincroniza los interruptores del formulario con el selector de la barra. */
+export function applyForecastSelection(values: Values, ids: string[]): void {
+  for (const forecast of FORECASTS) values[`show${forecast.id}`] = ids.includes(forecast.id)
 }
 
 export function precipitationSnippet(values: Values): string {
@@ -221,31 +253,38 @@ export function precipitationSnippet(values: Values): string {
   if (values.theme) attributes.push(`theme="${values.theme}"`)
   attributes.push(`:height="${values.height}"`)
   lines.push(...attributes.map((a) => `  ${a}`))
+  const observedDisplay =
+    values.observedDisplay !== 'bar' ? `, display: '${values.observedDisplay}'` : ''
   const series: string[] = []
   if (values.showTelemetry) {
     series.push(
-      `{ id: 'tr', name: 'P. TR', values: telemetria, input: 'intensity', intervalMinutes: 10, style: { color: '#0066CC' }${values.telemetryCumulative ? ', cumulative: true' : ''} },`,
+      `{ id: 'tr', name: 'P. TR', values: telemetria, input: 'intensity', intervalMinutes: 10${observedDisplay}, style: { color: '#0066CC' }${values.telemetryCumulative ? ', cumulative: true' : ''} },`,
     )
   }
   if (values.showAreal) {
     series.push(
-      `{ id: 'areal', name: 'P. Areal', values: areal, style: { color: '#9C27B0' }${values.arealCumulative ? ', cumulative: true' : ''} },`,
+      `{ id: 'areal', name: 'P. Areal', values: areal${observedDisplay}, style: { color: '#9C27B0' }${values.arealCumulative ? ', cumulative: true' : ''} },`,
     )
   }
   const cumulative = values.forecastCumulative
-    ? `, cumulative: { name: 'Acumulat', style: { color: '#14b554' }${values.continueObserved ? '' : ', continueFrom: false'} }`
+    ? values.continueObserved
+      ? ', cumulative: true'
+      : ', cumulative: { continueFrom: false }'
     : ''
-  const display = values.forecastDisplay !== 'area' ? `, display: '${values.forecastDisplay}'` : ''
-  const gradient = values.forecastGradient ? '' : ', gradient: false'
-  series.push(
-    `{ id: 'prevision', name: modelo, kind: 'forecast', values: prevision, style: { color: '#FFA500' }${display}${gradient}${cumulative} },`,
-  )
+  const display = values.forecastDisplay !== 'bar' ? `, display: '${values.forecastDisplay}'` : ''
+  const gradient =
+    values.forecastDisplay === 'area' && !values.forecastGradient ? ', gradient: false' : ''
+  for (const forecast of FORECASTS.filter((f) => values[`show${f.id}`])) {
+    series.push(
+      `{ id: '${forecast.id.toLowerCase()}', name: '${forecast.id}', kind: 'forecast', values: ${forecast.id.toLowerCase()}${display}${gradient}, style: { color: '${forecast.color}' }${cumulative} },`,
+    )
+  }
   lines.push('  :series="[', ...series.map((s) => `    ${s}`), '  ]"')
   if (values.withThresholds) lines.push('  :thresholds="umbrales"')
   if (values.toolbar !== false) {
     lines.push(
-      `  :toolbar="{ items: [{ type: 'select', id: 'provider', label: 'Modelo de previsión', value: modelo, options: modelos, showCount: true }] }"`,
-      '  @toolbar-change="({ id, value }) => id === \'provider\' && (modelo = value)"',
+      `  :toolbar="{ items: [{ type: 'select', id: 'forecasts', label: 'Previsiones', multiple: true, selectAll: true, showCount: true, value: previsiones, options: modelos }] }"`,
+      '  @toolbar-change="({ id, value }) => id === \'forecasts\' && (previsiones = value)"',
     )
   }
   lines.push('/>')
@@ -272,35 +311,42 @@ const acumulado = toCumulative(mm, { start: totalObservado })`,
   {
     title: 'Desde una API de predicciones (como el widget de ThingsBoard)',
     description:
-      'La gráfica no pide datos: el proyecto los trae (con su token) y los pasa en series. El selector de modelo es un elemento propio de la barra; al cambiarlo, el proyecto pide la otra previsión.',
+      'La gráfica no pide datos: el proyecto los trae (con su token) y los pasa en series, con tantos observados y previsiones como haga falta. El selector de previsiones es un elemento propio de la barra; al cambiarlo, el proyecto pide las elegidas.',
     code: `<script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue'
 import { ASPrecipitationChart, type PrecipitationSeries } from '@vsadtajo/adasa-ui/charts'
 
-const modelo = ref<'WRF' | 'ECMWF'>('WRF')
-const prevision = ref<[Date, number | null][]>([])
+const previsiones = ref(['WRF', 'ECMWF'])
+const datos = ref<Record<string, [Date, number | null][]>>({})
 
+// Cada previsión elegida, de la API (WRF a 3 días, ECMWF a 7).
 watchEffect(async () => {
-  const dias = modelo.value === 'ECMWF' ? 7 : 3
-  const respuesta = await fetch(\`/v1/prediction-results/?prediction_provider=\${modelo.value}&dias=\${dias}\`, {
-    headers: { Authorization: \`Bearer \${token}\` },
-  })
-  prevision.value = (await respuesta.json()).map((p) => [new Date(p.date_timestamp * 1000), p.value])
+  for (const modelo of previsiones.value) {
+    const respuesta = await fetch(\`/v1/prediction-results/?prediction_provider=\${modelo}\`, {
+      headers: { Authorization: \`Bearer \${token}\` },
+    })
+    datos.value[modelo] = (await respuesta.json()).map((p) => [new Date(p.date_timestamp * 1000), p.value])
+  }
 })
 
 const series = computed<PrecipitationSeries[]>(() => [
-  { id: 'tr', name: 'P. TR', values: telemetria.value, input: 'intensity', style: { color: '#0066CC' } },
-  { id: 'prevision', name: modelo.value, kind: 'forecast', values: prevision.value,
-    style: { color: '#FFA500' }, cumulative: { name: 'Acumulat', style: { color: '#14b554' } } },
+  // Varios observados...
+  { id: 'tr', name: 'P. TR', values: telemetria.value, input: 'intensity', style: { color: '#0066CC' }, cumulative: true },
+  { id: 'areal', name: 'P. Areal', values: areal.value, style: { color: '#9C27B0' } },
+  // ...y varias previsiones; cada acumulado continúa el de P. TR.
+  ...previsiones.value.map((modelo) => ({
+    id: modelo, name: modelo, kind: 'forecast' as const, values: datos.value[modelo] ?? [], cumulative: true,
+  })),
 ])
 </script>
 
 <template>
   <ASPrecipitationChart
     :series="series"
-    :toolbar="{ items: [{ type: 'select', id: 'modelo', label: 'Modelo', value: modelo, showCount: true,
+    :toolbar="{ items: [{ type: 'select', id: 'previsiones', label: 'Previsiones', value: previsiones,
+      multiple: true, selectAll: true, showCount: true,
       options: [{ value: 'WRF', label: 'WRF' }, { value: 'ECMWF', label: 'ECMWF' }] }] }"
-    @toolbar-change="({ value }) => (modelo = value)"
+    @toolbar-change="({ value }) => (previsiones = value)"
   />
 </template>`,
   },

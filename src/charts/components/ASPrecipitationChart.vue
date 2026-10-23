@@ -14,8 +14,9 @@ import ASChart from './ASChart.vue'
 
 /**
  * Gráfica de precipitación: series observadas (telemetría, precipitación
- * areal...) y previstas (WRF, ECMWF...) en intensidad (mm/h) o en mm por
- * intervalo, con el acumulado de cada serie que lo pida en el eje derecho.
+ * areal...) y previstas (WRF, ECMWF...), varias de cada tipo, en columnas,
+ * en intensidad (mm/h) o en mm por intervalo, con el acumulado de cada
+ * serie que lo pida en el eje derecho.
  * Cada serie dice cómo llegan sus valores (`input`) y la gráfica los
  * convierte a lo que muestra (`rate`); el acumulado de una previsión
  * continúa el observado.

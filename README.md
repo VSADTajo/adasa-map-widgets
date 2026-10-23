@@ -265,7 +265,7 @@ Precipitación observada (telemetría, precipitación areal...) y prevista (WRF,
 - `from` empieza a sumar en un instante; `name` y `style` los personalizan.
 - Con `toolbar`, un botón muestra u oculta todos (`v-model:show-cumulative`); cada uno también se oculta desde la leyenda.
 
-**Dibujo por defecto**: una serie observada, en línea continua; una prevista, en área discontinua con **degradado** (`gradient`), que se cambian con `display` (`'line'`, `'area'`, `'bar'`), `style` y `gradient`. Umbrales de intensidad o de acumulado con `thresholds` (`axis: 'rate' | 'cumulative'`).
+**Dibujo por defecto: en columnas.** Cada columna ocupa el intervalo que termina en su instante, así que series con intervalos distintos (telemetría cada 10 min, previsión horaria o cada 3 h) mantienen cada una su ancho en vez de quedar como hilos. Las observadas, casi opacas (0,85) y las previstas, semitransparentes (0,5), para que se vean las que se solapan; se cambia con `opacity`. Puede haber **varias observadas y varias previstas a la vez** (p. ej. pluviómetro y precipitación areal; WRF y ECMWF), y cada previsión continúa el acumulado observado. `display: 'line' | 'area'` las pasa a línea o área (la prevista en área, con **degradado**: `gradient`), con su `style`. Umbrales de intensidad o de acumulado con `thresholds` (`axis: 'rate' | 'cumulative'`).
 
 **Selector de modelo** (como en los visores con WRF y ECMWF): un `select` propio de la barra; la gráfica no pide datos, el proyecto cambia la serie al recibir `toolbar-change`:
 

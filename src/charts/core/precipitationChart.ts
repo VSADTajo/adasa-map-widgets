@@ -2,6 +2,8 @@ import type { LocaleContext } from '@/core/composables/useLocale'
 import {
   convertPrecipitation,
   cumulativeAt,
+  intervalHours,
+  sortByTime,
   toCumulative,
   type PrecipitationUnit,
 } from './precipitation'
@@ -14,6 +16,27 @@ import type {
 } from '@/charts/types/PrecipitationProps'
 
 const RATE_AXIS = 'rate'
+/**
+ * Opacidad de las columnas: casi opacas las observadas y semitransparentes
+ * las previstas (así se ven también las que se solapan).
+ */
+const OBSERVED_COLUMN_OPACITY = 0.85
+const FORECAST_COLUMN_OPACITY = 0.5
+
+/**
+ * Columnas de un hietograma: cada valor ocupa el intervalo que termina en
+ * su instante (un área escalonada con `step: 'start'`), así que cada serie
+ * lleva su propio ancho (10 min, 1 h, 3 h...) aunque se mezclen. Con barras
+ * de verdad, el ancho lo marcaría la serie de intervalo más corto y las
+ * demás quedarían como hilos. Se añade un punto a 0 al principio del primer
+ * intervalo para que también tenga su columna.
+ */
+function columns(points: HydroPoint[], intervalMinutes: number | undefined): HydroPoint[] {
+  if (points.length === 0) return points
+  const [first] = sortByTime(points)
+  const hours = intervalHours(sortByTime(points), { intervalMinutes })[0]!
+  return [[new Date(first![0].getTime() - hours * 3_600_000), 0], ...points]
+}
 const CUMULATIVE_AXIS = 'cumulative'
 
 /** Color por defecto de la serie número `index`: la paleta categórica en orden (sin ciclar más de 8). */
@@ -37,8 +60,9 @@ const cumulativeConfig = (series: PrecipitationSeries): PrecipitationCumulative 
  * Función pura: se dibuja igual con cualquier motor.
  *
  * - Eje izquierdo (`rate`): cada serie, convertida de su `input` a lo que se
- *   muestra (mm/h o mm por intervalo). Observadas en línea continua y
- *   previstas en área con degradado, por defecto.
+ *   muestra (mm/h o mm por intervalo), en columnas por defecto: sólidas las
+ *   observadas y semitransparentes las previstas. Puede haber varias de
+ *   cada tipo.
  * - Eje derecho (`cumulative`): el acumulado (mm) de las series que lo
  *   piden, del color de su serie y en su propia línea de la leyenda. Una
  *   previsión continúa por defecto el acumulado del primer observado que
@@ -82,19 +106,25 @@ export function buildPrecipitation(props: PrecipitationProps, t: LocaleContext['
   props.series.forEach((entry, index) => {
     const forecast = entry.kind === 'forecast'
     const color = entry.style?.color ?? paletteColor(index)
-    const display = entry.display ?? (forecast ? 'area' : 'line')
+    const display = entry.display ?? 'bar'
+    const converted = convertPrecipitation(entry.values, entry.input ?? 'depth', rate, {
+      intervalMinutes: entry.intervalMinutes,
+    })
+    const isColumn = display === 'bar'
     series.push({
       id: `precipitation-${entry.id}`,
       name: entry.name,
-      type: display,
-      data: convertPrecipitation(entry.values, entry.input ?? 'depth', rate, {
-        intervalMinutes: entry.intervalMinutes,
-      }),
+      type: isColumn ? 'area' : display,
+      data: isColumn ? columns(converted, entry.intervalMinutes) : converted,
+      step: isColumn ? 'start' : undefined,
       yAxis: RATE_AXIS,
       color,
-      lineWidth: entry.style?.width ?? 2,
-      lineStyle: entry.style?.type ?? (forecast ? 'dashed' : 'solid'),
+      lineWidth: entry.style?.width ?? (isColumn ? 1 : 2),
+      lineStyle: entry.style?.type ?? (forecast && !isColumn ? 'dashed' : 'solid'),
       gradient: display === 'area' ? (entry.gradient ?? forecast) : undefined,
+      opacity:
+        entry.opacity ??
+        (isColumn ? (forecast ? FORECAST_COLUMN_OPACITY : OBSERVED_COLUMN_OPACITY) : undefined),
     })
   })
 

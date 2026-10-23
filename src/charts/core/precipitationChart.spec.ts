@@ -47,7 +47,11 @@ describe('buildPrecipitation', () => {
         },
         fakeLocale.t,
       )
-      expect(values(chart, 'precipitation-a')).toEqual([2, 4])
+      // En columnas, con el punto de arranque (a 0) al principio del primer intervalo.
+      expect(values(chart, 'precipitation-a')).toEqual([0, 2, 4])
+      expect((byId(chart, 'precipitation-a').data as HydroPoint[])[0]![0]).toEqual(
+        new Date(T0.getTime() - 1_800_000),
+      )
       expect(chart.yAxes![0]).toMatchObject({
         id: 'rate',
         unit: 'mm/h',
@@ -61,37 +65,114 @@ describe('buildPrecipitation', () => {
         { id: 'a', name: 'A', values: hourly(0, 6, 6), input: 'intensity', intervalMinutes: 30 },
       ]
       expect(values(buildPrecipitation({ series }, fakeLocale.t), 'precipitation-a')).toEqual([
-        6, 6,
+        0, 6, 6,
       ])
       const depth = buildPrecipitation({ series, rate: 'depth' }, fakeLocale.t)
-      expect(values(depth, 'precipitation-a')).toEqual([3, 3])
+      expect(values(depth, 'precipitation-a')).toEqual([0, 3, 3])
       expect(depth.yAxes![0]).toMatchObject({ unit: 'mm', label: 'Precipitación' })
     })
   })
 
   describe('dibujo por defecto', () => {
-    it('observado en línea continua; previsto en área discontinua con degradado; paleta en orden', () => {
+    it('en columnas que ocupan su intervalo: observado casi opaco y previsto semitransparente', () => {
       const chart = build()
       expect(byId(chart, 'precipitation-tr')).toMatchObject({
-        type: 'line',
-        lineStyle: 'solid',
+        type: 'area',
+        step: 'start',
         color: 'var(--as-data-cat-1)',
+        opacity: 0.85,
+        lineStyle: 'solid',
+        gradient: undefined,
       })
+      expect(byId(chart, 'precipitation-wrf')).toMatchObject({
+        type: 'area',
+        step: 'start',
+        color: 'var(--as-data-cat-2)',
+        opacity: 0.5,
+      })
+    })
+
+    it('cada serie con el ancho de su intervalo, aunque se mezclen 10 min y 3 h', () => {
+      const tenMinutes: HydroPoint[] = [0, 10, 20].map((m) => [
+        new Date(T0.getTime() + m * 60_000),
+        1,
+      ])
+      const threeHours: HydroPoint[] = [3, 6].map((h) => [
+        new Date(T0.getTime() + h * 3_600_000),
+        6,
+      ])
+      const chart = buildPrecipitation(
+        {
+          series: [
+            { id: 'a', name: 'A', values: tenMinutes },
+            { id: 'b', name: 'B', kind: 'forecast', values: threeHours },
+          ],
+        },
+        fakeLocale.t,
+      )
+      const start = (id: string) => (byId(chart, id).data as HydroPoint[])[0]![0].getTime()
+      expect(start('precipitation-a')).toBe(T0.getTime() - 10 * 60_000)
+      expect(start('precipitation-b')).toBe(T0.getTime())
+      expect(values(chart, 'precipitation-b')).toEqual([0, 2, 2])
+    })
+
+    it('en área, la previsión lleva degradado y trazo discontinuo; en línea, el observado continuo', () => {
+      const chart = buildPrecipitation(
+        {
+          series: [
+            { ...observed, display: 'line' },
+            { ...forecast, display: 'area' },
+          ],
+        },
+        fakeLocale.t,
+      )
+      expect(byId(chart, 'precipitation-tr')).toMatchObject({ type: 'line', lineStyle: 'solid' })
       expect(byId(chart, 'precipitation-wrf')).toMatchObject({
         type: 'area',
         lineStyle: 'dashed',
         gradient: true,
-        color: 'var(--as-data-cat-2)',
+        opacity: undefined,
       })
+    })
+
+    it('varios observados y varias previsiones a la vez, cada una con su acumulado', () => {
+      const chart = buildPrecipitation(
+        {
+          series: [
+            observed,
+            { id: 'areal', name: 'P. Areal', values: hourly(-3, 0.5, 1, 1.5), cumulative: true },
+            forecast,
+            {
+              id: 'ecmwf',
+              name: 'ECMWF',
+              kind: 'forecast',
+              values: hourly(0, 2, 2),
+              cumulative: true,
+            },
+          ],
+        },
+        fakeLocale.t,
+      )
+      expect(chart.series.filter((s) => s.yAxis === 'rate').map((s) => s.id)).toEqual([
+        'precipitation-tr',
+        'precipitation-areal',
+        'precipitation-wrf',
+        'precipitation-ecmwf',
+      ])
+      // Las dos previsiones continúan el primer observado con acumulado (P. TR: 6 mm).
+      expect(values(chart, 'cumulative-wrf')).toEqual([6, 10, 11])
+      expect(values(chart, 'cumulative-ecmwf')).toEqual([6, 8, 10])
+      expect(values(chart, 'cumulative-areal')).toEqual([0.5, 1.5, 3])
     })
 
     it('display, gradient y style propios', () => {
       const chart = buildPrecipitation(
         {
           series: [
-            { ...observed, display: 'bar' },
+            { ...observed, opacity: 0.8 },
             {
               ...forecast,
+              display: 'area',
               gradient: { from: 0.8 },
               style: { color: '#FFA500', width: 3, type: 'dotted' },
             },
@@ -99,7 +180,11 @@ describe('buildPrecipitation', () => {
         },
         fakeLocale.t,
       )
-      expect(byId(chart, 'precipitation-tr')).toMatchObject({ type: 'bar', gradient: undefined })
+      expect(byId(chart, 'precipitation-tr')).toMatchObject({
+        type: 'area',
+        step: 'start',
+        opacity: 0.8,
+      })
       expect(byId(chart, 'precipitation-wrf')).toMatchObject({
         gradient: { from: 0.8 },
         color: '#FFA500',

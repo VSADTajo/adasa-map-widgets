@@ -71,18 +71,31 @@ export interface PrecipitationSeries {
    * puntos consecutivos (y el primero usa el intervalo típico de la serie).
    */
   intervalMinutes?: number
-  /** Observada o prevista: cambia su dibujo por defecto. @default 'observed' */
+  /**
+   * Observada o prevista: cambia su dibujo por defecto (barras sólidas o
+   * semitransparentes) y de qué serie continúa su acumulado. Puede haber
+   * varias de cada tipo (p. ej. pluviómetro y precipitación areal; WRF y ECMWF).
+   * @default 'observed'
+   */
   kind?: 'observed' | 'forecast'
   /**
-   * Cómo se dibuja: línea, área o barras.
-   * @default 'line' en una observada, 'area' en una prevista
+   * Cómo se dibuja: en columnas (`'bar'`), en línea o en área. Cada columna
+   * ocupa el intervalo que termina en su instante, así que series con
+   * intervalos distintos (10 min, 1 h, 3 h) mantienen cada una su ancho.
+   * @default 'bar'
    */
   display?: 'line' | 'area' | 'bar'
   /**
-   * Color, grosor y trazo. Por defecto: la paleta en orden, 2 px, continua
-   * en una observada y discontinua en una prevista.
+   * Color, grosor y trazo (grosor y trazo, en línea o área). Por defecto:
+   * la paleta en orden, 2 px, continua en una observada y discontinua en una prevista.
    */
   style?: HydroLineStyle
+  /**
+   * Opacidad del relleno de las barras o el área (0–1). Lo previsto se ve
+   * más claro que lo observado.
+   * @default 0.85 en una observada y 0.5 en una prevista (en columnas)
+   */
+  opacity?: number
   /**
    * Relleno en degradado (solo con `display: 'area'`).
    * @default true en una prevista, false en una observada

@@ -67,6 +67,7 @@ import {
 } from './utils/chartPlayground'
 import {
   DEMO_PRECIPITATION_THRESHOLDS,
+  applyForecastSelection,
   PRECIPITATION_FIELDS,
   precipitationExamples,
   precipitationSeries,
@@ -1332,7 +1333,7 @@ export const registry: RegistryEntry[] = [
     }),
     toSnippet: precipitationSnippet,
     notes:
-      'Datos sintéticos: P. TR en mm/h cada 10 min, P. Areal en mm por hora, y la previsión de WRF (horaria, 3 días) o ECMWF (cada 3 h, 7 días). Cambia el modelo desde la barra, pasa el eje a mm por intervalo (rate) y activa o quita acumulados: la previsión continúa el acumulado observado.',
+      'Datos sintéticos: dos observados (P. TR en mm/h cada 10 min y P. Areal en mm por hora) y dos previsiones a la vez (WRF horaria a 3 días y ECMWF cada 3 h a 7 días), en columnas. Elige las previsiones desde la barra, pasa el eje a mm por intervalo (rate) y activa o quita acumulados: cada previsión continúa el acumulado observado.',
     component: ASPrecipitationChart,
     bindings: (values, log) => ({
       ...chartBindings(values, log),
@@ -1342,7 +1343,7 @@ export const registry: RegistryEntry[] = [
       },
       onToolbarChange: (event: unknown) => {
         const { id, value } = event as { id: string; value: unknown }
-        if (id === 'provider') values.provider = value
+        if (id === 'forecasts') applyForecastSelection(values, value as string[])
         log('toolbar-change', event)
       },
     }),
