@@ -76,6 +76,10 @@ const VARIABLE_COLORS: Record<Exclude<LineVariableKey, 'discharge'>, string> = {
   level: 'var(--as-data-cat-7)',
 }
 
+/** Color propio del observado: `observedStyle.color` o, por compatibilidad, `observedColor`. */
+const observedColorOf = (variable: HydroVariable): string | undefined =>
+  variable.observedStyle?.color ?? variable.observedColor
+
 /** Si la variable trae algo que dibujar (observado, previsión o percentiles). */
 function hasData(variable: HydroVariable | undefined): variable is HydroVariable {
   return Boolean(
@@ -114,7 +118,9 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     ),
   ]
   const colorOf = (forecast: HydroForecast) =>
-    forecast.color ?? `var(--as-data-cat-${(sourceIds.indexOf(forecast.id) % 7) + 2})`
+    forecast.style?.color ??
+    forecast.color ??
+    `var(--as-data-cat-${(sourceIds.indexOf(forecast.id) % 7) + 2})`
   const observedColor = 'var(--as-data-cat-1)'
   const observedName = t('hydrograph.observed')
 
@@ -134,7 +140,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       key,
       variable,
       axis: DISCHARGE_AXIS,
-      color: variable.observedColor ?? (key === 'discharge' ? observedColor : VARIABLE_COLORS[key]),
+      color:
+        observedColorOf(variable) ?? (key === 'discharge' ? observedColor : VARIABLE_COLORS[key]),
       label: variable.label ?? t(`hydrograph.${key}`),
     }
   })
@@ -148,7 +155,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       key,
       variable,
       axis,
-      color: variable.observedColor ?? VARIABLE_COLORS[key],
+      color: observedColorOf(variable) ?? VARIABLE_COLORS[key],
       label: variable.label ?? t(`hydrograph.${key}`),
     })
   }
@@ -235,7 +242,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         type: 'bar',
         data: precipitation!.observed,
         yAxis: PRECIPITATION_AXIS,
-        color: precipitation!.observedColor ?? observedColor,
+        color: observedColorOf(precipitation!) ?? observedColor,
       })
     }
     for (const forecast of precipitation!.forecasts ?? []) {
@@ -262,7 +269,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       ? { name: forecast.name, color: colorOf(forecast) }
       : {
           name: t('hydrograph.variableForecast', { variable: line.label, source: forecast.name }),
-          color: forecast.color ?? line.color,
+          color: forecast.style?.color ?? forecast.color ?? line.color,
         }
 
   // Bandas antes que las líneas, para que queden por debajo.
@@ -297,7 +304,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         data: line.variable.observed,
         yAxis: line.axis,
         color: line.color,
-        lineWidth: 2,
+        lineWidth: line.variable.observedStyle?.width ?? 2,
+        lineStyle: line.variable.observedStyle?.type ?? 'solid',
       })
     }
     for (const forecast of line.variable.forecasts ?? []) {
@@ -308,8 +316,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         type: 'line',
         data: forecast.values,
         yAxis: line.axis,
-        lineStyle: 'dashed',
-        lineWidth: 2,
+        lineStyle: forecast.style?.type ?? 'dashed',
+        lineWidth: forecast.style?.width ?? 2,
       })
     }
   }

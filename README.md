@@ -88,7 +88,7 @@ Ningún widget de control importa una librería de mapas: solo `ASMap` y el sist
 ## Gráficas (`@vsadtajo/adasa-ui/charts`)
 
 - **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
-- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y color del observado con `observedName`/`observedColor` (y `name`/`color` de cada previsión). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo del observado con `observedName`/`observedStyle`, y de cada previsión con `name`/`style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
 
 **Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
 
@@ -148,6 +148,21 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
     { value: 826, level: 'amarillo', variable: 'volume', label: 'Resguardo' },
     { value: 649.9, level: 'rojo', variable: 'level', label: 'Cota máxima' },
   ]"
+/>
+```
+
+**Estilo de cada serie.** El observado de cada variable lleva `observedStyle` y cada previsión `style`, con el mismo tipo (`HydroLineStyle`): `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. `observedColor` y `color` siguen funcionando, pero están obsoletas.
+
+```vue
+<ASHydrographChart
+  :discharge="{
+    observed: caudal,
+    observedStyle: { color: '#2a78d6', width: 3, type: 'solid' },
+    forecasts: [
+      { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834', type: 'dashed' } },
+      { id: 'eps', name: 'EPS', values: eps, percentiles, style: { color: '#05a873', width: 2, type: 'dashdot' } },
+    ],
+  }"
 />
 ```
 
@@ -264,7 +279,7 @@ Sin configurar nada:
   - Intro elige ese instante (emite `time-select`, como un clic) y Esc quita el cursor.
   - Cada paso se anuncia al lector de pantalla ("18/10/2026, 06:00: Caudal 69,2 m³/s, Lluvia 0,8 mm") y mueve también el cursor de las gráficas de su `sync-group`.
 - **Tabla de datos alternativa**: oculta a la vista, pero accesible a los lectores de pantalla. Con más de 500 filas se recorta (el CSV las lleva todas). Se desactiva con `:data-table="false"`.
-- **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle`. Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
+- **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle` (`'solid'`, `'dashed'`, `'dotted'` o `'dashdot'`). Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
 
 El contraste se comprueba en los dos temas: las tramas, contra su relleno (`patterns.spec.ts`), y los textos de la barra, contra la superficie y el fondo de los botones al pasar el ratón (`tokens.spec.ts`).
 

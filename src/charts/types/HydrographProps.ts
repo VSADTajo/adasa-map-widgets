@@ -2,6 +2,7 @@ import type { AlertLevel } from '@/core/types/theme'
 import type {
   ChartAnnotations,
   ChartEmits,
+  ChartLineStyle,
   ChartProps,
   ChartSeries,
   ChartToolbarConfig,
@@ -12,13 +13,41 @@ import type {
 /** Punto de una serie hidrológica: `[instante, valor]`. `null` deja un hueco. */
 export type HydroPoint = [Date, number | null]
 
+/**
+ * Estilo de una serie del hidrograma: color, grosor y trazo.
+ *
+ * @example
+ * ```ts
+ * { color: '#2a78d6', width: 3, type: 'solid' }   // observado
+ * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión
+ * ```
+ */
+export interface HydroLineStyle {
+  /** Color CSS, o `'var(--as-data-cat-N)'` para un color del tema que respete claro/oscuro. */
+  color?: string
+  /** Grosor de la línea en px. En la precipitación (barras) no se usa. @default 2 */
+  width?: number
+  /**
+   * Trazo: `'solid'` (continua), `'dashed'` (discontinua), `'dotted'`
+   * (puntos) o `'dashdot'` (punto y raya). En la precipitación no se usa.
+   * @default 'solid' en el observado, 'dashed' en las previsiones
+   */
+  type?: ChartLineStyle
+}
+
 /** Una fuente de previsión (p. ej. Harmonie, EPS), con su mediana y sus percentiles. */
 export interface HydroForecast {
   /** Id estable: la misma fuente en lluvia y en caudal comparte color. */
   id: string
   /** Nombre visible (p. ej. `'Harmonie'`). */
   name: string
-  /** Color CSS. Por defecto, la paleta categórica a partir del 2.º color (el 1.º es el observado). */
+  /**
+   * Estilo de su línea (y el color de sus bandas y de sus barras de lluvia).
+   * Por defecto: color de la paleta a partir del 2.º (el 1.º es el observado),
+   * 2 px y discontinua.
+   */
+  style?: HydroLineStyle
+  /** @deprecated Usa `style.color`. Se mantiene por compatibilidad; `style.color` tiene prioridad. */
   color?: string
   /** Serie determinista o mediana (p50): línea discontinua. */
   values?: HydroPoint[]
@@ -45,10 +74,13 @@ export interface HydroVariable {
    */
   observedName?: string
   /**
-   * Color de la serie observada. Por defecto, el 1.º de la paleta en caudal y
-   * precipitación, y uno fijo por variable en el resto (entrada, salida,
-   * volumen y nivel: `--as-data-cat-4` a `-7`).
+   * Estilo de la serie observada. Por defecto: 2 px, continua y el 1.º color
+   * de la paleta en caudal y precipitación, o uno fijo por variable en el
+   * resto (entrada, salida, volumen y nivel: `--as-data-cat-4` a `-7`). En la
+   * precipitación (barras) solo cuenta el color.
    */
+  observedStyle?: HydroLineStyle
+  /** @deprecated Usa `observedStyle.color`. Se mantiene por compatibilidad; `observedStyle.color` tiene prioridad. */
   observedColor?: string
   /**
    * Previsiones. En caudal y precipitación, cada fuente lleva su color (el

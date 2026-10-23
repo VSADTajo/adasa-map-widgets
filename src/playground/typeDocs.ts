@@ -305,11 +305,13 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
       description: 'Nombre en la leyenda y el tooltip.',
     },
     {
-      key: 'observedColor',
-      type: 'string',
+      key: 'observedStyle',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'solid' }",
       description:
-        'Color. Por defecto, el 1.º de la paleta en caudal y lluvia; uno fijo por variable en el resto.',
+        'Color, grosor y trazo del observado. Color por defecto: el 1.º de la paleta en caudal y lluvia; uno fijo por variable en el resto. En la lluvia (barras), solo el color.',
     },
+    { key: 'observedColor', type: 'string', description: 'Obsoleta: usa observedStyle.color.' },
     {
       key: 'forecasts',
       type: 'HydroForecast[]',
@@ -338,10 +340,13 @@ export const HYDRO_FORECAST_DOC: TypeDoc = {
       description: 'Nombre visible. Fuera del caudal, "Variable · Fuente".',
     },
     {
-      key: 'color',
-      type: 'string',
-      description: 'Color. En caudal y lluvia, por fuente; en el resto, el de la variable.',
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'dashed' }",
+      description:
+        'Color, grosor y trazo de su línea; el color también tiñe sus bandas y sus barras de lluvia. Color por defecto: en caudal y lluvia, por fuente; en el resto, el de la variable.',
     },
+    { key: 'color', type: 'string', description: 'Obsoleta: usa style.color.' },
     { key: 'values', type: 'HydroPoint[]', description: 'Serie determinista o mediana (p50).' },
     {
       key: 'percentiles',
@@ -393,6 +398,33 @@ export const HYDROGRAPH_TOOLBAR_DOC: TypeDoc = {
       type: 'boolean',
       default: 'true',
       description: 'Enfoca los umbrales uno a uno.',
+    },
+  ],
+}
+
+export const HYDRO_LINE_STYLE_DOC: TypeDoc = {
+  name: 'HydroLineStyle',
+  description:
+    'Estilo de una serie del hidrograma (observedStyle de cada variable y style de cada previsión).',
+  fields: [
+    {
+      key: 'color',
+      type: 'string',
+      description:
+        "Color CSS, o 'var(--as-data-cat-N)' para un color del tema que respete claro y oscuro.",
+    },
+    {
+      key: 'width',
+      type: 'number',
+      default: '2',
+      description: 'Grosor de la línea en px (no se usa en las barras de lluvia).',
+    },
+    {
+      key: 'type',
+      type: "'solid' | 'dashed' | 'dotted' | 'dashdot'",
+      default: "'solid' / 'dashed'",
+      description:
+        'Trazo: continua, discontinua, puntos o punto y raya. Por defecto, continua en el observado y discontinua en las previsiones.',
     },
   ],
 }

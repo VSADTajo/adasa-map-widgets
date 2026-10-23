@@ -1,5 +1,5 @@
 import type { ChartSeries, ChartYAxis } from '@/charts/types/chart'
-import type { HydroVariable } from '@/charts/types/HydrographProps'
+import type { HydroLineStyle, HydroVariable } from '@/charts/types/HydrographProps'
 import type { PropField } from '../propTypes'
 import {
   EXAMPLE_NOW,
@@ -185,36 +185,67 @@ export function chartToSnippet(values: Values): string {
   ].join('\n')
 }
 
-/** Campos del formulario para personalizar nombre y color de las series del hidrograma. */
+const LINE_TYPES = ['solid', 'dashed', 'dotted', 'dashdot']
+
+/**
+ * Nombre y estilo (color, grosor y trazo) de una serie del hidrograma: el
+ * observado (`observedName` y `observedStyle`) o una previsión (`name` y `style`).
+ */
+function seriesStyleFields(
+  prefix: string,
+  title: string,
+  defaults: { name: string; color: string; type: string },
+): PropField[] {
+  return [
+    {
+      key: `${prefix}Name`,
+      label: `${title}: nombre`,
+      type: 'string',
+      default: defaults.name,
+      playgroundOnly: true,
+    },
+    {
+      key: `${prefix}Color`,
+      label: `${title}: color`,
+      type: 'color',
+      default: defaults.color,
+      playgroundOnly: true,
+    },
+    {
+      key: `${prefix}Width`,
+      label: `${title}: grosor (px)`,
+      type: 'number',
+      default: 2,
+      min: 1,
+      max: 6,
+      step: 0.5,
+      playgroundOnly: true,
+    },
+    {
+      key: `${prefix}Type`,
+      label: `${title}: trazo`,
+      type: 'select',
+      options: LINE_TYPES,
+      default: defaults.type,
+      playgroundOnly: true,
+      description: 'Continua, discontinua, puntos o punto y raya.',
+    },
+  ]
+}
+
+/** Campos del formulario para personalizar nombre y estilo de las series del hidrograma. */
 export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
-  {
-    key: 'observedName',
-    label: 'Observado: nombre',
-    type: 'string',
-    default: 'Observado',
-    playgroundOnly: true,
-  },
-  {
-    key: 'observedColor',
-    label: 'Observado: color',
-    type: 'color',
-    default: '#2a78d6',
-    playgroundOnly: true,
-  },
-  {
-    key: 'harmonieName',
-    label: 'Harmonie: nombre',
-    type: 'string',
-    default: 'Harmonie',
-    playgroundOnly: true,
-  },
-  {
-    key: 'harmonieColor',
-    label: 'Harmonie: color',
-    type: 'color',
-    default: '#eb6834',
-    playgroundOnly: true,
-  },
+  ...seriesStyleFields('observed', 'Observado', {
+    name: 'Observado',
+    color: '#2a78d6',
+    type: 'solid',
+  }),
+  ...seriesStyleFields('harmonie', 'Harmonie', {
+    name: 'Harmonie',
+    color: '#eb6834',
+    type: 'dashed',
+  }),
+  ...seriesStyleFields('eps', 'EPS', { name: 'EPS', color: '#05a873', type: 'dashdot' }),
   {
     key: 'episode',
     label: 'Marcar el episodio (annotations)',
@@ -223,9 +254,22 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
     playgroundOnly: true,
     description: 'Añade un intervalo en X con `annotations`, igual que en ASChart.',
   },
-  { key: 'epsName', label: 'EPS: nombre', type: 'string', default: 'EPS', playgroundOnly: true },
-  { key: 'epsColor', label: 'EPS: color', type: 'color', default: '#05a873', playgroundOnly: true },
 ]
+
+/** El estilo de una serie a partir del formulario (`observedStyle` o `style`). */
+function styleOf(values: Values, prefix: string): HydroLineStyle {
+  return {
+    color: String(values[`${prefix}Color`] || ''),
+    width: Number(values[`${prefix}Width`]) || 2,
+    type: values[`${prefix}Type`] as HydroLineStyle['type'],
+  }
+}
+
+/** Texto del estilo en el snippet: `{ color: '#…', width: 2, type: 'dashed' }`. */
+function styleSnippet(values: Values, prefix: string): string {
+  const style = styleOf(values, prefix)
+  return `{ color: '${style.color}', width: ${style.width}, type: '${style.type}' }`
+}
 
 /** Qué variables se muestran en el ejemplo (cada una es una prop del hidrograma). */
 export const HYDROGRAPH_VARIABLE_FIELDS: PropField[] = [
@@ -398,11 +442,11 @@ function customizeVariable(variable: HydroVariable, values: Values): HydroVariab
   return {
     ...variable,
     observedName: String(values.observedName || 'Observado'),
-    observedColor: String(values.observedColor || '#2a78d6'),
+    observedStyle: styleOf(values, 'observed'),
     forecasts: variable.forecasts?.map((forecast) => ({
       ...forecast,
       name: String(values[`${forecast.id}Name`] || forecast.name),
-      color: String(values[`${forecast.id}Color`] || ''),
+      style: styleOf(values, forecast.id),
     })),
   }
 }
@@ -438,7 +482,7 @@ export function hydrographToProps(values: Values): Values {
 export function hydrographToSnippet(values: Values): string {
   const forecasts = (['harmonie', 'eps'] as const).map(
     (id) =>
-      `{ id: '${id}', name: '${values[`${id}Name`]}', color: '${values[`${id}Color`]}', values: ${id}${id === 'eps' ? ', percentiles' : ''} },`,
+      `{ id: '${id}', name: '${values[`${id}Name`]}', style: ${styleSnippet(values, id)}, values: ${id}${id === 'eps' ? ', percentiles' : ''} },`,
   )
   const attributes = commonAttributes(values)
   if (values.magnitude === 'level') attributes.push('magnitude="level"')
@@ -450,14 +494,14 @@ export function hydrographToSnippet(values: Values): string {
     ...indent(attributes, 2),
     ...(values.showDischarge
       ? [
-          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', observedColor: '${values.observedColor}', forecasts: [`,
+          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', observedStyle: ${styleSnippet(values, 'observed')}, forecasts: [`,
           ...indent(forecasts, 4),
           '  ] }"',
         ]
       : []),
     ...(values.showPrecipitation
       ? [
-          `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedColor: '${values.observedColor}' }"`,
+          `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedStyle: { color: '${values.observedColor}' } }"`,
         ]
       : []),
     ...(values.showInflow

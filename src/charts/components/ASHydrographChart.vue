@@ -157,12 +157,12 @@ function filterForecasts(
   if (!variable?.forecasts) return variable
   const ids = sources.value.map((s) => s.id)
   const colorOf = (f: HydroForecast) =>
-    f.color ?? `var(--as-data-cat-${(ids.indexOf(f.id) % 7) + 2})`
+    f.style?.color ?? f.color ?? `var(--as-data-cat-${(ids.indexOf(f.id) % 7) + 2})`
   return {
     ...variable,
     forecasts: variable.forecasts
       .filter((f) => visibleIds.value.includes(f.id))
-      .map((f) => (sourceColor ? { ...f, color: colorOf(f) } : f)),
+      .map((f) => (sourceColor ? { ...f, style: { ...f.style, color: colorOf(f) } } : f)),
   }
 }
 

@@ -374,3 +374,115 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
     expect(byId(chart, 'volume-observed')!.lineStyle).toBe('dotted')
   })
 })
+
+describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () => {
+  const byId = (chart: ReturnType<typeof build>, id: string) =>
+    chart.series.find((s) => s.id === id)
+
+  it('por defecto: observado continuo y previsiones discontinuas, de 2 px', () => {
+    const chart = build()
+    expect(byId(chart, 'discharge-observed')).toMatchObject({ lineStyle: 'solid', lineWidth: 2 })
+    expect(byId(chart, 'discharge-eps')).toMatchObject({ lineStyle: 'dashed', lineWidth: 2 })
+  })
+
+  it('observedStyle y style de cada previsión fijan color, grosor y trazo', () => {
+    const chart = build({
+      discharge: {
+        observed: points(10, 12),
+        observedStyle: { color: '#123456', width: 3, type: 'solid' },
+        forecasts: [
+          {
+            id: 'eps',
+            name: 'EPS',
+            values: points(12, 20),
+            style: { color: '#ff0000', width: 1, type: 'dotted' },
+          },
+          { id: 'harmonie', name: 'Harmonie', values: points(12, 30), style: { type: 'dashdot' } },
+        ],
+      },
+    })
+    expect(byId(chart, 'discharge-observed')).toMatchObject({
+      color: '#123456',
+      lineWidth: 3,
+      lineStyle: 'solid',
+    })
+    expect(byId(chart, 'discharge-eps')).toMatchObject({
+      color: '#ff0000',
+      lineWidth: 1,
+      lineStyle: 'dotted',
+    })
+    expect(byId(chart, 'discharge-harmonie')).toMatchObject({ lineStyle: 'dashdot', lineWidth: 2 })
+  })
+
+  it('el color del estilo también tiñe las bandas de la previsión y sus barras de lluvia', () => {
+    const chart = build({
+      discharge: {
+        forecasts: [
+          {
+            id: 'harmonie',
+            name: 'Harmonie',
+            values: points(1, 2),
+            style: { color: '#00aa00' },
+            percentiles: { p10: points(0, 1), p90: points(2, 3) },
+          },
+        ],
+      },
+      precipitation: {
+        forecasts: [
+          { id: 'harmonie', name: 'Harmonie', values: points(1, 2), style: { color: '#00aa00' } },
+        ],
+      },
+    })
+    expect(byId(chart, 'discharge-harmonie-p10-p90')!.color).toBe('#00aa00')
+    expect(byId(chart, 'precipitation-harmonie')!.color).toBe('#00aa00')
+  })
+
+  it('observedStyle.color y style.color tienen prioridad sobre observedColor y color (obsoletos)', () => {
+    const chart = build({
+      discharge: {
+        observed: points(1, 2),
+        observedColor: '#aaaaaa',
+        observedStyle: { color: '#bbbbbb' },
+        forecasts: [
+          {
+            id: 'eps',
+            name: 'EPS',
+            values: points(1, 2),
+            color: '#cccccc',
+            style: { color: '#dddddd' },
+          },
+        ],
+      },
+    })
+    expect(byId(chart, 'discharge-observed')!.color).toBe('#bbbbbb')
+    expect(byId(chart, 'discharge-eps')!.color).toBe('#dddddd')
+    const legacy = build({ discharge: { observed: points(1, 2), observedColor: '#aaaaaa' } })
+    expect(byId(legacy, 'discharge-observed')!.color).toBe('#aaaaaa')
+  })
+
+  it('también en entrada, salida, volumen y nivel', () => {
+    const chart = buildHydrograph(
+      {
+        level: {
+          observed: points(1, 2),
+          observedStyle: { type: 'dotted', width: 4 },
+          forecasts: [
+            {
+              id: 'eps',
+              name: 'EPS',
+              values: points(2, 3),
+              style: { type: 'dashdot', color: '#654321' },
+            },
+          ],
+        },
+      },
+      fakeLocale.t,
+    )
+    expect(byId(chart, 'level-observed')).toMatchObject({
+      lineStyle: 'dotted',
+      lineWidth: 4,
+      color: 'var(--as-data-cat-7)',
+    })
+    expect(byId(chart, 'level-eps')).toMatchObject({ lineStyle: 'dashdot', color: '#654321' })
+  })
+})
