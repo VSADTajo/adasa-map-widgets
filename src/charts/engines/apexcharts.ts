@@ -106,9 +106,10 @@ export function toApexOptions(
         })(),
       )
       if (!range) return {}
+      const span = range[1] - range[0]
       return {
-        min: axis.min ?? niceRound(range[0], 'down'),
-        max: axis.max ?? niceRound(range[1], 'up'),
+        min: axis.min ?? niceRound(range[0], 'down', span),
+        max: axis.max ?? niceRound(range[1], 'up', span),
       }
     }
 

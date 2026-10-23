@@ -202,6 +202,20 @@ describe('utilidades de maquetación', () => {
     expect(niceRound(0, 'up')).toBe(0)
   })
 
+  it.each([
+    [651.62, 'up', 0.3, 651.65],
+    [651.31, 'down', 0.3, 651.3],
+    [651.6, 'up', 0.3, 651.6],
+    [212.7, 'up', 212.7, 250],
+    [812.4, 'down', 15, 810],
+    [5, 'up', 0, 5],
+  ] as const)(
+    'niceRound(%s, %s, rango %s) → %s: el paso sale del rango',
+    (value, dir, span, expected) => {
+      expect(niceRound(value, dir, span)).toBe(expected)
+    },
+  )
+
   it('ticksForHeight: una marca cada ~40 px, entre 2 y 6', () => {
     expect(ticksForHeight(60)).toBe(2)
     expect(ticksForHeight(160)).toBe(4)

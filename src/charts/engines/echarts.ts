@@ -1,4 +1,5 @@
 import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
+import { extent as valueExtent } from '@/charts/core/extent'
 import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
@@ -6,6 +7,7 @@ import {
   axisTitleFits,
   layoutPanels,
   niceRound,
+  niceTickCount,
   ticksForHeight,
   Y_AXIS_WIDTH,
   type ChartEngine,
@@ -14,6 +16,29 @@ import { createFrame, renderLegend } from './panels'
 import { composeImage } from './exportImage'
 
 type Option = Record<string, unknown>
+
+/**
+ * Rango de un eje con umbrales (`include`): los datos de sus series, los
+ * umbrales y el 0 si lo pide, redondeados a valores "bonitos" según el rango.
+ */
+function fixedScale(
+  spec: ResolvedChartSpec,
+  axis: ResolvedChartSpec['yAxes'][number],
+): { min: number; max: number } | undefined {
+  const range = valueExtent(
+    (function* () {
+      for (const s of spec.series.filter((s) => s.yAxis === axis.id)) {
+        if (s.type === 'range') for (const [, low, high] of s.ranges) yield* [low, high]
+        else for (const [, y] of s.points) yield y
+      }
+      yield* axis.include
+      if (axis.beginAtZero) yield 0
+    })(),
+  )
+  if (!range) return undefined
+  const span = range[1] - range[0]
+  return { min: niceRound(range[0], 'down', span), max: niceRound(range[1], 'up', span) }
+}
 type EChartsInstance = import('echarts/core').ECharts
 
 const X_LABELS_SPACE = 26
@@ -94,35 +119,38 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
   }))
 
   const yAxis = spec.yAxes.map((axis) => {
-    // Con umbrales, el eje se amplía hasta incluirlos, redondeando a un valor
-    // "bonito" (si no, acabaría en el dato exacto, p. ej. 212,7).
-    const extent = (value: { min: number; max: number }, edge: 'min' | 'max') => {
-      const values = [value[edge], ...axis.include, ...(axis.beginAtZero ? [0] : [])]
-      return edge === 'max'
-        ? niceRound(Math.max(...values), 'up')
-        : niceRound(Math.min(...values), 'down')
-    }
+    // Con umbrales, el eje se amplía hasta incluirlos, redondeando a valores
+    // "bonitos" (si no, acabaría en el dato exacto, p. ej. 212,7), con un
+    // intervalo que divide el rango justo: así el máximo cae en una marca (como en ApexCharts).
+    const scale = axis.include.length ? fixedScale(spec, axis) : undefined
+    const splitNumber = ticksForHeight(layouts[axis.panelIndex]!.height)
+    const interval =
+      scale && axis.min === undefined && axis.max === undefined && axis.scale !== 'log'
+        ? (scale.max - scale.min) / niceTickCount(scale.min, scale.max, splitNumber)
+        : undefined
     return {
       type: axis.scale === 'log' ? 'log' : 'value',
       gridIndex: axis.panelIndex,
       position: axis.position,
       offset: axis.slot * Y_AXIS_WIDTH,
       inverse: axis.inverse,
-      min:
-        axis.min ??
-        (axis.include.length ? (v: { min: number; max: number }) => extent(v, 'min') : undefined),
-      max:
-        axis.max ??
-        (axis.include.length ? (v: { min: number; max: number }) => extent(v, 'max') : undefined),
+      min: axis.min ?? scale?.min,
+      max: axis.max ?? scale?.max,
+      interval,
       scale: !axis.beginAtZero,
       // En paneles bajos: menos marcas y sin título si no cabe entero.
       name: axisTitleFits(axis.title, layouts[axis.panelIndex]!.height) ? axis.title : undefined,
-      splitNumber: ticksForHeight(layouts[axis.panelIndex]!.height),
+      splitNumber,
       nameLocation: 'middle',
       nameGap: Y_AXIS_WIDTH - 18,
       nameRotate: axis.position === 'left' ? 90 : -90,
       nameTextStyle: axisTextStyle,
-      axisLabel: { ...axisTextStyle, formatter: (value: number) => axis.formatTick(value) },
+      axisLabel: {
+        ...axisTextStyle,
+        formatter: (value: number) => axis.formatTick(value),
+        // Si dos marcas quedan demasiado juntas (paneles bajos), no se montan sus etiquetas.
+        hideOverlap: true,
+      },
       axisLine: { show: true, lineStyle: { color: theme.axis } },
       splitLine: { show: axis.grid, lineStyle: { color: theme.grid } },
     }

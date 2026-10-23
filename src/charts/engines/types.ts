@@ -72,11 +72,24 @@ export function layoutPanels(
 /** Ancho reservado por cada eje Y (etiquetas + título), igual en todos los motores para alinear paneles. */
 export const Y_AXIS_WIDTH = 64
 
-/** Redondea hacia arriba/abajo a un múltiplo de la mitad de su orden de magnitud (212,7 → 250). */
-export function niceRound(value: number, direction: 'up' | 'down'): number {
-  if (value === 0 || !Number.isFinite(value)) return value
-  const step = 10 ** Math.floor(Math.log10(Math.abs(value))) / 2
-  return (direction === 'up' ? Math.ceil(value / step) : Math.floor(value / step)) * step
+/**
+ * Redondea hacia arriba/abajo a un valor "bonito": un múltiplo de la mitad
+ * del orden de magnitud de `span` (el rango de los datos del eje) o, sin
+ * él, del propio valor (212,7 → 250).
+ *
+ * Con `span`, un eje de valores altos y poca variación (una cota de 651,3 a
+ * 651,6 msnm) se redondea a 651,3–651,6 y no a 650–700.
+ */
+export function niceRound(value: number, direction: 'up' | 'down', span?: number): number {
+  if (!Number.isFinite(value)) return value
+  const base = span !== undefined && span > 0 ? span : Math.abs(value)
+  if (base === 0) return value
+  const step = 10 ** Math.floor(Math.log10(base)) / 2
+  // Un cociente que es entero salvo por el error de coma flotante (651,6 / 0,05) no se mueve.
+  const ratio = value / step
+  const whole = Math.abs(ratio - Math.round(ratio)) < 1e-9 ? Math.round(ratio) : ratio
+  const rounded = (direction === 'up' ? Math.ceil(whole) : Math.floor(whole)) * step
+  return Number(rounded.toPrecision(12))
 }
 
 /**
