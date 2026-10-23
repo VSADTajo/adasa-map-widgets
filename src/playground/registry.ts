@@ -23,6 +23,8 @@ import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
 import ASChart from '@/charts/components/ASChart.vue'
 import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
+import ASPrecipitationChart from '@/charts/components/ASPrecipitationChart.vue'
+import { EXAMPLE_NOW } from './utils/chartExamples'
 import AppShellDemo from './components/AppShellDemo.vue'
 import HydrographToolbarDemo from './components/HydrographToolbarDemo.vue'
 import { hydrographToolbarExample } from './utils/chartToolbarExample'
@@ -34,7 +36,12 @@ import {
 } from './utils/appShellExample'
 import {
   APP_SECTION_DOC,
+  CHART_GRADIENT_DOC,
   HYDRO_BAND_STYLE_DOC,
+  PRECIPITATION_CUMULATIVE_DOC,
+  PRECIPITATION_SERIES_DOC,
+  PRECIPITATION_THRESHOLD_DOC,
+  PRECIPITATION_TOOLBAR_DOC,
   HYDRO_FORECAST_DOC,
   HYDRO_LINE_STYLE_DOC,
   HYDRO_OBSERVED_DOC,
@@ -58,6 +65,14 @@ import {
   hydrographToProps,
   hydrographToSnippet,
 } from './utils/chartPlayground'
+import {
+  DEMO_PRECIPITATION_THRESHOLDS,
+  PRECIPITATION_FIELDS,
+  precipitationExamples,
+  precipitationSeries,
+  precipitationSnippet,
+  providerToolbar,
+} from './utils/precipitationExample'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -377,6 +392,118 @@ const HYDROGRAPH_EVENTS: EventDoc[] = [
     description: 'Elementos propios del proyecto en la barra (toolbar.items), como en ASChart.',
   },
 ]
+/** Props de ASPrecipitationChart que no se editan en el formulario: solo se documentan. */
+const PRECIPITATION_DOC_FIELDS: PropField[] = (
+  [
+    [
+      'series',
+      'PrecipitationSeries[]',
+      '',
+      'Series observadas y previstas, cada una con su input, estilo y acumulado.',
+    ],
+    ['thresholds', 'PrecipitationThreshold[]', '', 'Umbrales de intensidad o de acumulado.'],
+    ['now', 'Date | boolean', 'true', 'Línea "ahora" entre lo observado y lo previsto.'],
+    ['xAxis', "Omit<ChartXAxisConfig, 'type'>", '', 'Eje de tiempo: título, formato y límites.'],
+    [
+      'annotations',
+      'ChartAnnotations',
+      '',
+      'Anotaciones extra (las de Y, en el eje de intensidad).',
+    ],
+    [
+      'seriesOverrides',
+      'Record<string, Partial<ChartSeries>>',
+      '',
+      "Retoques por id: 'precipitation-<id>' y 'cumulative-<id>'.",
+    ],
+    [
+      'yAxisOverrides',
+      'Record<string, Partial<ChartYAxis>>',
+      '',
+      "Retoques de los ejes 'rate' y 'cumulative'.",
+    ],
+    ['currentTime', 'Date | null', '', 'Instante seleccionado (v-model:current-time).'],
+    [
+      'syncGroup',
+      'string',
+      '',
+      'Sincroniza cursor y zoom con otras gráficas (p. ej. el hidrograma).',
+    ],
+    ['fileName', 'string', '', 'Nombre de las descargas.'],
+    ['patterns', 'boolean', 'false', 'Tramas en los rellenos (con ellas, sin degradado).'],
+    ['dataTable', 'boolean', 'true', 'Tabla de datos accesible.'],
+    ['ariaLabel / description', 'string', '', 'Nombre y descripción accesibles.'],
+    ['animation', 'boolean', 'true', 'Animación al dibujar.'],
+    ['loading', 'boolean', 'false', 'Estado de carga.'],
+    ['emptyText / error', 'string', '', 'Texto sin datos y mensaje de error.'],
+    [
+      'nativeOptions',
+      '(options, library) => unknown',
+      '',
+      'Vía de escape: opciones nativas del motor.',
+    ],
+  ] as const
+).map(([key, docType, defaultText, description]) => ({
+  key,
+  label: key,
+  type: 'string' as const,
+  default: defaultText,
+  docType,
+  description,
+  docOnly: true,
+}))
+
+const PRECIPITATION_SCHEMA: PropField[] = [
+  CHART_LIBRARY_FIELD,
+  {
+    key: 'rate',
+    label: 'Eje izquierdo (rate)',
+    type: 'select',
+    options: ['intensity', 'depth'],
+    default: 'intensity',
+    description: 'Intensidad en mm/h o mm por intervalo: cada serie se convierte desde su input.',
+  },
+  {
+    key: 'showCumulative',
+    label: 'Acumulados (v-model:show-cumulative)',
+    type: 'boolean',
+    default: true,
+    description: 'También desde el botón de la barra.',
+  },
+  {
+    key: 'tooltip',
+    label: 'Tooltip',
+    type: 'select',
+    options: ['time', 'true', 'false'],
+    default: 'time',
+    docType: "boolean | 'time' | ChartTooltipConfig",
+    description: 'Por defecto solo la fecha: los valores van en la leyenda.',
+  },
+  {
+    key: 'legend',
+    label: 'Leyenda',
+    type: 'select',
+    options: ['bottom', 'top', 'left', 'right'],
+    default: 'bottom',
+    docType: 'boolean | ChartLegendPosition | ChartLegendConfig',
+  },
+  { key: 'legendValues', label: 'Valores en la leyenda', type: 'boolean', default: true },
+  { key: 'zoom', label: 'Zoom', type: 'boolean', default: false },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: true,
+    docType: 'boolean | PrecipitationToolbarConfig',
+    description:
+      'Descargas, pantalla completa, botón de acumulados y, en el ejemplo, el selector de modelo.',
+  },
+  { key: 'height', label: 'Alto (px)', type: 'number', default: 440, min: 260, max: 800, step: 20 },
+  CHART_THEME_FIELD,
+  ...PRECIPITATION_FIELDS,
+  ...PRECIPITATION_DOC_FIELDS,
+]
+
 const chartBindings = (
   values: Record<string, unknown>,
   log: (name: string, payload?: unknown) => void,
@@ -1156,6 +1283,68 @@ export const registry: RegistryEntry[] = [
       'onUpdate:visibleForecasts': (ids: unknown) => log('update:visibleForecasts', ids),
       'onUpdate:bands': (bands: unknown) => log('update:bands', bands),
       onThresholdFocus: (threshold: unknown) => log('threshold-focus', threshold),
+    }),
+  },
+  {
+    id: 'as-precipitation-chart',
+    name: 'ASPrecipitationChart',
+    category: 'charts',
+    description:
+      'Precipitación observada y prevista en intensidad (mm/h) o mm por intervalo, con el acumulado de cada serie que lo pida en el eje derecho. Cada serie dice cómo llegan sus valores (input) y la gráfica los convierte; el acumulado de la previsión continúa el observado. Tooltip con solo la fecha y valores en la leyenda, con los acumulados en su propia línea.',
+    propsSchema: PRECIPITATION_SCHEMA,
+    events: [
+      ...CHART_EVENTS,
+      {
+        name: 'update:showCumulative',
+        payload: 'boolean',
+        description:
+          'El botón de la barra mostró u ocultó los acumulados (v-model:show-cumulative).',
+      },
+      {
+        name: 'toolbar-change / toolbar-action',
+        payload: '{ id, value? }',
+        description: 'Elementos propios de la barra (aquí, el selector de modelo).',
+      },
+    ],
+    types: [
+      PRECIPITATION_SERIES_DOC,
+      PRECIPITATION_CUMULATIVE_DOC,
+      HYDRO_LINE_STYLE_DOC,
+      CHART_GRADIENT_DOC,
+      PRECIPITATION_THRESHOLD_DOC,
+      PRECIPITATION_TOOLBAR_DOC,
+    ],
+    examples: precipitationExamples,
+    toProps: (values) => ({
+      chartLibrary: values.chartLibrary,
+      rate: values.rate,
+      showCumulative: values.showCumulative,
+      tooltip: values.tooltip === 'time' ? 'time' : values.tooltip !== 'false',
+      legend: values.legend,
+      legendValues: values.legendValues,
+      zoom: values.zoom,
+      height: values.height,
+      theme: values.theme || undefined,
+      series: precipitationSeries(values),
+      toolbar: providerToolbar(values),
+      thresholds: values.withThresholds ? DEMO_PRECIPITATION_THRESHOLDS : undefined,
+      now: EXAMPLE_NOW,
+    }),
+    toSnippet: precipitationSnippet,
+    notes:
+      'Datos sintéticos: P. TR en mm/h cada 10 min, P. Areal en mm por hora, y la previsión de WRF (horaria, 3 días) o ECMWF (cada 3 h, 7 días). Cambia el modelo desde la barra, pasa el eje a mm por intervalo (rate) y activa o quita acumulados: la previsión continúa el acumulado observado.',
+    component: ASPrecipitationChart,
+    bindings: (values, log) => ({
+      ...chartBindings(values, log),
+      'onUpdate:showCumulative': (show: unknown) => {
+        values.showCumulative = show
+        log('update:showCumulative', show)
+      },
+      onToolbarChange: (event: unknown) => {
+        const { id, value } = event as { id: string; value: unknown }
+        if (id === 'provider') values.provider = value
+        log('toolbar-change', event)
+      },
     }),
   },
   buildLayerEntry({
