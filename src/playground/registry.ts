@@ -34,6 +34,7 @@ import {
 } from './utils/appShellExample'
 import {
   APP_SECTION_DOC,
+  HYDRO_BAND_STYLE_DOC,
   HYDRO_FORECAST_DOC,
   HYDRO_LINE_STYLE_DOC,
   HYDRO_THRESHOLD_DOC,
@@ -1130,13 +1131,14 @@ export const registry: RegistryEntry[] = [
       HYDRO_VARIABLE_DOC,
       HYDRO_FORECAST_DOC,
       HYDRO_LINE_STYLE_DOC,
+      HYDRO_BAND_STYLE_DOC,
       HYDRO_THRESHOLD_DOC,
       HYDROGRAPH_TOOLBAR_DOC,
     ],
     toProps: hydrographToProps,
     toSnippet: hydrographToSnippet,
     notes:
-      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el estilo (color, grosor y trazo) de cada serie: `observedName`/`observedStyle` y `name`/`style` de cada previsión. Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el estilo (color, grosor y trazo) de cada serie: `observedName`/`style` de cada variable y `name`/`style`/`bandStyle` de cada previsión. Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
     component: ASHydrographChart,
     bindings: (values, log) => ({
       ...chartBindings(values, log),

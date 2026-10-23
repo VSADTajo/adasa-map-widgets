@@ -76,9 +76,9 @@ const VARIABLE_COLORS: Record<Exclude<LineVariableKey, 'discharge'>, string> = {
   level: 'var(--as-data-cat-7)',
 }
 
-/** Color propio del observado: `observedStyle.color` o, por compatibilidad, `observedColor`. */
+/** Color propio del observado: `style.color` o, por compatibilidad, `observedColor`. */
 const observedColorOf = (variable: HydroVariable): string | undefined =>
-  variable.observedStyle?.color ?? variable.observedColor
+  variable.style?.color ?? variable.observedColor
 
 /** Si la variable trae algo que dibujar (observado, previsión o percentiles). */
 function hasData(variable: HydroVariable | undefined): variable is HydroVariable {
@@ -281,15 +281,19 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         const low = forecast.percentiles?.[lowKey]
         const high = forecast.percentiles?.[highKey]
         if (!low?.length || !high?.length) continue
+        const bandStyle = forecast.bandStyle?.[band]
         series.push({
           id: `${line.key}-${forecast.id}-${band}`,
-          name: t('hydrograph.band', { source: name, range: band.replace('-', '–') }),
+          name:
+            bandStyle?.name ??
+            t('hydrograph.band', { source: name, range: band.replace('-', '–') }),
           type: 'range',
           data: bandPoints(low, high),
           yAxis: line.axis,
-          color,
-          opacity: BAND_OPACITY[band],
-          legend: false,
+          color: bandStyle?.color ?? color,
+          opacity: bandStyle?.opacity ?? BAND_OPACITY[band],
+          // En la leyenda, para saber qué es cada sombra (y poder ocultarla).
+          legend: bandStyle?.legend ?? true,
         })
       }
     }
@@ -304,8 +308,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
         data: line.variable.observed,
         yAxis: line.axis,
         color: line.color,
-        lineWidth: line.variable.observedStyle?.width ?? 2,
-        lineStyle: line.variable.observedStyle?.type ?? 'solid',
+        lineWidth: line.variable.style?.width ?? 2,
+        lineStyle: line.variable.style?.type ?? 'solid',
       })
     }
     for (const forecast of line.variable.forecasts ?? []) {

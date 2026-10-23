@@ -1,5 +1,10 @@
 import type { ChartSeries, ChartYAxis } from '@/charts/types/chart'
-import type { HydroLineStyle, HydroVariable } from '@/charts/types/HydrographProps'
+import type {
+  HydroBand,
+  HydroBandStyle,
+  HydroLineStyle,
+  HydroVariable,
+} from '@/charts/types/HydrographProps'
 import type { PropField } from '../propTypes'
 import {
   EXAMPLE_NOW,
@@ -189,7 +194,7 @@ const LINE_TYPES = ['solid', 'dashed', 'dotted', 'dashdot']
 
 /**
  * Nombre y estilo (color, grosor y trazo) de una serie del hidrograma: el
- * observado (`observedName` y `observedStyle`) o una previsión (`name` y `style`).
+ * observado (`observedName` y el `style` de la variable) o una previsión (`name` y `style`).
  */
 function seriesStyleFields(
   prefix: string,
@@ -247,6 +252,54 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
   }),
   ...seriesStyleFields('eps', 'EPS', { name: 'EPS', color: '#05a873', type: 'dashdot' }),
   {
+    key: 'epsBandColor',
+    label: 'EPS percentiles: color',
+    type: 'string',
+    default: '',
+    playgroundOnly: true,
+    description: 'bandStyle[banda].color. Vacío: el color de la línea de EPS.',
+  },
+  {
+    key: 'epsOuterOpacity',
+    label: 'EPS p10–p90: opacidad',
+    type: 'number',
+    default: 0.15,
+    min: 0.05,
+    max: 1,
+    step: 0.05,
+    playgroundOnly: true,
+    description: "bandStyle['p10-p90'].opacity (la banda más ancha).",
+  },
+  {
+    key: 'epsInnerOpacity',
+    label: 'EPS p25–p75: opacidad',
+    type: 'number',
+    default: 0.3,
+    min: 0.05,
+    max: 1,
+    step: 0.05,
+    playgroundOnly: true,
+    description: "bandStyle['p25-p75'].opacity.",
+  },
+  {
+    key: 'epsBandsLegend',
+    label: 'EPS percentiles en la leyenda',
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+    description: 'bandStyle[banda].legend.',
+  },
+  {
+    key: 'precipitationUnit',
+    label: 'Unidad de la precipitación (precipitation.unit)',
+    type: 'select',
+    options: ['mm', 'mm/h'],
+    default: 'mm',
+    playgroundOnly: true,
+    description:
+      'Acumulada por intervalo (mm) o intensidad (mm/h): título del eje, tooltip, tabla y CSV.',
+  },
+  {
     key: 'episode',
     label: 'Marcar el episodio (annotations)',
     type: 'boolean',
@@ -256,13 +309,31 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
   },
 ]
 
-/** El estilo de una serie a partir del formulario (`observedStyle` o `style`). */
+/** El estilo de una serie a partir del formulario (`style` de la variable o de la previsión). */
 function styleOf(values: Values, prefix: string): HydroLineStyle {
   return {
     color: String(values[`${prefix}Color`] || ''),
     width: Number(values[`${prefix}Width`]) || 2,
     type: values[`${prefix}Type`] as HydroLineStyle['type'],
   }
+}
+
+/** `bandStyle` de EPS a partir del formulario: opacidad, color y leyenda de cada banda. */
+function bandStyleOf(values: Values): Partial<Record<HydroBand, HydroBandStyle>> {
+  const common = {
+    color: String(values.epsBandColor || '') || undefined,
+    legend: values.epsBandsLegend !== false,
+  }
+  return {
+    'p10-p90': { ...common, opacity: Number(values.epsOuterOpacity) },
+    'p25-p75': { ...common, opacity: Number(values.epsInnerOpacity) },
+  }
+}
+
+function bandStyleSnippet(values: Values): string {
+  const color = values.epsBandColor ? `color: '${values.epsBandColor}', ` : ''
+  const legend = values.epsBandsLegend === false ? ', legend: false' : ''
+  return `{ 'p10-p90': { ${color}opacity: ${values.epsOuterOpacity}${legend} }, 'p25-p75': { ${color}opacity: ${values.epsInnerOpacity}${legend} } }`
 }
 
 /** Texto del estilo en el snippet: `{ color: '#…', width: 2, type: 'dashed' }`. */
@@ -442,10 +513,11 @@ function customizeVariable(variable: HydroVariable, values: Values): HydroVariab
   return {
     ...variable,
     observedName: String(values.observedName || 'Observado'),
-    observedStyle: styleOf(values, 'observed'),
+    style: styleOf(values, 'observed'),
     forecasts: variable.forecasts?.map((forecast) => ({
       ...forecast,
       name: String(values[`${forecast.id}Name`] || forecast.name),
+      bandStyle: forecast.percentiles ? bandStyleOf(values) : undefined,
       style: styleOf(values, forecast.id),
     })),
   }
@@ -458,7 +530,10 @@ export function hydrographToProps(values: Values): Values {
     ...props,
     discharge: values.showDischarge ? customizeVariable(exampleDischarge, values) : undefined,
     precipitation: values.showPrecipitation
-      ? customizeVariable(examplePrecipitation, values)
+      ? {
+          ...customizeVariable(examplePrecipitation, values),
+          unit: String(values.precipitationUnit),
+        }
       : undefined,
     inflow: values.showInflow ? exampleInflow : undefined,
     outflow: values.showOutflow ? exampleOutflow : undefined,
@@ -482,7 +557,7 @@ export function hydrographToProps(values: Values): Values {
 export function hydrographToSnippet(values: Values): string {
   const forecasts = (['harmonie', 'eps'] as const).map(
     (id) =>
-      `{ id: '${id}', name: '${values[`${id}Name`]}', style: ${styleSnippet(values, id)}, values: ${id}${id === 'eps' ? ', percentiles' : ''} },`,
+      `{ id: '${id}', name: '${values[`${id}Name`]}', style: ${styleSnippet(values, id)}, values: ${id}${id === 'eps' ? `, percentiles, bandStyle: ${bandStyleSnippet(values)}` : ''} },`,
   )
   const attributes = commonAttributes(values)
   if (values.magnitude === 'level') attributes.push('magnitude="level"')
@@ -494,14 +569,14 @@ export function hydrographToSnippet(values: Values): string {
     ...indent(attributes, 2),
     ...(values.showDischarge
       ? [
-          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', observedStyle: ${styleSnippet(values, 'observed')}, forecasts: [`,
+          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', style: ${styleSnippet(values, 'observed')}, forecasts: [`,
           ...indent(forecasts, 4),
           '  ] }"',
         ]
       : []),
     ...(values.showPrecipitation
       ? [
-          `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedStyle: { color: '${values.observedColor}' } }"`,
+          `  :precipitation="{ observed: lluvia, unit: '${values.precipitationUnit}', observedName: '${values.observedName}', style: { color: '${values.observedColor}' } }"`,
         ]
       : []),
     ...(values.showInflow

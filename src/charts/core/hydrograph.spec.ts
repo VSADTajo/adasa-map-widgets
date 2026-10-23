@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildHydrograph } from './hydrograph'
 import { at, fakeLocale } from './chart.fixtures'
-import type { HydroPoint, HydrographProps } from '@/charts/types/HydrographProps'
+import type { HydroForecast, HydroPoint, HydrographProps } from '@/charts/types/HydrographProps'
 
 const points = (...values: number[]): HydroPoint[] => values.map((v, i) => [at(i), v])
 
@@ -89,12 +89,12 @@ describe('buildHydrograph', () => {
     expect(color('discharge-eps')).not.toBe(color('discharge-harmonie'))
   })
 
-  it('dibuja las bandas p10–p90 y p25–p75 antes que las líneas, sin entrada en la leyenda', () => {
+  it('dibuja las bandas p10–p90 y p25–p75 antes que las líneas, con su entrada en la leyenda', () => {
     const ids = build().series.map((s) => s.id)
     const bands = ['discharge-eps-p10-p90', 'discharge-eps-p25-p75']
     expect(ids.indexOf(bands[0]!)).toBeLessThan(ids.indexOf('discharge-observed'))
     const band = build().series.find((s) => s.id === bands[0])!
-    expect(band).toMatchObject({ type: 'range', legend: false, opacity: 0.15, name: 'EPS p10–p90' })
+    expect(band).toMatchObject({ type: 'range', legend: true, opacity: 0.15, name: 'EPS p10–p90' })
     expect(band.data[1]).toEqual([at(1), 15, 26])
   })
 
@@ -385,11 +385,11 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
     expect(byId(chart, 'discharge-eps')).toMatchObject({ lineStyle: 'dashed', lineWidth: 2 })
   })
 
-  it('observedStyle y style de cada previsión fijan color, grosor y trazo', () => {
+  it('style de la variable (observado) y de cada previsión fijan color, grosor y trazo', () => {
     const chart = build({
       discharge: {
         observed: points(10, 12),
-        observedStyle: { color: '#123456', width: 3, type: 'solid' },
+        style: { color: '#123456', width: 3, type: 'solid' },
         forecasts: [
           {
             id: 'eps',
@@ -437,12 +437,12 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
     expect(byId(chart, 'precipitation-harmonie')!.color).toBe('#00aa00')
   })
 
-  it('observedStyle.color y style.color tienen prioridad sobre observedColor y color (obsoletos)', () => {
+  it('style.color y style.color tienen prioridad sobre observedColor y color (obsoletos)', () => {
     const chart = build({
       discharge: {
         observed: points(1, 2),
         observedColor: '#aaaaaa',
-        observedStyle: { color: '#bbbbbb' },
+        style: { color: '#bbbbbb' },
         forecasts: [
           {
             id: 'eps',
@@ -465,7 +465,7 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
       {
         level: {
           observed: points(1, 2),
-          observedStyle: { type: 'dotted', width: 4 },
+          style: { type: 'dotted', width: 4 },
           forecasts: [
             {
               id: 'eps',
@@ -484,5 +484,63 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
       color: 'var(--as-data-cat-7)',
     })
     expect(byId(chart, 'level-eps')).toMatchObject({ lineStyle: 'dashdot', color: '#654321' })
+  })
+})
+
+describe('buildHydrograph · aspecto de los percentiles (bandStyle)', () => {
+  const withBands = (bandStyle: HydroForecast['bandStyle']) =>
+    build({
+      discharge: {
+        forecasts: [
+          {
+            id: 'eps',
+            name: 'EPS',
+            values: points(1, 2),
+            style: { color: '#05a873' },
+            percentiles: {
+              p10: points(0, 1),
+              p25: points(1, 1),
+              p75: points(2, 2),
+              p90: points(3, 3),
+            },
+            bandStyle,
+          },
+        ],
+      },
+    })
+  const band = (chart: ReturnType<typeof build>, range: string) =>
+    chart.series.find((s) => s.id === `discharge-eps-${range}`)!
+
+  it('por defecto: el color de la previsión, opacidad 0,15 / 0,3 y en la leyenda', () => {
+    const chart = withBands(undefined)
+    expect(band(chart, 'p10-p90')).toMatchObject({ color: '#05a873', opacity: 0.15, legend: true })
+    expect(band(chart, 'p25-p75')).toMatchObject({ color: '#05a873', opacity: 0.3, legend: true })
+  })
+
+  it('cada banda con su color, opacidad, nombre y leyenda propios', () => {
+    const chart = withBands({
+      'p10-p90': { color: '#7c3aed', opacity: 0.1, name: 'EPS (80 %)' },
+      'p25-p75': { opacity: 0.5, legend: false },
+    })
+    expect(band(chart, 'p10-p90')).toMatchObject({
+      color: '#7c3aed',
+      opacity: 0.1,
+      name: 'EPS (80 %)',
+      legend: true,
+    })
+    expect(band(chart, 'p25-p75')).toMatchObject({
+      color: '#05a873',
+      opacity: 0.5,
+      name: 'EPS p25–p75',
+      legend: false,
+    })
+  })
+})
+
+describe('buildHydrograph · unidad de la precipitación', () => {
+  it("mm por defecto; 'mm/h' para intensidad, en el eje y en los valores", () => {
+    expect(build().yAxes![0]!.unit).toBe('mm')
+    const chart = build({ precipitation: { observed: points(1, 2), unit: 'mm/h' } })
+    expect(chart.yAxes![0]).toMatchObject({ id: 'precipitation', unit: 'mm/h' })
   })
 })

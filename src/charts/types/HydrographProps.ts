@@ -18,8 +18,8 @@ export type HydroPoint = [Date, number | null]
  *
  * @example
  * ```ts
- * { color: '#2a78d6', width: 3, type: 'solid' }   // observado
- * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión
+ * { color: '#2a78d6', width: 3, type: 'solid' }   // el observado (style de la variable)
+ * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión (style de la previsión)
  * ```
  */
 export interface HydroLineStyle {
@@ -35,7 +35,54 @@ export interface HydroLineStyle {
   type?: ChartLineStyle
 }
 
-/** Una fuente de previsión (p. ej. Harmonie, EPS), con su mediana y sus percentiles. */
+/**
+ * Estilo de una banda de percentiles (`bandStyle` de una previsión).
+ *
+ * @example
+ * ```ts
+ * bandStyle: {
+ *   'p10-p90': { color: '#7c3aed', opacity: 0.12, name: 'EPS (80 % de los miembros)' },
+ *   'p25-p75': { opacity: 0.35, legend: false },
+ * }
+ * ```
+ */
+export interface HydroBandStyle {
+  /** Color del relleno. Por defecto, el de la línea de su previsión (`style.color`). */
+  color?: string
+  /**
+   * Opacidad del relleno (0–1).
+   * @default 0.15 en p10–p90 (la más ancha), 0.3 en p25–p75
+   */
+  opacity?: number
+  /** Nombre en la leyenda, el tooltip, la tabla y el CSV. Por defecto, "<previsión> p10–p90". */
+  name?: string
+  /** Aparece en la leyenda. @default true */
+  legend?: boolean
+}
+
+/**
+ * Una fuente de previsión (p. ej. Harmonie, EPS), con su mediana y sus percentiles.
+ *
+ * Los percentiles se dibujan como dos bandas de incertidumbre bajo la línea:
+ * - **p10–p90**, entre `percentiles.p10` y `percentiles.p90` (más ancha y tenue);
+ * - **p25–p75**, entre `percentiles.p25` y `percentiles.p75` (más estrecha y marcada).
+ *
+ * Cada banda necesita sus dos percentiles, en los mismos instantes. Cuáles
+ * se dibujan lo decide la prop `bands` del hidrograma (o su botón de la
+ * barra); el aspecto de cada una, `bandStyle`.
+ *
+ * @example
+ * ```ts
+ * {
+ *   id: 'eps',
+ *   name: 'EPS',
+ *   values: mediana,
+ *   percentiles: { p10, p25, p75, p90 },
+ *   style: { color: '#05a873', type: 'dashdot' },
+ *   bandStyle: { 'p10-p90': { opacity: 0.1 } },
+ * }
+ * ```
+ */
 export interface HydroForecast {
   /** Id estable: la misma fuente en lluvia y en caudal comparte color. */
   id: string
@@ -51,8 +98,17 @@ export interface HydroForecast {
   color?: string
   /** Serie determinista o mediana (p50): línea discontinua. */
   values?: HydroPoint[]
-  /** Percentiles para las bandas de incertidumbre. Los pares (p10/p90, p25/p75) deben tener los mismos instantes. */
+  /**
+   * Percentiles para las bandas de incertidumbre: `p10` y `p90` forman la
+   * banda p10–p90, y `p25` y `p75` la p25–p75. Cada par, en los mismos instantes.
+   */
   percentiles?: { p10?: HydroPoint[]; p25?: HydroPoint[]; p75?: HydroPoint[]; p90?: HydroPoint[] }
+  /**
+   * Aspecto de cada banda de percentiles: color, opacidad, nombre y si sale
+   * en la leyenda (ver `HydroBandStyle`). Por defecto, el color de la
+   * previsión, opacidad 0,15 (p10–p90) y 0,3 (p25–p75), y en la leyenda.
+   */
+  bandStyle?: Partial<Record<HydroBand, HydroBandStyle>>
 }
 
 /**
@@ -74,13 +130,14 @@ export interface HydroVariable {
    */
   observedName?: string
   /**
-   * Estilo de la serie observada. Por defecto: 2 px, continua y el 1.º color
-   * de la paleta en caudal y precipitación, o uno fijo por variable en el
-   * resto (entrada, salida, volumen y nivel: `--as-data-cat-4` a `-7`). En la
-   * precipitación (barras) solo cuenta el color.
+   * Estilo de la serie observada (el de cada previsión va en su propio
+   * `style`). Por defecto: 2 px, continua y el 1.º color de la paleta en
+   * caudal y precipitación, o uno fijo por variable en el resto (entrada,
+   * salida, volumen y nivel: `--as-data-cat-4` a `-7`). En la precipitación
+   * (barras) solo cuenta el color.
    */
-  observedStyle?: HydroLineStyle
-  /** @deprecated Usa `observedStyle.color`. Se mantiene por compatibilidad; `observedStyle.color` tiene prioridad. */
+  style?: HydroLineStyle
+  /** @deprecated Usa `style.color`. Se mantiene por compatibilidad; `style.color` tiene prioridad. */
   observedColor?: string
   /**
    * Previsiones. En caudal y precipitación, cada fuente lleva su color (el
@@ -91,7 +148,9 @@ export interface HydroVariable {
   /**
    * Unidad. Por defecto: `m³/s` (caudal, entrada y salida), `hm³` (volumen),
    * `m` (nivel; p. ej. `'msnm'` para cotas sobre el nivel del mar) y `mm`
-   * (precipitación). La entrada y la salida comparten el eje de caudal, así
+   * (precipitación acumulada en cada intervalo; `'mm/h'` para intensidad).
+   * Sale en el título del eje (o sola, si el título no cabe), en el tooltip,
+   * la tabla y el CSV. La entrada y la salida comparten el eje de caudal, así
    * que usan su unidad.
    */
   unit?: string

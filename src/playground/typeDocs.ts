@@ -305,13 +305,13 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
       description: 'Nombre en la leyenda y el tooltip.',
     },
     {
-      key: 'observedStyle',
+      key: 'style',
       type: 'HydroLineStyle',
       default: "{ width: 2, type: 'solid' }",
       description:
         'Color, grosor y trazo del observado. Color por defecto: el 1.º de la paleta en caudal y lluvia; uno fijo por variable en el resto. En la lluvia (barras), solo el color.',
     },
-    { key: 'observedColor', type: 'string', description: 'Obsoleta: usa observedStyle.color.' },
+    { key: 'observedColor', type: 'string', description: 'Obsoleta: usa style.color.' },
     {
       key: 'forecasts',
       type: 'HydroForecast[]',
@@ -321,7 +321,8 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
       key: 'unit',
       type: 'string',
       default: "'m³/s', 'hm³', 'm', 'mm'",
-      description: "Unidad del eje ('msnm' para cotas). Entrada y salida usan la del caudal.",
+      description:
+        "Unidad del eje ('msnm' para cotas; 'mm/h' para intensidad de lluvia). Entrada y salida usan la del caudal.",
     },
     { key: 'label', type: 'string', description: 'Título del eje y nombre de la variable.' },
   ],
@@ -351,7 +352,14 @@ export const HYDRO_FORECAST_DOC: TypeDoc = {
     {
       key: 'percentiles',
       type: '{ p10?, p25?, p75?, p90?: HydroPoint[] }',
-      description: 'Bandas de incertidumbre (p10–p90 y p25–p75).',
+      description:
+        'Datos de las bandas de incertidumbre: p10 y p90 forman la banda p10–p90; p25 y p75, la p25–p75. Cada par en los mismos instantes. Cuáles se dibujan lo decide la prop bands (o su botón de la barra).',
+    },
+    {
+      key: 'bandStyle',
+      type: "Partial<Record<'p10-p90' | 'p25-p75', HydroBandStyle>>",
+      description:
+        'Aspecto de cada banda: color, opacidad, nombre y si sale en la leyenda. Por defecto, el color de la previsión, opacidad 0,15 / 0,3 y en la leyenda.',
     },
   ],
 }
@@ -405,7 +413,7 @@ export const HYDROGRAPH_TOOLBAR_DOC: TypeDoc = {
 export const HYDRO_LINE_STYLE_DOC: TypeDoc = {
   name: 'HydroLineStyle',
   description:
-    'Estilo de una serie del hidrograma (observedStyle de cada variable y style de cada previsión).',
+    'Estilo de una serie del hidrograma: el style de cada variable (su observado) y el de cada previsión.',
   fields: [
     {
       key: 'color',
@@ -426,5 +434,32 @@ export const HYDRO_LINE_STYLE_DOC: TypeDoc = {
       description:
         'Trazo: continua, discontinua, puntos o punto y raya. Por defecto, continua en el observado y discontinua en las previsiones.',
     },
+  ],
+}
+
+export const HYDRO_BAND_STYLE_DOC: TypeDoc = {
+  name: 'HydroBandStyle',
+  description:
+    "Aspecto de una banda de percentiles, en bandStyle de la previsión: { 'p10-p90': {...}, 'p25-p75': {...} }.",
+  fields: [
+    {
+      key: 'color',
+      type: 'string',
+      default: 'el de la previsión',
+      description: 'Color del relleno.',
+    },
+    {
+      key: 'opacity',
+      type: 'number',
+      default: '0.15 / 0.3',
+      description: 'Opacidad del relleno (0–1): 0,15 en p10–p90 y 0,3 en p25–p75.',
+    },
+    {
+      key: 'name',
+      type: 'string',
+      default: "'<previsión> p10–p90'",
+      description: 'Nombre en la leyenda, el tooltip, la tabla y el CSV.',
+    },
+    { key: 'legend', type: 'boolean', default: 'true', description: 'Aparece en la leyenda.' },
   ],
 }

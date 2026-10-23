@@ -88,7 +88,7 @@ Ningún widget de control importa una librería de mapas: solo `ASMap` y el sist
 ## Gráficas (`@vsadtajo/adasa-ui/charts`)
 
 - **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
-- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo del observado con `observedName`/`observedStyle`, y de cada previsión con `name`/`style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo del observado con `observedName`/`style` de cada variable, y de cada previsión con `name`/`style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
 
 **Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
 
@@ -151,13 +151,13 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 />
 ```
 
-**Estilo de cada serie.** El observado de cada variable lleva `observedStyle` y cada previsión `style`, con el mismo tipo (`HydroLineStyle`): `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. `observedColor` y `color` siguen funcionando, pero están obsoletas.
+**Estilo de cada serie.** Todas llevan `style`, del mismo tipo (`HydroLineStyle`): el de una variable (`discharge`, `level`...) es el de su serie observada, y cada previsión tiene el suyo. Contiene: `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. `observedColor` y `color` siguen funcionando, pero están obsoletas.
 
 ```vue
 <ASHydrographChart
   :discharge="{
     observed: caudal,
-    observedStyle: { color: '#2a78d6', width: 3, type: 'solid' },
+    style: { color: '#2a78d6', width: 3, type: 'solid' },
     forecasts: [
       { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834', type: 'dashed' } },
       { id: 'eps', name: 'EPS', values: eps, percentiles, style: { color: '#05a873', width: 2, type: 'dashdot' } },
@@ -165,6 +165,42 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
   }"
 />
 ```
+
+**Percentiles (bandas de incertidumbre).** Una previsión por conjuntos (p. ej. EPS) puede traer, además de su mediana en `values`, cuatro percentiles en `percentiles`. Se dibujan como dos bandas sombreadas debajo de la línea:
+
+| Banda       | Entre                 | Qué indica                              | Opacidad por defecto |
+| ----------- | --------------------- | --------------------------------------- | -------------------- |
+| `'p10-p90'` | `p10` y `p90`         | el 80 % de los miembros (más ancha)     | 0,15                 |
+| `'p25-p75'` | `p25` y `p75`         | el 50 % central (más estrecha y marcada) | 0,3                  |
+
+- **Datos**: cada percentil es una serie `[instante, valor]` como `values`, y cada par (p10 con p90, p25 con p75) tiene que ir en los mismos instantes. Si falta uno del par, esa banda no se dibuja.
+- **Cuáles se ven**: la prop `bands` (`['p10-p90', 'p25-p75']` por defecto; `[]` las oculta), que el botón "Percentiles" de la barra cambia con `v-model:bands`.
+- **Aspecto**: `bandStyle` de la previsión, por banda (`HydroBandStyle`): `color` (por defecto, el de la línea de la previsión), `opacity`, `name` y `legend`.
+- **Leyenda**: cada banda tiene su entrada ("EPS p10–p90"), con su color y su opacidad; al pulsarla se oculta. `legend: false` la quita de la leyenda.
+- **Tooltip, tabla y CSV**: cada banda sale con su inferior y su superior.
+
+```vue
+<ASHydrographChart
+  :discharge="{
+    observed: caudal,
+    forecasts: [
+      {
+        id: 'eps',
+        name: 'EPS',
+        values: mediana,
+        percentiles: { p10, p25, p75, p90 },
+        style: { color: '#05a873', type: 'dashdot' },
+        bandStyle: {
+          'p10-p90': { opacity: 0.1, name: 'EPS (80 % de los miembros)' },
+          'p25-p75': { color: '#047857', opacity: 0.35 },
+        },
+      },
+    ],
+  }"
+/>
+```
+
+**Unidades.** Cada variable lleva su `unit`, que sale en el título del eje, el tooltip, la tabla y el CSV. La precipitación usa `mm` por defecto (acumulada en cada intervalo); para intensidad, `unit: 'mm/h'`. En un panel bajo, si el título completo ("Precipitación (mm/h)") no cabe, el eje muestra solo la unidad ("mm/h").
 
 Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
 

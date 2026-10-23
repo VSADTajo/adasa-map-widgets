@@ -9,7 +9,9 @@ import { toApexOptions } from './apexcharts'
 import {
   alignedTimeTicks,
   axisTitleFits,
+  fittedAxisTitle,
   layoutPanels,
+  legendSample,
   niceRound,
   niceTickCount,
   ticksForHeight,
@@ -87,8 +89,8 @@ describe('toEChartsOption', () => {
     expect(now.map((m: Any) => m.label.show)).toEqual([true, false])
   })
 
-  it('la leyenda no incluye las bandas', () => {
-    expect(option.legend.data).toEqual(['Observado', 'EPS'])
+  it('la leyenda incluye las bandas de percentiles', () => {
+    expect(option.legend.data).toEqual(['Observado', 'EPS p10–p90', 'EPS'])
   })
 })
 
@@ -228,6 +230,14 @@ describe('utilidades de maquetación', () => {
     expect(niceTickCount(0, 30, 6)).toBe(6) // 5
   })
 
+  it('fittedAxisTitle: el título entero si cabe; si no, solo la unidad; si tampoco, ninguno', () => {
+    const axis = { title: 'Precipitación (mm/h)', unit: 'mm/h' }
+    expect(fittedAxisTitle(axis, 200)).toBe('Precipitación (mm/h)')
+    expect(fittedAxisTitle(axis, 80)).toBe('mm/h')
+    expect(fittedAxisTitle(axis, 20)).toBeUndefined()
+    expect(fittedAxisTitle({ title: 'Precipitación' }, 80)).toBeUndefined()
+  })
+
   it('axisTitleFits oculta los títulos que no caben enteros en el panel', () => {
     expect(axisTitleFits('Precipitación (mm)', 80)).toBe(false)
     expect(axisTitleFits('Precipitación (mm)', 200)).toBe(true)
@@ -280,5 +290,22 @@ describe('trazos de línea en los tres motores', () => {
   it('ApexCharts: un dashArray por serie, el punto y raya como patrón en texto', () => {
     const options = toApexOptions(lines, [400], 'g')[0] as Any
     expect(options.stroke.dashArray).toEqual([0, 6, 2, '8 3 2 3'])
+  })
+})
+
+describe('legendSample', () => {
+  const series = [
+    { name: 'EPS', type: 'bar', legend: true },
+    { name: 'Observado', type: 'line', legend: true },
+    { name: 'EPS', type: 'line', legend: true },
+  ]
+
+  it('la muestra de un nombre con línea es la línea (para ver su trazo)', () => {
+    expect(legendSample(series, series[0]!)).toBe(series[2])
+  })
+
+  it('sin línea con ese nombre, la propia serie', () => {
+    const bars = [{ name: 'Lluvia', type: 'bar', legend: true }]
+    expect(legendSample(bars, bars[0]!)).toBe(bars[0])
   })
 })

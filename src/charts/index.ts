@@ -49,6 +49,7 @@ export type {
   HydroPoint,
   HydroForecast,
   HydroVariable,
+  HydroBandStyle,
   HydroLineStyle,
   HydroThreshold,
   HydroThresholdVariable,
