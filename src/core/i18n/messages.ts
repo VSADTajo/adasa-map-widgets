@@ -97,6 +97,8 @@ export const es = {
   'layout.expandSheet': 'Ampliar panel',
   'layout.collapseSheet': 'Reducir panel',
   'layout.userMenu': 'Menú de usuario',
+  'layout.sectionBadge': '{label} ({badge})',
+  'layout.sectionDisabled': '{label}. No disponible: {reason}',
   'layout.darkTheme': 'Tema oscuro',
   'layout.logout': 'Cerrar sesión',
 
@@ -289,6 +291,8 @@ export const en: Messages = {
   'layout.expandSheet': 'Expand panel',
   'layout.collapseSheet': 'Collapse panel',
   'layout.userMenu': 'User menu',
+  'layout.sectionBadge': '{label} ({badge})',
+  'layout.sectionDisabled': '{label}. Not available: {reason}',
   'layout.darkTheme': 'Dark theme',
   'layout.logout': 'Sign out',
 

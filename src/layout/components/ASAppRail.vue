@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useLocale } from '@/core/composables/useLocale'
 import type { AppRailEmits, AppRailProps } from '@/layout/types/AppRailProps'
 import ASIcon from '@/core/components/ASIcon.vue'
+import { hasBadge, sectionLabel, sectionTooltip } from '@/layout/utils/sections'
 
 /**
  * Barra vertical de iconos con el color corporativo: una sección por
@@ -47,17 +48,25 @@ const groups = computed(() => [
       :class="{ 'as-app-rail__group--bottom': index === 1 }"
     >
       <li v-for="section in group" :key="section.id">
+        <!-- Deshabilitada con aria-disabled (no disabled): sigue enfocable y con su tooltip. -->
         <button
           type="button"
           class="as-app-rail__item"
-          :class="{ 'as-app-rail__item--active': section.id === props.activeSection }"
-          :aria-label="section.label"
-          :title="section.label"
+          :class="{
+            'as-app-rail__item--active': section.id === props.activeSection,
+            'as-app-rail__item--disabled': section.disabled,
+          }"
+          :aria-label="sectionLabel(section, t)"
+          :title="sectionTooltip(section)"
           :aria-pressed="section.id === props.activeSection"
+          :aria-disabled="section.disabled || undefined"
           :aria-controls="props.controls"
-          @click="emit('toggle', section.id)"
+          @click="!section.disabled && emit('toggle', section.id)"
         >
           <ASIcon :icon="section.icon" />
+          <span v-if="hasBadge(section)" class="as-app-rail__badge" aria-hidden="true">
+            {{ section.badge }}
+          </span>
         </button>
       </li>
     </ul>
@@ -101,10 +110,37 @@ const groups = computed(() => [
   transition: background-color 0.15s ease;
 }
 
-.as-app-rail__item:hover,
+.as-app-rail__item {
+  position: relative;
+}
+
+.as-app-rail__item:not(.as-app-rail__item--disabled):hover,
 .as-app-rail__item--active {
   background: var(--as-app-chrome-active, rgba(255, 255, 255, 0.16));
   color: var(--as-app-chrome-text, #ffffff);
+}
+
+.as-app-rail__item--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Contador en la esquina del icono, con el color de aviso (y siempre con su número). */
+.as-app-rail__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: var(--as-radius-full, 9999px);
+  background: var(--as-color-danger, light-dark(#dc2626, #f87171));
+  color: var(--as-color-danger-contrast, light-dark(#ffffff, #0f172a));
+  font-size: 10px;
+  font-weight: var(--as-font-weight-bold, 700);
+  line-height: 16px;
+  text-align: center;
 }
 
 /* Sobre el color corporativo, el anillo de foco es del color del texto (el azul no contrasta). */

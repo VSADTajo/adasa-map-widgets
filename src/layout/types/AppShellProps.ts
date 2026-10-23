@@ -1,20 +1,47 @@
 import type { IconValue } from '@/core/types/icon'
 
-/** Una sección de la aplicación: un icono en la barra lateral y su panel. */
+/**
+ * Una sección de la aplicación: un icono en la barra lateral (y una línea
+ * del menú en móvil) que abre su panel. Las define cada proyecto: cuántas,
+ * cuáles y en qué orden.
+ *
+ * @example
+ * ```ts
+ * const secciones: AppSection[] = [
+ *   { id: 'capas', label: 'Capas', icon: mdiLayers },
+ *   { id: 'avisos', label: 'Avisos', icon: 'mdi:alert', badge: avisosActivos },
+ *   { id: 'simulaciones', label: 'Simulaciones', icon: Sliders, disabled: !esAdmin,
+ *     disabledReason: 'Solo para administradores' },
+ *   { id: 'ajustes', label: 'Ajustes', icon: mdiCog, position: 'bottom' },
+ * ]
+ * ```
+ */
 export interface AppSection {
   /** Id estable (p. ej. `'capas'`). Es el valor de `v-model:active-section`. */
   id: string
-  /** Nombre visible: tooltip y nombre accesible del icono, y texto del menú en móvil. */
+  /** Nombre visible: nombre accesible del icono, tooltip y texto del menú en móvil. */
   label: string
   /**
-   * Trazado SVG del icono, en una caja de 24 × 24 (el atributo `d` de un
-   * `<path>`). Encaja con `@mdi/js`: `import { mdiLayers } from '@mdi/js'`.
+   * Icono: un trazado SVG (`@mdi/js`), un componente de cualquier librería
+   * o un nombre (`'mdi:layers'`) que traduce `provideIcons` (ver `IconValue`).
    */
   icon: IconValue
-  /** Grupo de la barra de iconos: arriba o abajo del todo. @default 'top' */
+  /**
+   * Grupo de la barra de iconos: arriba del todo o abajo del todo (p. ej.
+   * mapas base y ajustes). En el menú móvil, las de abajo van al final.
+   * @default 'top'
+   */
   position?: 'top' | 'bottom'
   /** Oculta la sección (p. ej. según el rol del usuario). @default false */
   hidden?: boolean
+  /** Contador sobre el icono (p. ej. avisos activos). `0` o vacío no se muestra. */
+  badge?: number | string
+  /** Se ve pero no se puede abrir (p. ej. sin permisos). @default false */
+  disabled?: boolean
+  /** Por qué está deshabilitada: se añade al tooltip y al nombre accesible. */
+  disabledReason?: string
+  /** Tooltip propio. Por defecto, `label`. */
+  tooltip?: string
 }
 
 /** Props de `ASAppShell`. */
