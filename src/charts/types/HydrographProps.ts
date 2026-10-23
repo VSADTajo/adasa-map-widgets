@@ -14,12 +14,13 @@ import type {
 export type HydroPoint = [Date, number | null]
 
 /**
- * Estilo de una serie del hidrograma: color, grosor y trazo.
+ * Estilo de una serie del hidrograma (cada observada y cada previsión lleva
+ * el suyo): color, grosor y trazo.
  *
  * @example
  * ```ts
- * { color: '#2a78d6', width: 3, type: 'solid' }   // el observado (style de la variable)
- * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión (style de la previsión)
+ * { color: '#2a78d6', width: 3, type: 'solid' }   // un observado
+ * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión
  * ```
  */
 export interface HydroLineStyle {
@@ -112,32 +113,63 @@ export interface HydroForecast {
 }
 
 /**
- * Una variable del hidrograma (caudal, caudal de entrada o de salida,
- * volumen, nivel o precipitación): observado y previsiones.
+ * Una serie observada de una variable (p. ej. la estación SAIH y un aforo
+ * manual del mismo punto). Una variable puede tener varias.
  *
  * @example
  * ```ts
- * const nivel: HydroVariable = { observed: cotas, unit: 'msnm', forecasts: [{ id: 'eps', name: 'EPS', values: cotasEps }] }
+ * { id: 'saih', name: 'SAIH', values: caudal, style: { color: '#2a78d6', width: 2 } }
+ * ```
+ */
+export interface HydroObserved {
+  /**
+   * Id estable dentro de la variable. La serie generada es
+   * `'<variable>-observed-<id>'` (p. ej. `'discharge-observed-saih'`), para `seriesOverrides`.
+   */
+  id: string
+  /** Nombre en la leyenda, el tooltip, la tabla y el CSV. */
+  name: string
+  /** Puntos `[instante, valor]`; `null` deja un hueco. */
+  values: HydroPoint[]
+  /**
+   * Color, grosor y trazo (en la precipitación, barras, solo cuenta el
+   * color). Por defecto: 2 px y continua; el 1.º observado lleva el color de
+   * la variable (el 1.º de la paleta en caudal y lluvia; uno fijo en entrada,
+   * salida, volumen y nivel) y los siguientes, otros de la paleta: con
+   * varios, conviene darles `color`.
+   */
+  style?: HydroLineStyle
+}
+
+/**
+ * Una variable del hidrograma (caudal, caudal de entrada o de salida,
+ * volumen, nivel o precipitación): sus series observadas y sus previsiones,
+ * cada una con su nombre y su estilo.
+ *
+ * @example
+ * ```ts
+ * const caudal: HydroVariable = {
+ *   observed: [
+ *     { id: 'saih', name: 'SAIH', values: saih, style: { color: '#2a78d6' } },
+ *     { id: 'aforo', name: 'Aforo manual', values: aforos, style: { color: '#6250d6', type: 'dotted' } },
+ *   ],
+ *   forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles, style: { type: 'dashdot' } }],
+ * }
  * ```
  */
 export interface HydroVariable {
-  /** Serie observada: línea sólida (caudal, volumen, nivel) o barras sólidas (precipitación). */
-  observed?: HydroPoint[]
   /**
-   * Nombre de la serie observada en la leyenda y el tooltip. Por defecto,
-   * "Observado" en caudal y precipitación, y el nombre de la variable en el
-   * resto ("Caudal de entrada", "Volumen", "Nivel"...), para distinguirlas.
+   * Series observadas (ver `HydroObserved`): líneas en caudal, entrada,
+   * salida, volumen y nivel, y barras en la precipitación.
+   *
+   * Por compatibilidad también admite un solo array de puntos (la forma
+   * anterior, obsoleta), con su nombre en `observedName` y su color en
+   * `observedColor`; su serie es `'<variable>-observed'`.
    */
+  observed?: HydroObserved[] | HydroPoint[]
+  /** @deprecated Con `observed` como lista, cada serie lleva su `name`. Solo para la forma anterior. */
   observedName?: string
-  /**
-   * Estilo de la serie observada (el de cada previsión va en su propio
-   * `style`). Por defecto: 2 px, continua y el 1.º color de la paleta en
-   * caudal y precipitación, o uno fijo por variable en el resto (entrada,
-   * salida, volumen y nivel: `--as-data-cat-4` a `-7`). En la precipitación
-   * (barras) solo cuenta el color.
-   */
-  style?: HydroLineStyle
-  /** @deprecated Usa `style.color`. Se mantiene por compatibilidad; `style.color` tiene prioridad. */
+  /** @deprecated Con `observed` como lista, cada serie lleva su `style.color`. Solo para la forma anterior. */
   observedColor?: string
   /**
    * Previsiones. En caudal y precipitación, cada fuente lleva su color (el
@@ -213,11 +245,15 @@ export interface HydrographToolbarConfig extends ChartToolbarConfig {
  * @example
  * ```vue
  * <!-- Punto de control de un río -->
- * <ASHydrographChart :discharge="{ observed: caudal, forecasts }" :precipitation="{ observed: lluvia }"
+ * <ASHydrographChart
+ *   :discharge="{ observed: [{ id: 'saih', name: 'Observado', values: caudal }], forecasts }"
+ *   :precipitation="{ observed: [{ id: 'saih', name: 'Lluvia', values: lluvia }] }"
  *   :thresholds="[{ value: 120, level: 'naranja' }]" />
  * <!-- Embalse: entrada y salida (m³/s), volumen (hm³) y nivel (msnm), cada uno con su eje -->
- * <ASHydrographChart :inflow="{ observed: entrada }" :outflow="{ observed: salida }"
- *   :volume="{ observed: volumen }" :level="{ observed: cota, unit: 'msnm' }"
+ * <ASHydrographChart :inflow="{ observed: [{ id: 'saih', name: 'Entrada', values: entrada }] }"
+ *   :outflow="{ observed: [{ id: 'saih', name: 'Salida', values: salida }] }"
+ *   :volume="{ observed: [{ id: 'saih', name: 'Volumen', values: volumen }] }"
+ *   :level="{ observed: [{ id: 'saih', name: 'Cota', values: cota }], unit: 'msnm' }"
  *   :thresholds="[{ value: 652.5, level: 'rojo', variable: 'level', label: 'Cota máxima' }]" />
  * ```
  */

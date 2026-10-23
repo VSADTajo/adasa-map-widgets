@@ -121,11 +121,32 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
 />
 
 <ASHydrographChart
-  :discharge="{ observed: caudal, forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }] }"
-  :precipitation="{ observed: lluvia }"
+  :discharge="{
+    observed: [{ id: 'saih', name: 'Observado', values: caudal }],
+    forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }],
+  }"
+  :precipitation="{ observed: [{ id: 'saih', name: 'Lluvia', values: lluvia }] }"
   :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
 />
 ```
+
+**Forma de cada variable.** `discharge`, `inflow`, `outflow`, `volume`, `level` y `precipitation` tienen la misma forma (`HydroVariable`): una lista de **observados** y otra de **previsiones**, y cada serie lleva su `id`, su `name` y su `style`:
+
+```ts
+{
+  observed: [
+    { id: 'saih', name: 'SAIH', values: caudal, style: { color: '#2a78d6' } },
+    { id: 'aforos', name: 'Aforos manuales', values: aforos, style: { color: '#6250d6', type: 'dotted' } },
+  ],
+  forecasts: [
+    { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834' } },
+    { id: 'eps', name: 'EPS', values: mediana, percentiles, style: { type: 'dashdot' }, bandStyle: { 'p10-p90': { opacity: 0.1 } } },
+  ],
+  unit: 'm³/s',
+}
+```
+
+Puede haber varios observados por variable (p. ej. la estación SAIH y los aforos manuales del mismo punto). El primero lleva el color de la variable y los siguientes, otros de la paleta: con varios, conviene darles `color`. La forma anterior (`observed: caudal`, un solo array de puntos, con `observedName`/`observedColor`) sigue funcionando, pero está obsoleta.
 
 **Embalses y otras magnitudes en la misma gráfica.** Además de `discharge`, el panel principal admite:
 
@@ -140,10 +161,13 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 
 ```vue
 <ASHydrographChart
-  :inflow="{ observed: entrada, forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }] }"
-  :outflow="{ observed: salida }"
-  :volume="{ observed: volumen }"
-  :level="{ observed: cota, unit: 'msnm' }"
+  :inflow="{
+    observed: [{ id: 'saih', name: 'Entrada', values: entrada }],
+    forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }],
+  }"
+  :outflow="{ observed: [{ id: 'saih', name: 'Salida', values: salida }] }"
+  :volume="{ observed: [{ id: 'saih', name: 'Volumen', values: volumen }] }"
+  :level="{ observed: [{ id: 'saih', name: 'Cota', values: cota }], unit: 'msnm' }"
   :thresholds="[
     { value: 826, level: 'amarillo', variable: 'volume', label: 'Resguardo' },
     { value: 649.9, level: 'rojo', variable: 'level', label: 'Cota máxima' },
@@ -151,13 +175,12 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 />
 ```
 
-**Estilo de cada serie.** Todas llevan `style`, del mismo tipo (`HydroLineStyle`): el de una variable (`discharge`, `level`...) es el de su serie observada, y cada previsión tiene el suyo. Contiene: `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. `observedColor` y `color` siguen funcionando, pero están obsoletas.
+**Estilo de cada serie.** Cada observado y cada previsión lleva su `style` (`HydroLineStyle`), con `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. El `color` suelto de una previsión sigue funcionando, pero está obsoleto.
 
 ```vue
 <ASHydrographChart
   :discharge="{
-    observed: caudal,
-    style: { color: '#2a78d6', width: 3, type: 'solid' },
+    observed: [{ id: 'saih', name: 'Observado', values: caudal, style: { color: '#2a78d6', width: 3 } }],
     forecasts: [
       { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834', type: 'dashed' } },
       { id: 'eps', name: 'EPS', values: eps, percentiles, style: { color: '#05a873', width: 2, type: 'dashdot' } },
@@ -182,7 +205,7 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 ```vue
 <ASHydrographChart
   :discharge="{
-    observed: caudal,
+    observed: [{ id: 'saih', name: 'Observado', values: caudal }],
     forecasts: [
       {
         id: 'eps',
@@ -202,7 +225,7 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 
 **Unidades.** Cada variable lleva su `unit`, que sale en el título del eje, el tooltip, la tabla y el CSV. La precipitación usa `mm` por defecto (acumulada en cada intervalo); para intensidad, `unit: 'mm/h'`. En un panel bajo, si el título completo ("Precipitación (mm/h)") no cabe, el eje muestra solo la unidad ("mm/h").
 
-Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
+Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed-<id>`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
 
 ### Props, eventos y métodos
 

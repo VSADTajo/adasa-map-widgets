@@ -290,32 +290,18 @@ export const TREE_SLOT_DOC: TypeDoc = {
 export const HYDRO_VARIABLE_DOC: TypeDoc = {
   name: 'HydroVariable',
   description:
-    'Una variable del hidrograma: discharge, inflow, outflow, volume, level o precipitation. Observado y previsiones.',
+    'Una variable del hidrograma (discharge, inflow, outflow, volume, level o precipitation): sus series observadas y sus previsiones, cada una con su nombre y su estilo.',
   fields: [
     {
       key: 'observed',
-      type: 'HydroPoint[]',
+      type: 'HydroObserved[]',
       description:
-        'Serie observada ([Date, number | null]; null deja un hueco): línea sólida o barras.',
+        'Series observadas (una o varias, p. ej. SAIH y aforos manuales). Por compatibilidad admite también un solo array de puntos (forma anterior, obsoleta).',
     },
-    {
-      key: 'observedName',
-      type: 'string',
-      default: "'Observado' o el nombre de la variable",
-      description: 'Nombre en la leyenda y el tooltip.',
-    },
-    {
-      key: 'style',
-      type: 'HydroLineStyle',
-      default: "{ width: 2, type: 'solid' }",
-      description:
-        'Color, grosor y trazo del observado. Color por defecto: el 1.º de la paleta en caudal y lluvia; uno fijo por variable en el resto. En la lluvia (barras), solo el color.',
-    },
-    { key: 'observedColor', type: 'string', description: 'Obsoleta: usa style.color.' },
     {
       key: 'forecasts',
       type: 'HydroForecast[]',
-      description: 'Previsiones: discontinuas, con bandas de percentiles.',
+      description: 'Previsiones: discontinuas por defecto, con bandas de percentiles.',
     },
     {
       key: 'unit',
@@ -325,6 +311,44 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
         "Unidad del eje ('msnm' para cotas; 'mm/h' para intensidad de lluvia). Entrada y salida usan la del caudal.",
     },
     { key: 'label', type: 'string', description: 'Título del eje y nombre de la variable.' },
+    {
+      key: 'observedName / observedColor',
+      type: 'string',
+      description: 'Obsoletas: solo para observed como array de puntos.',
+    },
+  ],
+}
+
+export const HYDRO_OBSERVED_DOC: TypeDoc = {
+  name: 'HydroObserved',
+  description:
+    'Una serie observada de una variable. Su serie es <variable>-observed-<id> (para seriesOverrides).',
+  fields: [
+    {
+      key: 'id',
+      type: 'string',
+      required: true,
+      description: "Id estable dentro de la variable (p. ej. 'saih').",
+    },
+    {
+      key: 'name',
+      type: 'string',
+      required: true,
+      description: 'Nombre en la leyenda, el tooltip, la tabla y el CSV.',
+    },
+    {
+      key: 'values',
+      type: 'HydroPoint[]',
+      required: true,
+      description: 'Puntos [instante, valor]; null deja un hueco.',
+    },
+    {
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'solid' }",
+      description:
+        'Color, grosor y trazo. El 1.º observado lleva el color de la variable; los siguientes, otros de la paleta (mejor darles color). En la lluvia, solo el color.',
+    },
   ],
 }
 
@@ -413,7 +437,7 @@ export const HYDROGRAPH_TOOLBAR_DOC: TypeDoc = {
 export const HYDRO_LINE_STYLE_DOC: TypeDoc = {
   name: 'HydroLineStyle',
   description:
-    'Estilo de una serie del hidrograma: el style de cada variable (su observado) y el de cada previsión.',
+    'Estilo de una serie del hidrograma: el style de cada observado y el de cada previsión.',
   fields: [
     {
       key: 'color',

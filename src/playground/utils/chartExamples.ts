@@ -50,8 +50,19 @@ const medianFlow = (hour: number) => flood(hour, -20, 96, 28) + flood(hour, 26, 
 /** Dispersión del conjunto: crece con el horizonte de previsión. */
 const spread = (hour: number, factor: number) => 1 + (factor * hour) / 72
 
+/** Caudal observado (puntos), para las demos que no usan el hidrograma. */
+export const exampleFlowPoints = series(PAST, observedFlow)
+
+/**
+ * Aforos manuales: una medida cada 6 h, algo por encima o por debajo del
+ * SAIH (un segundo observado del mismo punto).
+ */
+export const exampleGaugings: HydroPoint[] = range(-48, 0)
+  .filter((hour) => hour % 6 === 0)
+  .map((hour) => [at(hour), round(observedFlow(hour) * (1 + 0.06 * Math.sin(hour)))])
+
 export const exampleDischarge: HydroVariable = {
-  observed: series(PAST, observedFlow),
+  observed: [{ id: 'saih', name: 'Observado', values: exampleFlowPoints }],
   forecasts: [
     {
       id: 'harmonie',
@@ -72,8 +83,11 @@ export const exampleDischarge: HydroVariable = {
   ],
 }
 
+/** Lluvia observada (puntos), para las demos que no usan el hidrograma. */
+export const exampleRainPoints = series(PAST, (h) => rain(h, -30, 9) + rain(h, -6, 4))
+
 export const examplePrecipitation: HydroVariable = {
-  observed: series(PAST, (h) => rain(h, -30, 9) + rain(h, -6, 4)),
+  observed: [{ id: 'saih', name: 'Observado', values: exampleRainPoints }],
   forecasts: [
     { id: 'harmonie', name: 'Harmonie', values: series(range(1, 48), (h) => rain(h, 14, 11)) },
     { id: 'eps', name: 'EPS', values: series(range(1, 48), (h) => rain(h, 18, 8)) },
@@ -120,23 +134,23 @@ const toLevel = (points: HydroPoint[]): HydroPoint[] =>
   points.map(([date, volume]) => [date, volume === null ? null : levelOf(volume)])
 
 export const exampleInflow: HydroVariable = {
-  observed: series(PAST, inflowAt),
+  observed: [{ id: 'saih', name: 'Caudal de entrada', values: series(PAST, inflowAt) }],
   forecasts: [{ id: 'eps', name: 'EPS', values: series(FUTURE, inflowMedian) }],
 }
 
 export const exampleOutflow: HydroVariable = {
-  observed: series(PAST, outflowAt),
+  observed: [{ id: 'saih', name: 'Caudal de salida', values: series(PAST, outflowAt) }],
   forecasts: [{ id: 'eps', name: 'EPS', values: series(FUTURE, outflowAt) }],
 }
 
 export const exampleVolume: HydroVariable = {
-  observed: observedVolume,
+  observed: [{ id: 'saih', name: 'Volumen', values: observedVolume }],
   forecasts: [{ id: 'eps', name: 'EPS', values: volumeAt() }],
 }
 
 /** Nivel con la previsión EPS y sus percentiles (de distintas entradas posibles). */
 export const exampleLevel: HydroVariable = {
-  observed: toLevel(observedVolume),
+  observed: [{ id: 'saih', name: 'Nivel', values: toLevel(observedVolume) }],
   forecasts: [
     {
       id: 'eps',

@@ -35,8 +35,11 @@ import ASChart from './ASChart.vue'
  * @example
  * ```vue
  * <ASHydrographChart
- *   :discharge="{ observed: caudal, forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }] }"
- *   :precipitation="{ observed: lluvia }"
+ *   :discharge="{
+ *     observed: [{ id: 'saih', name: 'Observado', values: caudal }],
+ *     forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }],
+ *   }"
+ *   :precipitation="{ observed: [{ id: 'saih', name: 'Lluvia', values: lluvia }] }"
  *   :thresholds="[{ value: 120, level: 'naranja' }, { value: 180, level: 'rojo' }]"
  * />
  * ```

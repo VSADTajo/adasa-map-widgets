@@ -3,6 +3,7 @@ import type {
   HydroBand,
   HydroBandStyle,
   HydroLineStyle,
+  HydroObserved,
   HydroVariable,
 } from '@/charts/types/HydrographProps'
 import type { PropField } from '../propTypes'
@@ -10,12 +11,15 @@ import {
   EXAMPLE_NOW,
   exampleChartAnnotations,
   exampleDischarge,
+  exampleFlowPoints,
+  exampleGaugings,
   exampleInflow,
   exampleLevel,
   exampleOutflow,
   exampleReservoirThresholds,
   exampleVolume,
   examplePrecipitation,
+  exampleRainPoints,
   exampleThresholds,
 } from './chartExamples'
 
@@ -42,7 +46,7 @@ const DEMO_SERIES = [
     color: '#2a78d6',
     axis: '1',
     type: 'line' as const,
-    data: exampleDischarge.observed!,
+    data: exampleFlowPoints,
     dataName: 'caudal',
   },
   {
@@ -51,7 +55,7 @@ const DEMO_SERIES = [
     color: '#eb6834',
     axis: '2',
     type: 'line' as const,
-    data: exampleDischarge.observed!.map(([date, value]): [Date, number | null] => [
+    data: exampleFlowPoints.map(([date, value]): [Date, number | null] => [
       date,
       value === null ? null : Math.round((0.8 + value / 60) * 100) / 100,
     ]),
@@ -63,7 +67,7 @@ const DEMO_SERIES = [
     color: '#05a873',
     axis: '3',
     type: 'bar' as const,
-    data: examplePrecipitation.observed!,
+    data: exampleRainPoints,
     dataName: 'lluvia',
   },
 ]
@@ -251,6 +255,14 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
     type: 'dashed',
   }),
   ...seriesStyleFields('eps', 'EPS', { name: 'EPS', color: '#05a873', type: 'dashdot' }),
+  {
+    key: 'gaugings',
+    label: 'Segundo observado (aforos manuales)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Otra entrada en discharge.observed, con su nombre y su estilo (de puntos).',
+  },
   {
     key: 'epsBandColor',
     label: 'EPS percentiles: color',
@@ -509,11 +521,31 @@ const HYDROGRAPH_ONLY = new Set(
 )
 
 /** Aplica nombres y colores del formulario a una variable del hidrograma. */
-function customizeVariable(variable: HydroVariable, values: Values): HydroVariable {
+/** Aforos manuales: el segundo observado del ejemplo, de puntos y sin línea entre ellos. */
+const GAUGINGS = {
+  id: 'aforos',
+  name: 'Aforos manuales',
+  values: exampleGaugings,
+  style: { color: '#6250d6', width: 2, type: 'dotted' as const },
+}
+
+/** Nombre y estilo del formulario sobre la variable de ejemplo: el 1.er observado y cada previsión. */
+function customizeVariable(
+  variable: HydroVariable,
+  values: Values,
+  extraObserved: HydroObserved[] = [],
+): HydroVariable {
+  const [first] = variable.observed as HydroObserved[]
   return {
     ...variable,
-    observedName: String(values.observedName || 'Observado'),
-    style: styleOf(values, 'observed'),
+    observed: [
+      {
+        ...first!,
+        name: String(values.observedName || 'Observado'),
+        style: styleOf(values, 'observed'),
+      },
+      ...extraObserved,
+    ],
     forecasts: variable.forecasts?.map((forecast) => ({
       ...forecast,
       name: String(values[`${forecast.id}Name`] || forecast.name),
@@ -528,7 +560,9 @@ export function hydrographToProps(values: Values): Values {
   const flow = values.showDischarge || values.showInflow || values.showOutflow
   return {
     ...props,
-    discharge: values.showDischarge ? customizeVariable(exampleDischarge, values) : undefined,
+    discharge: values.showDischarge
+      ? customizeVariable(exampleDischarge, values, values.gaugings ? [GAUGINGS] : [])
+      : undefined,
     precipitation: values.showPrecipitation
       ? {
           ...customizeVariable(examplePrecipitation, values),
@@ -555,10 +589,27 @@ export function hydrographToProps(values: Values): Values {
 }
 
 export function hydrographToSnippet(values: Values): string {
+  const observed = (name: string, values_: string, style: string) =>
+    `{ id: 'saih', name: '${name}', values: ${values_}, style: ${style} },`
   const forecasts = (['harmonie', 'eps'] as const).map(
     (id) =>
-      `{ id: '${id}', name: '${values[`${id}Name`]}', style: ${styleSnippet(values, id)}, values: ${id}${id === 'eps' ? `, percentiles, bandStyle: ${bandStyleSnippet(values)}` : ''} },`,
+      `{ id: '${id}', name: '${values[`${id}Name`]}', values: ${id}${id === 'eps' ? ', percentiles' : ''}, style: ${styleSnippet(values, id)}${id === 'eps' ? `, bandStyle: ${bandStyleSnippet(values)}` : ''} },`,
   )
+  /** Una variable con su lista de observados y, si las hay, sus previsiones. */
+  const variable = (
+    prop: string,
+    observedLines: string[],
+    forecastLines: string[] = [],
+    extra = '',
+  ) => [
+    `  :${prop}="{`,
+    '    observed: [',
+    ...indent(observedLines, 6),
+    '    ],',
+    ...(forecastLines.length ? ['    forecasts: [', ...indent(forecastLines, 6), '    ],'] : []),
+    ...(extra ? [`    ${extra}`] : []),
+    '  }"',
+  ]
   const attributes = commonAttributes(values)
   if (values.magnitude === 'level') attributes.push('magnitude="level"')
   if (values.precipitationLayout === 'overlay') attributes.push('precipitation-layout="overlay"')
@@ -568,28 +619,47 @@ export function hydrographToSnippet(values: Values): string {
     '<ASHydrographChart',
     ...indent(attributes, 2),
     ...(values.showDischarge
-      ? [
-          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', style: ${styleSnippet(values, 'observed')}, forecasts: [`,
-          ...indent(forecasts, 4),
-          '  ] }"',
-        ]
+      ? variable(
+          'discharge',
+          [
+            observed(String(values.observedName), 'caudal', styleSnippet(values, 'observed')),
+            ...(values.gaugings
+              ? [
+                  "{ id: 'aforos', name: 'Aforos manuales', values: aforos, style: { color: '#6250d6', width: 2, type: 'dotted' } },",
+                ]
+              : []),
+          ],
+          forecasts,
+        )
       : []),
     ...(values.showPrecipitation
-      ? [
-          `  :precipitation="{ observed: lluvia, unit: '${values.precipitationUnit}', observedName: '${values.observedName}', style: { color: '${values.observedColor}' } }"`,
-        ]
+      ? variable(
+          'precipitation',
+          [observed(String(values.observedName), 'lluvia', `{ color: '${values.observedColor}' }`)],
+          [],
+          `unit: '${values.precipitationUnit}',`,
+        )
       : []),
     ...(values.showInflow
-      ? [
-          `  :inflow="{ observed: entrada, forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }] }"`,
-        ]
+      ? variable(
+          'inflow',
+          ["{ id: 'saih', name: 'Caudal de entrada', values: entrada },"],
+          ["{ id: 'eps', name: 'EPS', values: entradaEps },"],
+        )
       : []),
-    ...(values.showOutflow ? ['  :outflow="{ observed: salida }"'] : []),
-    ...(values.showVolume ? ['  :volume="{ observed: volumen }"'] : []),
+    ...(values.showOutflow
+      ? variable('outflow', ["{ id: 'saih', name: 'Caudal de salida', values: salida },"])
+      : []),
+    ...(values.showVolume
+      ? variable('volume', ["{ id: 'saih', name: 'Volumen', values: volumen },"])
+      : []),
     ...(values.showLevel
-      ? [
-          `  :level="{ observed: cota, unit: '${values.levelUnit}', forecasts: [{ id: 'eps', name: 'EPS', values: cotaEps, percentiles: cotaPercentiles }] }"`,
-        ]
+      ? variable(
+          'level',
+          ["{ id: 'saih', name: 'Nivel', values: cota },"],
+          ["{ id: 'eps', name: 'EPS', values: cotaEps, percentiles: cotaPercentiles },"],
+          `unit: '${values.levelUnit}',`,
+        )
       : []),
     `  :thresholds="${reservoir ? '[...umbrales, ...umbralesEmbalse]' : 'umbrales'}"`,
     ...(values.episode

@@ -385,11 +385,17 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
     expect(byId(chart, 'discharge-eps')).toMatchObject({ lineStyle: 'dashed', lineWidth: 2 })
   })
 
-  it('style de la variable (observado) y de cada previsión fijan color, grosor y trazo', () => {
+  it('el style de cada observado y de cada previsión fija color, grosor y trazo', () => {
     const chart = build({
       discharge: {
-        observed: points(10, 12),
-        style: { color: '#123456', width: 3, type: 'solid' },
+        observed: [
+          {
+            id: 'saih',
+            name: 'SAIH',
+            values: points(10, 12),
+            style: { color: '#123456', width: 3, type: 'solid' },
+          },
+        ],
         forecasts: [
           {
             id: 'eps',
@@ -401,7 +407,8 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
         ],
       },
     })
-    expect(byId(chart, 'discharge-observed')).toMatchObject({
+    expect(byId(chart, 'discharge-observed-saih')).toMatchObject({
+      name: 'SAIH',
       color: '#123456',
       lineWidth: 3,
       lineStyle: 'solid',
@@ -437,12 +444,9 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
     expect(byId(chart, 'precipitation-harmonie')!.color).toBe('#00aa00')
   })
 
-  it('style.color y style.color tienen prioridad sobre observedColor y color (obsoletos)', () => {
+  it('en una previsión, style.color tiene prioridad sobre color (obsoleto)', () => {
     const chart = build({
       discharge: {
-        observed: points(1, 2),
-        observedColor: '#aaaaaa',
-        style: { color: '#bbbbbb' },
         forecasts: [
           {
             id: 'eps',
@@ -454,18 +458,16 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
         ],
       },
     })
-    expect(byId(chart, 'discharge-observed')!.color).toBe('#bbbbbb')
     expect(byId(chart, 'discharge-eps')!.color).toBe('#dddddd')
-    const legacy = build({ discharge: { observed: points(1, 2), observedColor: '#aaaaaa' } })
-    expect(byId(legacy, 'discharge-observed')!.color).toBe('#aaaaaa')
   })
 
   it('también en entrada, salida, volumen y nivel', () => {
     const chart = buildHydrograph(
       {
         level: {
-          observed: points(1, 2),
-          style: { type: 'dotted', width: 4 },
+          observed: [
+            { id: 'cota', name: 'Cota', values: points(1, 2), style: { type: 'dotted', width: 4 } },
+          ],
           forecasts: [
             {
               id: 'eps',
@@ -478,7 +480,7 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
       },
       fakeLocale.t,
     )
-    expect(byId(chart, 'level-observed')).toMatchObject({
+    expect(byId(chart, 'level-observed-cota')).toMatchObject({
       lineStyle: 'dotted',
       lineWidth: 4,
       color: 'var(--as-data-cat-7)',
@@ -542,5 +544,99 @@ describe('buildHydrograph · unidad de la precipitación', () => {
     expect(build().yAxes![0]!.unit).toBe('mm')
     const chart = build({ precipitation: { observed: points(1, 2), unit: 'mm/h' } })
     expect(chart.yAxes![0]).toMatchObject({ id: 'precipitation', unit: 'mm/h' })
+  })
+})
+
+describe('buildHydrograph · varias series observadas por variable', () => {
+  const byId = (chart: ReturnType<typeof build>, id: string) =>
+    chart.series.find((s) => s.id === id)
+
+  it('una serie por observado, con su id, nombre y estilo', () => {
+    const chart = build({
+      discharge: {
+        observed: [
+          { id: 'saih', name: 'SAIH', values: points(10, 12) },
+          { id: 'aforo', name: 'Aforo manual', values: points(11, 13), style: { type: 'dotted' } },
+        ],
+      },
+    })
+    expect(byId(chart, 'discharge-observed-saih')).toMatchObject({
+      name: 'SAIH',
+      color: 'var(--as-data-cat-1)',
+      lineStyle: 'solid',
+      yAxis: 'discharge',
+    })
+    expect(byId(chart, 'discharge-observed-aforo')).toMatchObject({
+      name: 'Aforo manual',
+      color: 'var(--as-data-cat-8)',
+      lineStyle: 'dotted',
+    })
+  })
+
+  it('el 1.º lleva el color de la variable y los siguientes, del final de la paleta', () => {
+    const chart = buildHydrograph(
+      {
+        level: {
+          observed: ['a', 'b', 'c'].map((id) => ({ id, name: id, values: points(1, 2) })),
+        },
+      },
+      fakeLocale.t,
+    )
+    expect(['a', 'b', 'c'].map((id) => byId(chart, `level-observed-${id}`)!.color)).toEqual([
+      'var(--as-data-cat-7)',
+      'var(--as-data-cat-8)',
+      'var(--as-data-cat-7)',
+    ])
+  })
+
+  it('el color del 1.º observado es el de las previsiones de la variable (fuera del caudal)', () => {
+    const chart = buildHydrograph(
+      {
+        volume: {
+          observed: [
+            { id: 'saih', name: 'Volumen', values: points(1, 2), style: { color: '#123456' } },
+          ],
+          forecasts: [{ id: 'eps', name: 'EPS', values: points(2, 3) }],
+        },
+      },
+      fakeLocale.t,
+    )
+    expect(byId(chart, 'volume-eps')!.color).toBe('#123456')
+  })
+
+  it('en la precipitación, una serie de barras por observado', () => {
+    const chart = build({
+      precipitation: {
+        observed: [
+          { id: 'saih', name: 'SAIH', values: points(1, 2) },
+          { id: 'aemet', name: 'AEMET', values: points(2, 3), style: { color: '#00aa00' } },
+        ],
+      },
+    })
+    expect(byId(chart, 'precipitation-observed-saih')).toMatchObject({ type: 'bar', name: 'SAIH' })
+    expect(byId(chart, 'precipitation-observed-aemet')).toMatchObject({
+      type: 'bar',
+      color: '#00aa00',
+    })
+  })
+
+  it('las series sin puntos no se dibujan, y sin ninguna la variable no cuenta', () => {
+    const chart = buildHydrograph(
+      {
+        level: { observed: [{ id: 'vacia', name: 'Vacía', values: [] }] },
+        discharge: { observed: points(1, 2) },
+      },
+      fakeLocale.t,
+    )
+    expect(chart.yAxes!.map((axis) => axis.id)).toEqual(['discharge'])
+  })
+
+  it('la forma anterior (un array de puntos) sigue valiendo, con su id y observedName/observedColor', () => {
+    const chart = build({
+      discharge: { observed: points(1, 2), observedName: 'Medido', observedColor: '#aaaaaa' },
+    })
+    expect(byId(chart, 'discharge-observed')).toMatchObject({ name: 'Medido', color: '#aaaaaa' })
+    const plain = build({ discharge: { observed: points(1, 2) } })
+    expect(byId(plain, 'discharge-observed')!.name).toBe('Observado')
   })
 })

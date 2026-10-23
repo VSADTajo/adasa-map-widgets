@@ -51,6 +51,7 @@ export type {
   HydroVariable,
   HydroBandStyle,
   HydroLineStyle,
+  HydroObserved,
   HydroThreshold,
   HydroThresholdVariable,
   HydroBand,

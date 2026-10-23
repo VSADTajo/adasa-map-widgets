@@ -11,6 +11,7 @@ import type {
 import type {
   HydroBand,
   HydroForecast,
+  HydroObserved,
   HydroPoint,
   HydrographProps,
   HydroThresholdVariable,
@@ -27,11 +28,44 @@ const BAND_PERCENTILES: Record<HydroBand, ['p10' | 'p25', 'p75' | 'p90']> = {
 const PRECIPITATION_AXIS = 'precipitation'
 const DISCHARGE_AXIS = 'discharge'
 
+/**
+ * Las series observadas de una variable como lista. La forma anterior (un
+ * solo array de puntos, con `observedName`/`observedColor`) pasa a una
+ * entrada sin id, cuya serie conserva su id de siempre (`<variable>-observed`).
+ */
+function observedList(variable: HydroVariable | undefined): HydroObserved[] {
+  const observed = variable?.observed ?? []
+  if (observed.length === 0) return []
+  if (Array.isArray(observed[0])) {
+    return [
+      {
+        id: '',
+        name: variable!.observedName!,
+        values: observed as HydroPoint[],
+        style: variable!.observedColor ? { color: variable!.observedColor } : undefined,
+      },
+    ]
+  }
+  return (observed as HydroObserved[]).filter((entry) => entry.values?.length)
+}
+
+/** Id de la serie de un observado: `<variable>-observed` (forma anterior) o `<variable>-observed-<id>`. */
+const observedSeriesId = (key: string, entry: HydroObserved) =>
+  entry.id ? `${key}-observed-${entry.id}` : `${key}-observed`
+
+/**
+ * Color por defecto del observado número `index` de una variable: el 1.º
+ * lleva el de la variable; los siguientes, colores del final de la paleta
+ * (lejos de las fuentes de previsión, que empiezan por el 2.º).
+ */
+const observedColorAt = (index: number, base: string) =>
+  index === 0 ? base : `var(--as-data-cat-${8 - ((index - 1) % 4)})`
+
 /** Máximo del eje de precipitación superpuesta: las barras ocupan ~el 40 % del alto. */
 function overlayMax(precipitation: HydroVariable): number | undefined {
   const range = extent(
     [
-      ...(precipitation.observed ?? []),
+      ...observedList(precipitation).flatMap((entry) => entry.values),
       ...(precipitation.forecasts ?? []).flatMap((f) => f.values ?? []),
     ].map(([, value]) => value),
   )
@@ -76,14 +110,10 @@ const VARIABLE_COLORS: Record<Exclude<LineVariableKey, 'discharge'>, string> = {
   level: 'var(--as-data-cat-7)',
 }
 
-/** Color propio del observado: `style.color` o, por compatibilidad, `observedColor`. */
-const observedColorOf = (variable: HydroVariable): string | undefined =>
-  variable.style?.color ?? variable.observedColor
-
 /** Si la variable trae algo que dibujar (observado, previsión o percentiles). */
 function hasData(variable: HydroVariable | undefined): variable is HydroVariable {
   return Boolean(
-    variable?.observed?.length ||
+    observedList(variable).length ||
     variable?.forecasts?.some(
       (f) => f.values?.length || Object.values(f.percentiles ?? {}).some((p) => p?.length),
     ),
@@ -107,7 +137,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
   const discharge = props.discharge
   const precipitation = props.precipitation
   const hasPrecipitation = Boolean(
-    precipitation?.observed?.length || precipitation?.forecasts?.length,
+    observedList(precipitation).length || precipitation?.forecasts?.length,
   )
   const bands = props.bands ?? ['p10-p90', 'p25-p75']
 
@@ -141,7 +171,8 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       variable,
       axis: DISCHARGE_AXIS,
       color:
-        observedColorOf(variable) ?? (key === 'discharge' ? observedColor : VARIABLE_COLORS[key]),
+        observedList(variable)[0]?.style?.color ??
+        (key === 'discharge' ? observedColor : VARIABLE_COLORS[key]),
       label: variable.label ?? t(`hydrograph.${key}`),
     }
   })
@@ -155,7 +186,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       key,
       variable,
       axis,
-      color: observedColorOf(variable) ?? VARIABLE_COLORS[key],
+      color: observedList(variable)[0]?.style?.color ?? VARIABLE_COLORS[key],
       label: variable.label ?? t(`hydrograph.${key}`),
     })
   }
@@ -235,16 +266,16 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
   const series: ChartSeries[] = []
 
   if (hasPrecipitation) {
-    if (precipitation!.observed?.length) {
+    observedList(precipitation).forEach((entry, index) => {
       series.push({
-        id: 'precipitation-observed',
-        name: precipitation!.observedName ?? observedName,
+        id: observedSeriesId('precipitation', entry),
+        name: entry.name ?? observedName,
         type: 'bar',
-        data: precipitation!.observed,
+        data: entry.values,
         yAxis: PRECIPITATION_AXIS,
-        color: observedColorOf(precipitation!) ?? observedColor,
+        color: entry.style?.color ?? observedColorAt(index, observedColor),
       })
-    }
+    })
     for (const forecast of precipitation!.forecasts ?? []) {
       if (!forecast.values?.length) continue
       series.push({
@@ -299,19 +330,19 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     }
   }
   for (const line of lineVariables) {
-    if (line.variable.observed?.length) {
+    observedList(line.variable).forEach((entry, index) => {
       series.push({
-        id: `${line.key}-observed`,
-        // En caudal, "Observado"; en el resto, el nombre de la variable para distinguirlas.
-        name: line.variable.observedName ?? (line.key === 'discharge' ? observedName : line.label),
+        id: observedSeriesId(line.key, entry),
+        // Sin nombre (forma anterior): en caudal, "Observado"; en el resto, el de la variable.
+        name: entry.name ?? (line.key === 'discharge' ? observedName : line.label),
         type: 'line',
-        data: line.variable.observed,
+        data: entry.values,
         yAxis: line.axis,
-        color: line.color,
-        lineWidth: line.variable.style?.width ?? 2,
-        lineStyle: line.variable.style?.type ?? 'solid',
+        color: entry.style?.color ?? observedColorAt(index, line.color),
+        lineWidth: entry.style?.width ?? 2,
+        lineStyle: entry.style?.type ?? 'solid',
       })
-    }
+    })
     for (const forecast of line.variable.forecasts ?? []) {
       if (!forecast.values?.length) continue
       series.push({
