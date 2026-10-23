@@ -63,7 +63,7 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASThresholdSummary`](src/detail/components/ASThresholdSummary.vue)    | `/detail` | Superaciones de umbral por serie y nivel                                     | —                                   |
 | [`ASValueMatrix`](src/detail/components/ASValueMatrix.vue)              | `/detail` | Tabla de valores por intervalo (mín./media/máx.) teñida por nivel            | —                                   |
 | [`ASThresholdLegend`](src/detail/components/ASThresholdLegend.vue)      | `/detail` | Umbrales con su valor; resalta uno (p. ej. en el hidrograma)                 | —                                   |
-| [`ASIcon`](src/core/components/ASIcon.vue)                              | raíz      | Icono SVG a partir de su trazado (formato `@mdi/js`)                         | —                                   |
+| [`ASIcon`](src/core/components/ASIcon.vue)                              | raíz      | Icono de cualquier librería: trazado (`@mdi/js`), componente o nombre (`provideIcons`) | —                                   |
 
 Los widgets de control `ASMap*` no dependen de ninguna librería de mapas; las dependencias de la última columna son `peerDependencies` opcionales que se instalan solo si se usa ese motor.
 
@@ -330,16 +330,27 @@ Para verlo funcionando, abre el compositor del playground (`#composer`). Activa 
 </ASAppShell>
 ```
 
-Las secciones llevan su icono como trazado SVG; encajan con `@mdi/js`:
+Las secciones las decide cada proyecto (`AppSection[]`): cuántas, en qué orden y si van arriba o abajo de la barra (`position`). Cada una puede llevar un contador (`badge`), estar oculta (`hidden`) o deshabilitada con su motivo (`disabled`, `disabledReason`), y un tooltip propio (`tooltip`). El icono es cualquier [`IconValue`](#iconos):
 
 ```ts
-import { mdiLayers, mdiMap } from '@mdi/js'
-const secciones: AppSection[] = [
+import { mdiLayers } from '@mdi/js'
+import { Map } from 'lucide-vue-next'
+
+const secciones = computed<AppSection[]>(() => [
   { id: 'capas', label: 'Capas', icon: mdiLayers },
-  { id: 'simulaciones', label: 'Simulaciones', icon: mdiTuneVariant, hidden: !esAdmin },
-  { id: 'mapasbase', label: 'Mapas base', icon: mdiMap, position: 'bottom' },
-]
+  { id: 'avisos', label: 'Avisos', icon: 'mdi:alert', badge: avisosActivos.value },
+  {
+    id: 'simulaciones',
+    label: 'Simulaciones',
+    icon: 'tabler:chart-dots',
+    disabled: !esAdmin,
+    disabledReason: 'Solo para administradores',
+  },
+  { id: 'mapasbase', label: 'Mapas base', icon: Map, position: 'bottom' },
+])
 ```
+
+Una sección deshabilitada sigue enfocable (con `aria-disabled`) y anuncia el motivo, pero no se abre. El contador forma parte de su nombre accesible ("Avisos (3)").
 
 **Enlazarlo con la URL** (como en los visores SAIH): la sección va en la ruta y el detalle en un parámetro. Al cambiar de sección se conserva la query, para que no se cierre el detalle.
 
@@ -445,7 +456,30 @@ import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/form
 - **Tema**: sin prop `theme` ni `provideTheme`, no fuerzan ninguno y heredan el del contenedor (un formulario en un panel oscuro se ve oscuro).
 - **Controles propios**: `ASFormField` da a cualquier control la misma etiqueta, ayuda y error, y le pasa por el slot el `id` y el `aria-describedby`.
 
-**Iconos.** Todo prop de icono es el trazado SVG de 24 × 24 que exporta `@mdi/js` (`import { mdiFilter } from '@mdi/js'`). La librería no depende de `@mdi/js` ni de ninguna fuente de iconos: cada proyecto importa solo los que usa. Para logos o SVG multicolor, los componentes tienen slots (`#icon`, `#prefix`, `#suffix`), y `ASIcon` pinta un trazado igual que lo hace la librería.
+**Iconos.** Las props de icono aceptan cualquier [`IconValue`](#iconos). Para logos o SVG multicolor, los componentes tienen slots (`#icon`, `#prefix`, `#suffix`).
+
+## Iconos
+
+La librería no depende de ninguna librería de iconos: el proyecto elige la suya. Todas las props de icono (`icon`, `prefixIcon`, `AppSection.icon`, `SelectOption.icon`...) aceptan un `IconValue`, que puede ser:
+
+- **Un trazado SVG** de 24 × 24 (`@mdi/js`). Funciona sin configurar nada, y el bundle solo lleva los iconos que se importan: `:icon="mdiLayers"`.
+- **Un componente** de cualquier librería (Lucide, Font Awesome, Heroicons...), que recibe `width` y `height`: `:icon="Map"`. Si necesita props, se pasa como `{ component, props }`.
+- **Un nombre** (`icon="mdi:layers"`), que traduce el resolvedor registrado con `provideIcons` en la raíz de la app:
+
+```ts
+// App.vue
+import { Icon } from '@iconify/vue'
+import { provideIcons } from '@vsadtajo/adasa-ui'
+
+provideIcons((name) => {
+  if (name.startsWith('mdi-')) return { class: `mdi ${name}` } // fuente @mdi/font (como en Vuetify)
+  if (name.includes(':')) return { component: Icon, props: { icon: name } } // Iconify: 'mdi:…', 'tabler:…'
+})
+```
+
+El resolvedor devuelve `{ path }`, `{ component, props? }` o `{ class }`. Si no conoce un nombre, `ASIcon` deja un hueco del mismo tamaño y avisa una vez en consola. Para pintar un icono suelto: `<ASIcon icon="tabler:map" :size="20" label="Mapa" />` (sin `label`, es decorativo).
+
+En el playground, la entrada **ASIcon** muestra la misma barra con `@mdi/js`, Lucide, Iconify y `@mdi/font`, y los ejemplos de `provideIcons` para cada caso.
 
 ## Detalle (`@vsadtajo/adasa-ui/detail`)
 
