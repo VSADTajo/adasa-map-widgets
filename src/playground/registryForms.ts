@@ -13,6 +13,18 @@ import type { MenuEntry, MenuItem } from '@/forms/types/MenuProps'
 import type { DateRangePreset, DateRangePresetId } from '@/forms/types/DateRangePickerProps'
 import FormFieldDemo from './components/FormFieldDemo.vue'
 import FormsDemo from './components/FormsDemo.vue'
+import CollapsibleDemo from './components/CollapsibleDemo.vue'
+import LayersPanelDemo from './components/LayersPanelDemo.vue'
+import ASSlider from '@/forms/components/ASSlider.vue'
+import ASTreeList from '@/forms/components/ASTreeList.vue'
+import {
+  ICON_VALUE_DOC,
+  TREE_NODE_ACTION_DOC,
+  TREE_NODE_DOC,
+  TREE_SELECTION_DOC,
+  TREE_SLOT_DOC,
+} from './typeDocs'
+import { DEMO_TREE, layersPanelExample } from './utils/treeListExample'
 import type { PropField } from './propTypes'
 import type { RegistryEntry } from './registry'
 import {
@@ -410,6 +422,99 @@ const MENU_SCHEMA: PropField[] = [
   THEME_FIELD,
 ]
 
+/** Formatos de ejemplo del valor de `ASSlider` (`format` es una función: no cabe en el editor). */
+const SLIDER_FORMATS: Record<string, (value: number) => string> = {
+  porcentaje: (value) => `${value} %`,
+  caudal: (value) => `${value} m³/s`,
+}
+
+const SLIDER_SCHEMA: PropField[] = [
+  { key: 'modelValue', label: 'Valor (v-model)', type: 'number', default: 60 },
+  { key: 'min', label: 'Mínimo', type: 'number', default: 0 },
+  { key: 'max', label: 'Máximo', type: 'number', default: 100 },
+  { key: 'step', label: 'Paso', type: 'number', default: 5, min: 0.1, step: 0.1 },
+  { key: 'label', label: 'Etiqueta', type: 'string', default: 'Opacidad' },
+  {
+    key: 'formatKind',
+    label: 'Formato del valor',
+    type: 'select',
+    options: ['', 'porcentaje', 'caudal'],
+    default: 'porcentaje',
+    playgroundOnly: true,
+    description:
+      'Ejemplos de la prop format: (value) => string. Vacío: el número en el idioma activo.',
+  },
+  {
+    key: 'hideLabel',
+    label: 'Ocultar etiqueta',
+    type: 'boolean',
+    default: false,
+    description: 'Solo a la vista: los lectores de pantalla la siguen leyendo.',
+  },
+  { key: 'showValue', label: 'Mostrar valor', type: 'boolean', default: true },
+  { key: 'hint', label: 'Ayuda', type: 'string', default: '' },
+  { key: 'disabled', label: 'Deshabilitado', type: 'boolean', default: false },
+  THEME_FIELD,
+]
+
+const COLLAPSIBLE_SCHEMA: PropField[] = [
+  { key: 'title', label: 'Título', type: 'string', default: 'Aforos' },
+  { key: 'open', label: 'Abierta (v-model:open)', type: 'boolean', default: true },
+  { key: 'badge', label: 'Contador', type: 'string', default: '3', docType: 'number | string' },
+  {
+    key: 'headingLevel',
+    label: 'Nivel del encabezado',
+    type: 'select',
+    options: ['2', '3', '4', '5', '6'],
+    default: '3',
+    docType: '2 | 3 | 4 | 5 | 6',
+  },
+  { key: 'flat', label: 'Plana (sin borde)', type: 'boolean', default: false },
+  { key: 'disabled', label: 'Deshabilitada', type: 'boolean', default: false },
+  THEME_FIELD,
+]
+
+const TREE_SCHEMA: PropField[] = [
+  {
+    key: 'items',
+    label: 'Nodos (JSON)',
+    type: 'json',
+    default: DEMO_TREE,
+    docType: 'TreeNode[]',
+    snippetVar: 'capas',
+    description: 'Edítalos: grupos con children, opacity, badge, disabled, actions...',
+  },
+  {
+    key: 'modelValue',
+    label: 'Seleccionadas (v-model, JSON)',
+    type: 'json',
+    default: ['AR', 'E'],
+    docType: 'string[]',
+    description: 'Ids de las hojas. Cambia al marcar en el árbol.',
+  },
+  {
+    key: 'opacities',
+    label: 'Opacidades (v-model:opacities, JSON)',
+    type: 'json',
+    default: { E: 0.7 },
+    docType: 'Record<string, number>',
+    description: 'De 0 a 1, de las hojas con opacity: true.',
+  },
+  {
+    key: 'selection',
+    label: 'Selección',
+    type: 'select',
+    options: ['multiple', 'single', 'none'],
+    default: 'multiple',
+  },
+  { key: 'deselectable', label: "Deseleccionar en 'single'", type: 'boolean', default: true },
+  { key: 'label', label: 'Nombre accesible', type: 'string', default: 'Capas' },
+  { key: 'emptyText', label: 'Texto sin nodos', type: 'string', default: '' },
+  { key: 'loading', label: 'Cargando', type: 'boolean', default: false },
+  { key: 'dense', label: 'Filas compactas', type: 'boolean', default: false },
+  THEME_FIELD,
+]
+
 export const formsEntries: RegistryEntry[] = [
   {
     id: 'as-forms-demo',
@@ -794,5 +899,159 @@ export const formsEntries: RegistryEntry[] = [
       onSubmit: (query) => log('submit', query),
       onError: (error) => log('error', String(error)),
     }),
+  },
+  {
+    id: 'as-slider',
+    name: 'ASSlider',
+    category: 'forms',
+    description:
+      'Slider: un <input type="range"> nativo con estilo propio. Anuncia el valor formateado (aria-valuetext) y responde a flechas, Re Pág/Av Pág e Inicio/Fin.',
+    propsSchema: SLIDER_SCHEMA,
+    events: [
+      MODEL_EVENT('number', 'Cada movimiento (para v-model).'),
+      { name: 'change', payload: 'number', description: 'Valor definitivo, al soltar.' },
+    ],
+    toProps: (values) => {
+      const { formatKind, ...rest } = formsToProps()(values)
+      return { ...rest, format: SLIDER_FORMATS[formatKind as string] }
+    },
+    toSnippet: (values) =>
+      formsToSnippet('ASSlider', SLIDER_SCHEMA, {
+        extra: [
+          'v-model="opacidad"',
+          ...(values.formatKind === 'porcentaje' ? [':format="(v) => `${v} %`"'] : []),
+          ...(values.formatKind === 'caudal' ? [':format="(v) => formatUnit(v, \'m³/s\')"'] : []),
+        ],
+      })(values),
+    component: ASSlider,
+    bindings: (values, log) => ({
+      'onUpdate:modelValue': (value) => {
+        values.modelValue = value
+        log('update:modelValue', value)
+      },
+      onChange: (value) => log('change', value),
+    }),
+  },
+  {
+    id: 'as-collapsible',
+    name: 'ASCollapsible',
+    category: 'forms',
+    description:
+      'Sección plegable (patrón disclosure): cabecera con título, contador y acciones, y un contenido que se pliega con transición. Cerrada, sigue montada pero inerte.',
+    propsSchema: COLLAPSIBLE_SCHEMA,
+    events: [
+      {
+        name: 'update:open',
+        payload: 'boolean',
+        description: 'Se abrió o se cerró (v-model:open).',
+      },
+    ],
+    toProps: (values) => {
+      const props = formsToProps([], false)(values)
+      return { ...props, headingLevel: Number(props.headingLevel) }
+    },
+    toSnippet: formsToSnippet('ASCollapsible', COLLAPSIBLE_SCHEMA, {
+      slot: () =>
+        '\n  <template #actions><ASButton variant="ghost" size="sm">Ver todo</ASButton></template>\n  <ASTreeList v-model="aforos" :items="estaciones" label="Aforos" />\n',
+    }),
+    notes:
+      'Slots: default (contenido) y #actions (botones en la cabecera, fuera del botón que pliega). Sin v-model:open guarda su estado, que empieza en defaultOpen.',
+    component: CollapsibleDemo,
+    bindings: (values, log) => ({
+      'onUpdate:open': (open) => {
+        values.open = open
+        log('update:open', open)
+      },
+      onAction: () => log('acción de la cabecera'),
+    }),
+  },
+  {
+    id: 'as-tree-list',
+    name: 'ASTreeList',
+    category: 'forms',
+    description:
+      'Árbol con selección para capas, estaciones o escenarios: grupos que se despliegan, casillas con estado intermedio, selección única o ninguna, contador, muestra de color, acciones por fila y slider de opacidad.',
+    propsSchema: TREE_SCHEMA,
+    events: [
+      MODEL_EVENT('string[]', 'Ids de las hojas seleccionadas (v-model).'),
+      {
+        name: 'update:expanded',
+        payload: 'string[]',
+        description: 'Grupos desplegados (v-model:expanded).',
+      },
+      {
+        name: 'update:opacities',
+        payload: 'Record<string, number>',
+        description: 'Opacidades de 0 a 1 (v-model:opacities).',
+      },
+      {
+        name: 'expand',
+        payload: 'TreeNode',
+        description: 'Se desplegó un grupo (p. ej. para cargar sus hijos).',
+      },
+      {
+        name: 'node-click',
+        payload: 'TreeNode',
+        description: 'Se activó una hoja (en cualquier modo).',
+      },
+      {
+        name: 'node-action',
+        payload: '{ node: TreeNode; action: string }',
+        description: 'Se pulsó un botón de una fila.',
+      },
+    ],
+    types: [TREE_NODE_DOC, TREE_NODE_ACTION_DOC, TREE_SELECTION_DOC, TREE_SLOT_DOC, ICON_VALUE_DOC],
+    examples: [layersPanelExample],
+    toProps: (values) => ({ ...formsToProps([], false)(values), style: 'max-width: 380px' }),
+    toSnippet: formsToSnippet(
+      'ASTreeList',
+      TREE_SCHEMA.filter((field) => !['modelValue', 'opacities'].includes(field.key)),
+      {
+        extra: ['v-model="seleccion"', 'v-model:opacities="opacidades"', '@node-action="onAccion"'],
+      },
+    ),
+    notes:
+      'Teclado: ↑/↓ entre filas, → despliega o entra, ← pliega o sube, Inicio/Fin, Espacio selecciona e Intro despliega un grupo. Tab pasa al slider y a los botones de la fila enfocada. También exporta las funciones puras leafIds, checkState, toggleNode, findNode e isGroup.',
+    component: ASTreeList,
+    bindings: (values, log) => ({
+      'onUpdate:modelValue': (ids) => {
+        values.modelValue = ids
+        log('update:modelValue', ids)
+      },
+      'onUpdate:opacities': (opacities) => {
+        values.opacities = opacities
+        log('update:opacities', opacities)
+      },
+      'onUpdate:expanded': (ids) => log('update:expanded', ids),
+      onExpand: (node) => log('expand', (node as { id: string }).id),
+      onNodeClick: (node) => log('node-click', (node as { id: string }).id),
+      onNodeAction: (event) => log('node-action', event),
+    }),
+  },
+  {
+    id: 'layers-panel-example',
+    name: 'Panel de capas (ejemplo)',
+    category: 'layout',
+    description:
+      'ASCollapsible + ASTreeList en un panel lateral, como el de una sección de ASAppShell (el ItemsLayersGroup de TAJO): zonas excluyentes (selección única), estaciones con opacidad y escenarios que se cargan al desplegarlos y se pueden borrar. Las capas del mapa siguen al árbol.',
+    propsSchema: [
+      { key: 'dense', label: 'Filas compactas', type: 'boolean', default: false },
+      THEME_FIELD,
+    ],
+    events: [
+      { name: 'zonas / estaciones', payload: 'string[]', description: 'Selección de cada árbol.' },
+      { name: 'opacidades', payload: 'Record<string, number>', description: 'Slider de una capa.' },
+      {
+        name: 'expand / node-action',
+        payload: 'string',
+        description: 'Escenarios: carga y borrado.',
+      },
+    ],
+    types: [TREE_NODE_DOC, TREE_SELECTION_DOC],
+    examples: [layersPanelExample],
+    toProps: formsToProps([], false),
+    toSnippet: () => layersPanelExample.code,
+    component: LayersPanelDemo,
+    bindings: (_values, log) => ({ onLog: (name, payload) => log(String(name), payload) }),
   },
 ]

@@ -166,3 +166,123 @@ export const RESOLVED_ICON_DOC: TypeDoc = {
     },
   ],
 }
+
+export const TREE_NODE_DOC: TypeDoc = {
+  name: 'TreeNode',
+  description:
+    'Un nodo de ASTreeList: una hoja (lo que se selecciona: una capa, una estación...) o un grupo, si tiene children.',
+  fields: [
+    {
+      key: 'id',
+      type: 'string',
+      required: true,
+      description: 'Único en todo el árbol. En las hojas, es lo que va en v-model.',
+    },
+    {
+      key: 'label',
+      type: 'string',
+      required: true,
+      description: 'Texto de la fila y su nombre accesible.',
+    },
+    { key: 'description', type: 'string', description: 'Segunda línea, más pequeña.' },
+    { key: 'icon', type: 'IconValue', description: 'Icono delante del texto.' },
+    { key: 'swatch', type: 'string', description: 'Muestra de color (CSS), como en una leyenda.' },
+    {
+      key: 'children',
+      type: 'TreeNode[]',
+      description: 'Lo convierte en grupo. [] = grupo vacío.',
+    },
+    { key: 'emptyText', type: 'string', description: 'Texto de un grupo vacío al desplegarlo.' },
+    {
+      key: 'defaultExpanded',
+      type: 'boolean',
+      default: 'false',
+      description: 'Desplegado al montar (si expanded no se controla).',
+    },
+    {
+      key: 'disabled',
+      type: 'boolean',
+      default: 'false',
+      description: 'Se ve y se enfoca, pero no se selecciona.',
+    },
+    {
+      key: 'disabledReason',
+      type: 'string',
+      description: 'Motivo: tooltip, segunda línea y se anuncia.',
+    },
+    {
+      key: 'badge',
+      type: 'number | string',
+      description: 'Contador al final de la fila. 0 o vacío no se muestra.',
+    },
+    {
+      key: 'loading',
+      type: 'boolean',
+      default: 'false',
+      description: 'Indicador de carga en lugar de la casilla; no se selecciona.',
+    },
+    {
+      key: 'opacity',
+      type: 'boolean',
+      default: 'false',
+      description: 'Slider de opacidad bajo la hoja mientras está seleccionada.',
+    },
+    {
+      key: 'actions',
+      type: 'TreeNodeAction[]',
+      description: 'Botones de la fila: emiten node-action.',
+    },
+  ],
+}
+
+export const TREE_NODE_ACTION_DOC: TypeDoc = {
+  name: 'TreeNodeAction',
+  description: 'Botón de una fila de ASTreeList (borrar, zoom a la capa, descargar...).',
+  fields: [
+    { key: 'id', type: 'string', required: true, description: 'Llega en node-action.' },
+    { key: 'label', type: 'string', required: true, description: 'Nombre accesible y tooltip.' },
+    { key: 'icon', type: 'IconValue', required: true, description: 'Icono del botón.' },
+    {
+      key: 'danger',
+      type: 'boolean',
+      default: 'false',
+      description: 'Acción destructiva: color de peligro.',
+    },
+  ],
+}
+
+export const TREE_SELECTION_DOC: TypeDoc = {
+  name: 'TreeSelection',
+  description: 'Modo de selección de ASTreeList.',
+  union: true,
+  fields: [
+    {
+      key: "'multiple'",
+      type: 'string',
+      description:
+        'Casillas. La de un grupo marca o desmarca sus hojas y queda a medias (mixed) si solo hay algunas.',
+    },
+    {
+      key: "'single'",
+      type: 'string',
+      description: 'Una hoja a la vez (radios). Los grupos solo se despliegan.',
+    },
+    { key: "'none'", type: 'string', description: 'Solo lista: las hojas emiten node-click.' },
+  ],
+}
+
+export const TREE_SLOT_DOC: TypeDoc = {
+  name: 'TreeNodeSlotProps',
+  description: 'Props del slot #node de ASTreeList (el texto de cada fila).',
+  fields: [
+    { key: 'node', type: 'TreeNode', required: true, description: 'El nodo.' },
+    { key: 'level', type: 'number', required: true, description: 'Profundidad, desde 1.' },
+    {
+      key: 'state',
+      type: "'checked' | 'unchecked' | 'mixed'",
+      required: true,
+      description: 'Estado de su casilla.',
+    },
+    { key: 'expanded', type: 'boolean', required: true, description: 'Si es un grupo desplegado.' },
+  ],
+}
