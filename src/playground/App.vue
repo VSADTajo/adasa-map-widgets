@@ -55,7 +55,7 @@ const logEntries = ref<LogEntry[]>([])
 
 function resetState(): void {
   for (const key of Object.keys(propValues)) delete propValues[key]
-  for (const field of entry.value.propsSchema) {
+  for (const field of entry.value.propsSchema.filter((f) => !f.docOnly)) {
     // Copia: el editor JSON no debe tocar los datos de ejemplo del registro.
     propValues[field.key] =
       typeof field.default === 'object' ? structuredClone(field.default) : field.default

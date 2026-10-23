@@ -91,3 +91,69 @@ export const exampleChartAnnotations: ChartAnnotations = {
   y: [{ yAxis: 'y1', value: 90, level: 'amarillo', label: 'Umbral amarillo' }],
   x: [{ type: 'range', from: at(-26), to: at(-14), label: 'Episodio' }],
 }
+
+// ── Embalse: entrada, salida, volumen y nivel ──
+
+/** Entrada al embalse (m³/s): la avenida de aguas arriba, algo mayor y adelantada al caudal del ejemplo. */
+const inflowAt = (hour: number) => flood(hour, -24, 118, 32) + flood(hour, 20, 150, 0) * 0.3
+const inflowMedian = (hour: number) => flood(hour, -24, 118, 32) + flood(hour, 20, 150, 0)
+
+/** Desembalse (m³/s): 25 de base; se abren compuertas hace 10 h y se sube a 60 en la punta prevista. */
+const outflowAt = (hour: number) => (hour < -10 ? 25 : hour < 12 ? 45 : 60)
+
+/** Volumen (hm³) acumulando entrada menos salida hora a hora desde `start`. */
+function volumeSeries(hours: number[], inflow: (hour: number) => number, start: number) {
+  let volume = start
+  return hours.map((hour): HydroPoint => {
+    volume += ((inflow(hour) - outflowAt(hour)) * 3600) / 1e6
+    return [at(hour), Math.round(volume * 100) / 100]
+  })
+}
+
+/** Curva cota-volumen local: unos 4 cm por hm³ alrededor de 649 msnm. */
+const levelOf = (volume: number) => Math.round((649 + (volume - 812) * 0.04) * 100) / 100
+
+const observedVolume = volumeSeries(PAST, inflowAt, 812)
+const lastVolume = observedVolume.at(-1)![1]!
+const volumeAt = (factor = 1) => volumeSeries(FUTURE, (h) => inflowMedian(h) * factor, lastVolume)
+const toLevel = (points: HydroPoint[]): HydroPoint[] =>
+  points.map(([date, volume]) => [date, volume === null ? null : levelOf(volume)])
+
+export const exampleInflow: HydroVariable = {
+  observed: series(PAST, inflowAt),
+  forecasts: [{ id: 'eps', name: 'EPS', values: series(FUTURE, inflowMedian) }],
+}
+
+export const exampleOutflow: HydroVariable = {
+  observed: series(PAST, outflowAt),
+  forecasts: [{ id: 'eps', name: 'EPS', values: series(FUTURE, outflowAt) }],
+}
+
+export const exampleVolume: HydroVariable = {
+  observed: observedVolume,
+  forecasts: [{ id: 'eps', name: 'EPS', values: volumeAt() }],
+}
+
+/** Nivel con la previsión EPS y sus percentiles (de distintas entradas posibles). */
+export const exampleLevel: HydroVariable = {
+  observed: toLevel(observedVolume),
+  forecasts: [
+    {
+      id: 'eps',
+      name: 'EPS',
+      values: toLevel(volumeAt()),
+      percentiles: {
+        p10: toLevel(volumeAt(0.55)),
+        p25: toLevel(volumeAt(0.8)),
+        p75: toLevel(volumeAt(1.25)),
+        p90: toLevel(volumeAt(1.6)),
+      },
+    },
+  ],
+}
+
+/** Umbrales del embalse: resguardo en volumen y cota máxima en nivel. */
+export const exampleReservoirThresholds: HydroThreshold[] = [
+  { value: 826, level: 'amarillo', variable: 'volume', label: 'Resguardo' },
+  { value: 649.9, level: 'rojo', variable: 'level', label: 'Cota máxima' },
+]

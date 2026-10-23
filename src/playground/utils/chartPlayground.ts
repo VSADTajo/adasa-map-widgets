@@ -5,6 +5,11 @@ import {
   EXAMPLE_NOW,
   exampleChartAnnotations,
   exampleDischarge,
+  exampleInflow,
+  exampleLevel,
+  exampleOutflow,
+  exampleReservoirThresholds,
+  exampleVolume,
   examplePrecipitation,
   exampleThresholds,
 } from './chartExamples'
@@ -222,7 +227,171 @@ export const HYDROGRAPH_SERIES_FIELDS: PropField[] = [
   { key: 'epsColor', label: 'EPS: color', type: 'color', default: '#05a873', playgroundOnly: true },
 ]
 
-const HYDROGRAPH_ONLY = new Set(HYDROGRAPH_SERIES_FIELDS.map((field) => field.key))
+/** Qué variables se muestran en el ejemplo (cada una es una prop del hidrograma). */
+export const HYDROGRAPH_VARIABLE_FIELDS: PropField[] = [
+  {
+    key: 'showDischarge',
+    label: 'Caudal (discharge)',
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+  },
+  {
+    key: 'showPrecipitation',
+    label: 'Precipitación (precipitation)',
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+  },
+  {
+    key: 'showInflow',
+    label: 'Caudal de entrada (inflow)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Mismo eje que el caudal (m³/s).',
+  },
+  {
+    key: 'showOutflow',
+    label: 'Caudal de salida (outflow)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Mismo eje que el caudal (m³/s).',
+  },
+  {
+    key: 'showVolume',
+    label: 'Volumen (volume)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Su propio eje, en hm³.',
+  },
+  {
+    key: 'showLevel',
+    label: 'Nivel (level)',
+    type: 'boolean',
+    default: false,
+    playgroundOnly: true,
+    description: 'Su propio eje, con previsión EPS y percentiles.',
+  },
+  {
+    key: 'levelUnit',
+    label: 'Unidad del nivel (level.unit)',
+    type: 'select',
+    options: ['m', 'msnm'],
+    default: 'msnm',
+    playgroundOnly: true,
+  },
+  {
+    key: 'reservoirThresholds',
+    label: 'Umbrales de volumen y nivel',
+    type: 'boolean',
+    default: true,
+    playgroundOnly: true,
+    description: "thresholds con variable: 'volume' (resguardo) y 'level' (cota máxima).",
+  },
+]
+
+/** Props del hidrograma que no se editan en el formulario (datos, funciones...): solo se documentan. */
+export const HYDROGRAPH_DOC_FIELDS: PropField[] = (
+  [
+    [
+      'discharge',
+      'HydroVariable',
+      '',
+      'Caudal (o nivel con magnitude="level"): línea, eje a la izquierda. Opcional.',
+    ],
+    ['inflow', 'HydroVariable', '', 'Caudal de entrada, en el eje del caudal (m³/s).'],
+    ['outflow', 'HydroVariable', '', 'Caudal de salida (desembalse), en el eje del caudal (m³/s).'],
+    ['volume', 'HydroVariable', '', 'Volumen, en su propio eje (hm³ por defecto).'],
+    ['level', 'HydroVariable', '', "Nivel o cota, en su propio eje (m por defecto; unit: 'msnm')."],
+    [
+      'precipitation',
+      'HydroVariable',
+      '',
+      'Precipitación: barras en su panel o superpuestas (precipitationLayout).',
+    ],
+    [
+      'thresholds',
+      'HydroThreshold[]',
+      '',
+      "Umbrales de aviso; cada uno en el eje de su variable ('discharge', 'volume' o 'level').",
+    ],
+    [
+      'now',
+      'Date | boolean',
+      'true',
+      'Línea "ahora" entre observado y previsto (true = la hora actual).',
+    ],
+    [
+      'bands',
+      'HydroBand[]',
+      "['p10-p90', 'p25-p75']",
+      'Bandas de percentiles a dibujar (v-model:bands). [] las oculta.',
+    ],
+    [
+      'visibleForecasts',
+      'string[]',
+      'todas',
+      'Ids de las previsiones visibles en todas las variables (v-model:visible-forecasts).',
+    ],
+    ['xAxis', "Omit<ChartXAxisConfig, 'type'>", '', 'Eje de tiempo: título, formato y límites.'],
+    [
+      'annotations',
+      'ChartAnnotations',
+      '',
+      'Anotaciones extra como en ASChart; las de Y van al eje principal.',
+    ],
+    ['extraSeries', 'ChartSeries[]', '', 'Series adicionales (por defecto en el eje principal).'],
+    [
+      'extraYAxes',
+      'ChartYAxis[]',
+      '',
+      'Ejes Y adicionales: hasta 4 en total con los del hidrograma.',
+    ],
+    [
+      'seriesOverrides',
+      'Record<string, Partial<ChartSeries>>',
+      '',
+      "Retoques por id: '<variable>-observed', '<variable>-<fuente>', '<variable>-<fuente>-p10-p90'.",
+    ],
+    [
+      'yAxisOverrides',
+      'Record<string, Partial<ChartYAxis>>',
+      '',
+      "Retoques de los ejes 'precipitation', 'discharge', 'volume' y 'level'.",
+    ],
+    [
+      'currentTime',
+      'Date | null',
+      '',
+      'Instante seleccionado (v-model:current-time), como en ASChart.',
+    ],
+    ['syncGroup', 'string', '', 'Sincroniza cursor y zoom con otras gráficas del mismo grupo.'],
+    ['loading', 'boolean', 'false', 'Muestra el estado de carga.'],
+    ['emptyText', 'string', '', 'Texto sin datos.'],
+    ['error', 'string', '', 'Mensaje de error en lugar de la gráfica.'],
+    [
+      'nativeOptions',
+      '(options, library) => unknown',
+      '',
+      'Vía de escape: retoca las opciones nativas del motor.',
+    ],
+  ] as const
+).map(([key, docType, defaultText, description]) => ({
+  key,
+  label: key,
+  type: 'string' as const,
+  default: defaultText,
+  docType,
+  description,
+  docOnly: true,
+}))
+
+const HYDROGRAPH_ONLY = new Set(
+  [...HYDROGRAPH_SERIES_FIELDS, ...HYDROGRAPH_VARIABLE_FIELDS].map((field) => field.key),
+)
 
 /** Aplica nombres y colores del formulario a una variable del hidrograma. */
 function customizeVariable(variable: HydroVariable, values: Values): HydroVariable {
@@ -240,11 +409,27 @@ function customizeVariable(variable: HydroVariable, values: Values): HydroVariab
 
 export function hydrographToProps(values: Values): Values {
   const props = componentProps(values, HYDROGRAPH_ONLY)
+  const flow = values.showDischarge || values.showInflow || values.showOutflow
   return {
     ...props,
-    discharge: customizeVariable(exampleDischarge, values),
-    precipitation: customizeVariable(examplePrecipitation, values),
-    thresholds: exampleThresholds,
+    discharge: values.showDischarge ? customizeVariable(exampleDischarge, values) : undefined,
+    precipitation: values.showPrecipitation
+      ? customizeVariable(examplePrecipitation, values)
+      : undefined,
+    inflow: values.showInflow ? exampleInflow : undefined,
+    outflow: values.showOutflow ? exampleOutflow : undefined,
+    volume: values.showVolume ? exampleVolume : undefined,
+    level: values.showLevel ? { ...exampleLevel, unit: String(values.levelUnit) } : undefined,
+    thresholds: [
+      ...(flow ? exampleThresholds : []),
+      ...(values.reservoirThresholds
+        ? exampleReservoirThresholds.filter(
+            (t) =>
+              (t.variable === 'volume' && values.showVolume) ||
+              (t.variable === 'level' && values.showLevel),
+          )
+        : []),
+    ],
     now: EXAMPLE_NOW,
     annotations: values.episode ? { x: exampleChartAnnotations.x } : undefined,
   }
@@ -259,14 +444,35 @@ export function hydrographToSnippet(values: Values): string {
   if (values.magnitude === 'level') attributes.push('magnitude="level"')
   if (values.precipitationLayout === 'overlay') attributes.push('precipitation-layout="overlay"')
   if (values.precipitationInverted === false) attributes.push(':precipitation-inverted="false"')
+  const reservoir = values.reservoirThresholds && (values.showVolume || values.showLevel)
   return [
     '<ASHydrographChart',
     ...indent(attributes, 2),
-    `  :discharge="{ observed: caudal, observedName: '${values.observedName}', observedColor: '${values.observedColor}', forecasts: [`,
-    ...indent(forecasts, 4),
-    '  ] }"',
-    `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedColor: '${values.observedColor}' }"`,
-    '  :thresholds="umbrales"',
+    ...(values.showDischarge
+      ? [
+          `  :discharge="{ observed: caudal, observedName: '${values.observedName}', observedColor: '${values.observedColor}', forecasts: [`,
+          ...indent(forecasts, 4),
+          '  ] }"',
+        ]
+      : []),
+    ...(values.showPrecipitation
+      ? [
+          `  :precipitation="{ observed: lluvia, observedName: '${values.observedName}', observedColor: '${values.observedColor}' }"`,
+        ]
+      : []),
+    ...(values.showInflow
+      ? [
+          `  :inflow="{ observed: entrada, forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }] }"`,
+        ]
+      : []),
+    ...(values.showOutflow ? ['  :outflow="{ observed: salida }"'] : []),
+    ...(values.showVolume ? ['  :volume="{ observed: volumen }"'] : []),
+    ...(values.showLevel
+      ? [
+          `  :level="{ observed: cota, unit: '${values.levelUnit}', forecasts: [{ id: 'eps', name: 'EPS', values: cotaEps, percentiles: cotaPercentiles }] }"`,
+        ]
+      : []),
+    `  :thresholds="${reservoir ? '[...umbrales, ...umbralesEmbalse]' : 'umbrales'}"`,
     ...(values.episode
       ? [`  :annotations="{ x: [{ type: 'range', from: inicio, to: fin, label: 'Episodio' }] }"`]
       : []),

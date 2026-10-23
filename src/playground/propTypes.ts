@@ -39,6 +39,13 @@ export interface PropField {
    * convierte `toProps` en props reales, así que no se lista como prop del componente.
    */
   playgroundOnly?: boolean
+  /**
+   * Prop que solo se documenta: sale en la tabla de props, pero no en el
+   * editor ni se pasa al componente (datos que no caben en un formulario,
+   * como series con fechas o funciones). `default` es el texto de la columna
+   * "Default" (`''` = sin valor por defecto).
+   */
+  docOnly?: boolean
 }
 
 /** Un campo (o una forma, en una unión) de un tipo documentado. */
@@ -144,6 +151,7 @@ export function buildSnippet(
   slotContent?: string,
 ): string {
   const attrs = schema
+    .filter((field) => !field.docOnly)
     .map((field) => {
       const value = values[field.key]
       if (value === undefined || value === '') return null

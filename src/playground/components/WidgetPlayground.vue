@@ -135,7 +135,11 @@ function addWidget(): void {
     instanceId: crypto.randomUUID(),
     widgetType: entry.id,
     position: positionToAdd.value,
-    props: Object.fromEntries(entry.propsSchema.map((field) => [field.key, field.default])),
+    props: Object.fromEntries(
+      entry.propsSchema
+        .filter((field) => !field.docOnly)
+        .map((field) => [field.key, field.default]),
+    ),
   }
 
   placements.value = [...placements.value, placement]

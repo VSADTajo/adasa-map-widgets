@@ -122,6 +122,7 @@ export function formsToSnippet(
       if (
         field.key === 'modelValue' ||
         field.playgroundOnly ||
+        field.docOnly ||
         value === undefined ||
         value === ''
       ) {

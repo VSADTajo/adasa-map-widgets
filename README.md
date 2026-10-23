@@ -31,7 +31,7 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASMapLegend`](src/map/components/ASMapLegend.vue)                     | `/map`    | Leyenda de las capas dinámicas                                               | —                                   |
 | [`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)         | `/map`    | Grupo de botones de selección única                                          | —                                   |
 | [`ASChart`](src/charts/components/ASChart.vue)                          | `/charts` | Gráfica cartesiana: líneas, barras, áreas, bandas y dispersión; 1–4 ejes Y, paneles | `echarts`, `chart.js` o `apexcharts` (a elegir) |
-| [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación y caudal/nivel, observado y previsto, umbrales     | el motor de `ASChart`               |
+| [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación, caudal (y entrada/salida), volumen y nivel, observado y previsto, umbrales | el motor de `ASChart`               |
 | [`ASAppShell`](src/layout/components/ASAppShell.vue)                    | `/layout` | Layout de aplicación de mapa: barra, iconos, panel de sección y de detalle; escritorio y móvil | —                  |
 | [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
 | [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
@@ -126,6 +126,32 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
   :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
 />
 ```
+
+**Embalses y otras magnitudes en la misma gráfica.** Además de `discharge`, el panel principal admite:
+
+| Prop      | Qué es             | Eje                                  | Unidad por defecto            |
+| --------- | ------------------ | ------------------------------------ | ----------------------------- |
+| `inflow`  | Caudal de entrada  | el del caudal (compartido)           | `m³/s`                        |
+| `outflow` | Caudal de salida   | el del caudal (compartido)           | `m³/s`                        |
+| `volume`  | Volumen embalsado  | propio                               | `hm³`                         |
+| `level`   | Nivel o cota       | propio                               | `m` (`unit: 'msnm'` para cotas) |
+
+Todas son `HydroVariable` (observado y previsiones con percentiles, como `discharge`), y `discharge` es opcional: una gráfica de embalse puede llevar solo entrada, salida, volumen y nivel. Volumen y nivel colocan su eje en el lado con menos ejes, sin forzar el 0; cada variable tiene un color fijo (que no cambia al ocultar previsiones) y sus previsiones se llaman "Variable · Fuente". Los umbrales van al eje de su `variable`:
+
+```vue
+<ASHydrographChart
+  :inflow="{ observed: entrada, forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }] }"
+  :outflow="{ observed: salida }"
+  :volume="{ observed: volumen }"
+  :level="{ observed: cota, unit: 'msnm' }"
+  :thresholds="[
+    { value: 826, level: 'amarillo', variable: 'volume', label: 'Resguardo' },
+    { value: 649.9, level: 'rojo', variable: 'level', label: 'Cota máxima' },
+  ]"
+/>
+```
+
+Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
 
 ### Props, eventos y métodos
 

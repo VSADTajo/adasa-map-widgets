@@ -286,3 +286,113 @@ export const TREE_SLOT_DOC: TypeDoc = {
     { key: 'expanded', type: 'boolean', required: true, description: 'Si es un grupo desplegado.' },
   ],
 }
+
+export const HYDRO_VARIABLE_DOC: TypeDoc = {
+  name: 'HydroVariable',
+  description:
+    'Una variable del hidrograma: discharge, inflow, outflow, volume, level o precipitation. Observado y previsiones.',
+  fields: [
+    {
+      key: 'observed',
+      type: 'HydroPoint[]',
+      description:
+        'Serie observada ([Date, number | null]; null deja un hueco): línea sólida o barras.',
+    },
+    {
+      key: 'observedName',
+      type: 'string',
+      default: "'Observado' o el nombre de la variable",
+      description: 'Nombre en la leyenda y el tooltip.',
+    },
+    {
+      key: 'observedColor',
+      type: 'string',
+      description:
+        'Color. Por defecto, el 1.º de la paleta en caudal y lluvia; uno fijo por variable en el resto.',
+    },
+    {
+      key: 'forecasts',
+      type: 'HydroForecast[]',
+      description: 'Previsiones: discontinuas, con bandas de percentiles.',
+    },
+    {
+      key: 'unit',
+      type: 'string',
+      default: "'m³/s', 'hm³', 'm', 'mm'",
+      description: "Unidad del eje ('msnm' para cotas). Entrada y salida usan la del caudal.",
+    },
+    { key: 'label', type: 'string', description: 'Título del eje y nombre de la variable.' },
+  ],
+}
+
+export const HYDRO_FORECAST_DOC: TypeDoc = {
+  name: 'HydroForecast',
+  description:
+    'Una fuente de previsión (Harmonie, EPS...). El mismo id en varias variables es la misma fuente (selector de previsiones).',
+  fields: [
+    { key: 'id', type: 'string', required: true, description: 'Id estable de la fuente.' },
+    {
+      key: 'name',
+      type: 'string',
+      required: true,
+      description: 'Nombre visible. Fuera del caudal, "Variable · Fuente".',
+    },
+    {
+      key: 'color',
+      type: 'string',
+      description: 'Color. En caudal y lluvia, por fuente; en el resto, el de la variable.',
+    },
+    { key: 'values', type: 'HydroPoint[]', description: 'Serie determinista o mediana (p50).' },
+    {
+      key: 'percentiles',
+      type: '{ p10?, p25?, p75?, p90?: HydroPoint[] }',
+      description: 'Bandas de incertidumbre (p10–p90 y p25–p75).',
+    },
+  ],
+}
+
+export const HYDRO_THRESHOLD_DOC: TypeDoc = {
+  name: 'HydroThreshold',
+  description: 'Umbral de aviso: una línea horizontal en el eje de su variable.',
+  fields: [
+    { key: 'value', type: 'number', required: true, description: 'Valor, en la unidad de su eje.' },
+    {
+      key: 'level',
+      type: "'normal' | 'amarillo' | 'naranja' | 'rojo' | string",
+      required: true,
+      description: 'Nivel de aviso: da el color.',
+    },
+    { key: 'label', type: 'string', default: "'Umbral <nivel>'", description: 'Etiqueta.' },
+    {
+      key: 'variable',
+      type: "'discharge' | 'volume' | 'level'",
+      default: "'discharge'",
+      description: 'Eje del umbral. Si esa variable no está, va al eje principal.',
+    },
+  ],
+}
+
+export const HYDROGRAPH_TOOLBAR_DOC: TypeDoc = {
+  name: 'HydrographToolbarConfig',
+  description: 'La barra de ASChart (png, svg, csv, items...) más tres acciones propias.',
+  fields: [
+    {
+      key: 'forecastSelector',
+      type: 'boolean',
+      default: 'true',
+      description: 'Selector de previsiones visibles (todas las variables).',
+    },
+    {
+      key: 'bandsToggle',
+      type: 'boolean',
+      default: 'true',
+      description: 'Muestra u oculta los percentiles.',
+    },
+    {
+      key: 'focusThreshold',
+      type: 'boolean',
+      default: 'true',
+      description: 'Enfoca los umbrales uno a uno.',
+    },
+  ],
+}
