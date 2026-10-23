@@ -5,7 +5,7 @@ import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
 import {
-  axisTitleFits,
+  fittedAxisTitle,
   niceRound,
   niceTickCount,
   ticksForHeight,
@@ -146,15 +146,11 @@ export function toApexOptions(
             ? niceTickCount(scale.min, scale.max, ticksForHeight(panelHeight))
             : ticksForHeight(panelHeight),
         title: {
-          // Sin título si no cabe entero en el panel (un título cortado es peor que
-          // ninguno). Se deja un espacio duro: Apex reserva el mismo ancho y los
-          // paneles siguen alineados.
+          // Si el título no cabe entero en el panel, solo la unidad (o nada: un
+          // título cortado es peor que ninguno). Sin título se deja un espacio
+          // duro: Apex reserva el mismo ancho y los paneles siguen alineados.
           text: visible
-            ? axisTitleFits(axis.title, panelHeight)
-              ? axis.title
-              : axis.title
-                ? ' '
-                : undefined
+            ? (fittedAxisTitle(axis, panelHeight) ?? (axis.title ? ' ' : undefined))
             : undefined,
           style: { color: theme.textMuted, fontFamily: theme.fontFamily, fontWeight: 400 },
         },

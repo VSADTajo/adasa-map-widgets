@@ -4,7 +4,7 @@ import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
 import {
-  axisTitleFits,
+  fittedAxisTitle,
   layoutPanels,
   niceRound,
   niceTickCount,
@@ -145,7 +145,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
       interval,
       scale: !axis.beginAtZero,
       // En paneles bajos: menos marcas y sin título si no cabe entero.
-      name: axisTitleFits(axis.title, layouts[axis.panelIndex]!.height) ? axis.title : undefined,
+      name: fittedAxisTitle(axis, layouts[axis.panelIndex]!.height),
       splitNumber,
       nameLocation: 'middle',
       nameGap: Y_AXIS_WIDTH - 18,

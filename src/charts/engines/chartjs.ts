@@ -5,7 +5,7 @@ import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
 import {
   alignedTimeTicks,
-  axisTitleFits,
+  fittedAxisTitle,
   ticksForHeight,
   timeTickUnit,
   Y_AXIS_WIDTH,
@@ -182,10 +182,12 @@ export function toChartJsConfigs(spec: ResolvedChartSpec, heights?: number[]): C
         suggestedMin: axis.include.length ? Math.min(...axis.include) : undefined,
         suggestedMax: axis.include.length ? Math.max(...axis.include) : undefined,
         beginAtZero: axis.beginAtZero,
-        // En paneles bajos (con `heights`): menos marcas y sin título si no cabe entero.
+        // En paneles bajos (con `heights`): menos marcas, y el título solo con la unidad (o ninguno) si no cabe.
         title: {
-          display: heights ? axisTitleFits(axis.title, heights[panel.index]!) : Boolean(axis.title),
-          text: axis.title,
+          display: heights
+            ? Boolean(fittedAxisTitle(axis, heights[panel.index]!))
+            : Boolean(axis.title),
+          text: heights ? fittedAxisTitle(axis, heights[panel.index]!) : axis.title,
           color: theme.textMuted,
           font,
         },

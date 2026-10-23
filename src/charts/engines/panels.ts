@@ -1,7 +1,7 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipRows } from '@/charts/core/tooltip'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
-import { layoutPanels } from './types'
+import { layoutPanels, legendSample } from './types'
 
 /**
  * Para los motores que no saben repartir varios paneles con ejes a ambos
@@ -120,6 +120,10 @@ function legendMarker(series: ResolvedChartSpec['series'][number]): string {
     const dash = LEGEND_DASH[series.lineStyle]
     return `<svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${series.color}" stroke-width="2.5" stroke-dasharray="${dash}"/></svg>`
   }
+  // Banda: su opacidad real (p10–p90 más tenue que p25–p75) y un borde del color para verla siempre.
+  if (series.type === 'range' && !series.pattern) {
+    return `<span aria-hidden="true" style="position:relative;display:inline-block;width:14px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px ${series.color}"><span style="position:absolute;inset:0;border-radius:2px;background:${series.color};opacity:${series.opacity}"></span></span>`
+  }
   // Con `patterns`, la muestra lleva la misma trama que el relleno.
   const tile = series.pattern ? patternDataUrl(series.pattern.kind, series.pattern, 2) : null
   const background = tile
@@ -202,7 +206,7 @@ export function renderLegend(
     const item = document.createElement('button')
     item.type = 'button'
     item.setAttribute('aria-pressed', String(!hidden.has(series.name)))
-    item.innerHTML = `${legendMarker(series)}<span>${escape(series.name)}</span>`
+    item.innerHTML = `${legendMarker(legendSample(spec.series, series))}<span>${escape(series.name)}</span>`
     Object.assign(item.style, {
       display: 'inline-flex',
       alignItems: 'center',

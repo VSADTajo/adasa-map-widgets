@@ -143,6 +143,37 @@ export function axisTitleFits(title: string | undefined, height: number): boolea
 }
 
 /**
+ * Serie que da la muestra de una entrada de la leyenda (las series con el
+ * mismo nombre comparten entrada): la línea, si alguna lo es, para que se
+ * vea su trazo (la previsión "EPS" es una línea en el caudal y barras en la
+ * lluvia); si no, la primera.
+ */
+export function legendSample<S extends { name: string; type: string; legend: boolean }>(
+  series: readonly S[],
+  entry: S,
+): S {
+  return (
+    series.find(
+      (s) => s.legend && s.name === entry.name && (s.type === 'line' || s.type === 'scatter'),
+    ) ?? entry
+  )
+}
+
+/**
+ * Título de un eje Y en un panel de `height` px: el completo ("Precipitación
+ * (mm/h)") si cabe; si no, solo la unidad ("mm/h"), para no perderla en los
+ * paneles bajos; y si tampoco, ninguno (un título cortado es peor que ninguno).
+ */
+export function fittedAxisTitle(
+  axis: { title?: string; unit?: string },
+  height: number,
+): string | undefined {
+  if (axisTitleFits(axis.title, height)) return axis.title
+  if (axis.title && axis.unit && axisTitleFits(axis.unit, height)) return axis.unit
+  return undefined
+}
+
+/**
  * Número de intervalos (≤ `limit`) que divide [min, max] en pasos "redondos"
  * (1, 2, 2,5 o 5 × 10^n); así las marcas son 0, 50, 100... y no 83,33.
  */

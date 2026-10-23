@@ -219,12 +219,13 @@ export function formatDuration(
 }
 
 /** Unidades de magnitud con formato conocido. Cualquier otro texto se pinta tal cual tras el número. */
-export type MeasureUnit = 'm³/s' | 'mm' | 'hm³' | 'm' | '%' | '°C'
+export type MeasureUnit = 'm³/s' | 'mm' | 'mm/h' | 'hm³' | 'm' | '%' | '°C'
 
 /** Decimales por defecto de cada unidad: los habituales en hidrología y meteorología. */
 const UNIT_DECIMALS: Record<MeasureUnit, number> = {
   'm³/s': 2,
   mm: 1,
+  'mm/h': 1,
   'hm³': 2,
   m: 2,
   '%': 0,

@@ -1,6 +1,7 @@
 import type { ChartImageFormat } from '@/charts/types/chart'
 import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
 import { PATTERN_SIZE, patternDataUrl, patternTile } from '@/charts/core/patterns'
+import { legendSample } from './types'
 
 /**
  * Exportación común a los tres motores: cada motor entrega sus paneles como
@@ -32,11 +33,13 @@ const escapeXml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charC
 function legendItems(spec: ResolvedChartSpec, hidden: Set<string>): ResolvedSeries[] {
   if (!spec.legend) return []
   const seen = new Set<string>()
-  return spec.series.filter((series) => {
-    if (!series.legend || hidden.has(series.name) || seen.has(series.name)) return false
-    seen.add(series.name)
-    return true
-  })
+  return spec.series
+    .filter((series) => {
+      if (!series.legend || hidden.has(series.name) || seen.has(series.name)) return false
+      seen.add(series.name)
+      return true
+    })
+    .map((series) => legendSample(spec.series, series))
 }
 
 const isLine = (series: ResolvedSeries) => series.type === 'line' || series.type === 'scatter'
