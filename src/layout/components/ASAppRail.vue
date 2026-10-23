@@ -81,7 +81,12 @@ const groups = computed(() => [
   flex: none;
   box-sizing: border-box;
   height: 100%;
+  gap: var(--as-space-2, 8px);
   padding: var(--as-space-2, 8px) 0;
+  /* Muchas secciones en una pantalla baja: la barra se desplaza en vez de cortarlas. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
   background: var(--as-app-chrome, #1d283a);
   color: var(--as-app-chrome-text-muted, rgba(255, 255, 255, 0.72));
 }
@@ -108,9 +113,7 @@ const groups = computed(() => [
   color: inherit;
   cursor: pointer;
   transition: background-color 0.15s ease;
-}
-
-.as-app-rail__item {
+  /* Para colocar el contador en su esquina. */
   position: relative;
 }
 
