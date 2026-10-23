@@ -1,7 +1,7 @@
 import type { ChartImageFormat } from '@/charts/types/chart'
 import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
 import { PATTERN_SIZE, patternDataUrl, patternTile } from '@/charts/core/patterns'
-import { legendSample } from './types'
+import { legendGroups, legendSample } from './types'
 
 /**
  * Exportación común a los tres motores: cada motor entrega sus paneles como
@@ -29,53 +29,61 @@ const SCALE = 2
 
 const escapeXml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
-/** Entradas de la leyenda: como en la HTML, una por nombre visible y sin las ocultas. */
-function legendItems(spec: ResolvedChartSpec, hidden: Set<string>): ResolvedSeries[] {
+/** Una entrada de la leyenda exportada: una serie, o el título de un grupo (`legendGroup`). */
+type LegendCell =
+  { series: ResolvedSeries; label?: undefined } | { label: string; series?: undefined }
+
+/**
+ * Entradas de la leyenda: como en la HTML, una por nombre visible, sin las
+ * ocultas, y cada grupo en su línea encabezada por su título.
+ */
+function legendItems(spec: ResolvedChartSpec, hidden: Set<string>): LegendCell[][] {
   if (!spec.legend) return []
-  const seen = new Set<string>()
-  return spec.series
-    .filter((series) => {
-      if (!series.legend || hidden.has(series.name) || seen.has(series.name)) return false
-      seen.add(series.name)
-      return true
+  return legendGroups(spec.series)
+    .map(({ group, entries }) => {
+      const visible = entries
+        .filter((series) => !hidden.has(series.name))
+        .map((series): LegendCell => ({ series: legendSample(spec.series, series) }))
+      return visible.length && group ? [{ label: group } as LegendCell, ...visible] : visible
     })
-    .map((series) => legendSample(spec.series, series))
+    .filter((cells) => cells.length)
 }
 
 const isLine = (series: ResolvedSeries) => series.type === 'line' || series.type === 'scatter'
 const DASH = { solid: [], dashed: [4, 3], dotted: [1.5, 2.5], dashdot: [5, 2.5, 1.5, 2.5] } as const
 
-interface PlacedItem {
-  series: ResolvedSeries
-  x: number
-  y: number
-}
+type PlacedItem = LegendCell & { x: number; y: number }
 
-/** Coloca las entradas en filas centradas que caben en `width`. */
+/** Coloca las entradas en filas centradas que caben en `width`; cada grupo empieza fila. */
 function layoutLegend(
-  items: ResolvedSeries[],
+  groups: LegendCell[][],
   width: number,
   measure: (text: string) => number,
 ): { placed: PlacedItem[]; height: number } {
-  if (!items.length) return { placed: [], height: 0 }
-  const rows: { item: ResolvedSeries; width: number }[][] = [[]]
-  let rowWidth = 0
-  for (const item of items) {
-    const itemWidth = SWATCH + 6 + measure(item.name)
-    const row = rows[rows.length - 1]!
-    if (row.length && rowWidth + GAP + itemWidth > width - PAD * 2) {
-      rows.push([])
-      rowWidth = 0
+  if (!groups.length) return { placed: [], height: 0 }
+  const rows: { item: LegendCell; width: number }[][] = []
+  for (const group of groups) {
+    rows.push([])
+    let rowWidth = 0
+    for (const item of group) {
+      const itemWidth = item.label
+        ? measure(item.label)
+        : SWATCH + 6 + measure(item.series!.legendLabel)
+      const row = rows[rows.length - 1]!
+      if (row.length && rowWidth + GAP + itemWidth > width - PAD * 2) {
+        rows.push([])
+        rowWidth = 0
+      }
+      rowWidth += (rows[rows.length - 1]!.length ? GAP : 0) + itemWidth
+      rows[rows.length - 1]!.push({ item, width: itemWidth })
     }
-    rowWidth += (rows[rows.length - 1]!.length ? GAP : 0) + itemWidth
-    rows[rows.length - 1]!.push({ item, width: itemWidth })
   }
   const placed: PlacedItem[] = []
   rows.forEach((row, index) => {
     const total = row.reduce((sum, cell) => sum + cell.width, 0) + GAP * (row.length - 1)
     let x = Math.max((width - total) / 2, PAD)
     for (const cell of row) {
-      placed.push({ series: cell.item, x, y: PAD + index * ROW + ROW / 2 })
+      placed.push({ ...cell.item, x, y: PAD + index * ROW + ROW / 2 })
       x += cell.width + GAP
     }
   })
@@ -121,7 +129,14 @@ async function composePng(
 
   ctx.font = `${spec.theme.fontSize}px ${spec.theme.fontFamily}`
   ctx.textBaseline = 'middle'
-  for (const { series, x, y } of legend.placed) {
+  for (const { series, label, x, y } of legend.placed) {
+    if (label !== undefined) {
+      ctx.fillStyle = spec.theme.textMuted
+      ctx.font = `600 ${spec.theme.fontSize}px ${spec.theme.fontFamily}`
+      ctx.fillText(label, x, y)
+      ctx.font = `${spec.theme.fontSize}px ${spec.theme.fontFamily}`
+      continue
+    }
     if (isLine(series)) {
       ctx.strokeStyle = series.color
       ctx.lineWidth = 2.5
@@ -134,13 +149,20 @@ async function composePng(
     } else {
       const tile = series.pattern ? patternTile(series.pattern.kind, series.pattern) : null
       const pattern = tile ? ctx.createPattern(tile, 'repeat') : null
-      ctx.globalAlpha = pattern ? 1 : Math.max(series.opacity, 0.5)
+      const band = series.type === 'range' && !pattern
+      ctx.globalAlpha = pattern ? 1 : band ? series.opacity : Math.max(series.opacity, 0.5)
       ctx.fillStyle = pattern ?? series.color
       ctx.fillRect(x + 2, y - 4.5, 14, 9)
       ctx.globalAlpha = 1
+      // Banda: su opacidad real (como en la leyenda HTML), con un borde del color.
+      if (band) {
+        ctx.strokeStyle = series.color
+        ctx.lineWidth = 1
+        ctx.strokeRect(x + 2.5, y - 4, 13, 8)
+      }
     }
     ctx.fillStyle = spec.theme.text
-    ctx.fillText(series.name, x + SWATCH + 6, y)
+    ctx.fillText(series.legendLabel, x + SWATCH + 6, y)
   }
 
   let top = legend.height
@@ -159,7 +181,10 @@ function composeSvg(parts: ExportPart[], spec: ResolvedChartSpec, hidden: Set<st
   const { fontFamily, fontSize, surface, text } = spec.theme
 
   const defs: string[] = []
-  const legendMarkup = legend.placed.map(({ series, x, y }, index) => {
+  const legendMarkup = legend.placed.map(({ series, label, x, y }, index) => {
+    if (label !== undefined) {
+      return `<text x="${x}" y="${y}" dominant-baseline="central" font-weight="600" fill="${spec.theme.textMuted}">${escapeXml(label)}</text>`
+    }
     let swatch: string
     if (isLine(series)) {
       const dash = DASH[series.lineStyle].join(' ')
@@ -173,10 +198,12 @@ function composeSvg(parts: ExportPart[], spec: ResolvedChartSpec, hidden: Set<st
         )
         swatch = `<rect x="${x + 2}" y="${y - 4.5}" width="14" height="9" rx="2" fill="url(#${id})"/>`
       } else {
-        swatch = `<rect x="${x + 2}" y="${y - 4.5}" width="14" height="9" rx="2" fill="${series.color}" fill-opacity="${Math.max(series.opacity, 0.5)}"/>`
+        const band = series.type === 'range'
+        const opacity = band ? series.opacity : Math.max(series.opacity, 0.5)
+        swatch = `<rect x="${x + 2}" y="${y - 4.5}" width="14" height="9" rx="2" fill="${series.color}" fill-opacity="${opacity}"${band ? ` stroke="${series.color}" stroke-width="1"` : ''}/>`
       }
     }
-    return `${swatch}<text x="${x + SWATCH + 6}" y="${y}" dominant-baseline="central" fill="${text}">${escapeXml(series.name)}</text>`
+    return `${swatch}<text x="${x + SWATCH + 6}" y="${y}" dominant-baseline="central" fill="${text}">${escapeXml(series.legendLabel)}</text>`
   })
 
   let top = legend.height

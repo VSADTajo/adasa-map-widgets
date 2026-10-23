@@ -1,7 +1,7 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipRows } from '@/charts/core/tooltip'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
-import { layoutPanels, legendSample } from './types'
+import { layoutPanels, legendGroups, legendSample } from './types'
 
 /**
  * Para los motores que no saben repartir varios paneles con ejes a ambos
@@ -157,6 +157,9 @@ export function legendValues(
  * Devuelve una función para mostrar los valores de las series en el
  * instante `x` (con `legendValues`), o borrarlos con `null`.
  */
+/** Ids de los títulos de grupo de la leyenda (para `aria-labelledby`). */
+let groupCounter = 0
+
 export function renderLegend(
   element: HTMLElement,
   legend: HTMLElement,
@@ -199,14 +202,14 @@ export function renderLegend(
 
   const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
   const valueSpans = new Map<string, HTMLElement>()
-  const seen = new Set<string>()
-  for (const series of spec.series) {
-    if (!series.legend || seen.has(series.name)) continue
-    seen.add(series.name)
+
+  function appendItem(container: HTMLElement, series: ResolvedChartSpec['series'][number]): void {
     const item = document.createElement('button')
     item.type = 'button'
     item.setAttribute('aria-pressed', String(!hidden.has(series.name)))
-    item.innerHTML = `${legendMarker(legendSample(spec.series, series))}<span>${escape(series.name)}</span>`
+    // Dentro de un grupo se ve el texto corto, pero se anuncia el nombre completo.
+    if (series.legendLabel !== series.name) item.setAttribute('aria-label', series.name)
+    item.innerHTML = `${legendMarker(legendSample(spec.series, series))}<span>${escape(series.legendLabel)}</span>`
     Object.assign(item.style, {
       display: 'inline-flex',
       alignItems: 'center',
@@ -230,7 +233,43 @@ export function renderLegend(
       valueSpans.set(series.name, value)
     }
     item.addEventListener('click', () => onToggle(series.name))
-    legend.appendChild(item)
+    container.appendChild(item)
+  }
+
+  const groups = legendGroups(spec.series)
+  if (groups.length <= 1 && !groups[0]?.group) {
+    for (const series of groups[0]?.entries ?? []) appendItem(legend, series)
+  } else {
+    // Con grupos (p. ej. la precipitación del hidrograma), cada uno en su línea con su título.
+    Object.assign(legend.style, {
+      flexDirection: 'column',
+      alignItems: vertical ? 'flex-start' : 'stretch',
+    } satisfies Partial<CSSStyleDeclaration>)
+    for (const { group, entries } of groups) {
+      const row = document.createElement('div')
+      row.setAttribute('role', 'group')
+      Object.assign(row.style, {
+        display: 'flex',
+        flexDirection: vertical ? 'column' : 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: vertical ? 'flex-start' : 'center',
+        gap: vertical ? '4px' : '4px 16px',
+      } satisfies Partial<CSSStyleDeclaration>)
+      if (group) {
+        const title = document.createElement('span')
+        title.textContent = group
+        title.id = `as-legend-group-${++groupCounter}`
+        row.setAttribute('aria-labelledby', title.id)
+        Object.assign(title.style, {
+          fontWeight: '600',
+          color: spec.theme.textMuted,
+        } satisfies Partial<CSSStyleDeclaration>)
+        row.appendChild(title)
+      }
+      for (const series of entries) appendItem(row, series)
+      legend.appendChild(row)
+    }
   }
 
   return (x) => {

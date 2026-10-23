@@ -62,3 +62,15 @@ describe('tooltipHtml', () => {
     expect(html).not.toContain('<b>Q</b>')
   })
 })
+
+describe("tooltipHtml · solo la fecha (tooltip: 'time')", () => {
+  it('muestra la fecha y ninguna fila de valores', () => {
+    const html = tooltipHtml(
+      { ...spec, tooltip: { mode: 'shared', content: 'time' } },
+      at(1).getTime(),
+    )
+    expect(html).toContain('18/10/2026, 01:00')
+    expect(html).not.toContain('Caudal')
+    expect(html).not.toContain('m³/s')
+  })
+})

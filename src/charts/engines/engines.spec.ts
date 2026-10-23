@@ -11,6 +11,7 @@ import {
   axisTitleFits,
   fittedAxisTitle,
   layoutPanels,
+  legendGroups,
   legendSample,
   niceRound,
   niceTickCount,
@@ -26,7 +27,7 @@ const spec = resolveSpec(
   buildHydrograph(
     {
       discharge: {
-        observed: points(10, 12),
+        observed: [{ id: 'o', name: 'Observado', values: points(10, 12) }],
         forecasts: [
           {
             id: 'eps',
@@ -36,7 +37,7 @@ const spec = resolveSpec(
           },
         ],
       },
-      precipitation: { observed: points(1, 2) },
+      precipitation: { observed: [{ id: 'o', name: 'Observado', values: points(1, 2) }] },
       thresholds: [{ value: 25, level: 'rojo' }],
       now: T0,
       bands: ['p10-p90'],
@@ -89,8 +90,13 @@ describe('toEChartsOption', () => {
     expect(now.map((m: Any) => m.label.show)).toEqual([true, false])
   })
 
-  it('la leyenda incluye las bandas de percentiles', () => {
-    expect(option.legend.data).toEqual(['Observado', 'EPS p10–p90', 'EPS'])
+  it('la leyenda incluye las bandas de percentiles (y la lluvia, con su nombre completo)', () => {
+    expect(option.legend.data).toEqual([
+      'Precipitación · Observado',
+      'EPS p10–p90',
+      'Observado',
+      'EPS',
+    ])
   })
 })
 
@@ -169,8 +175,8 @@ describe('toApexOptions', () => {
 
   it('usa el id como nombre interno: "Observado" aparece en dos paneles sin confundirse', () => {
     const names = options.flatMap((o) => o.series.map((s: Any) => s.name))
-    expect(names).toContain('precipitation-observed')
-    expect(names).toContain('discharge-observed')
+    expect(names).toContain('precipitation-observed-o')
+    expect(names).toContain('discharge-observed-o')
     expect(new Set(names).size).toBe(names.length)
   })
 })
@@ -307,5 +313,25 @@ describe('legendSample', () => {
   it('sin línea con ese nombre, la propia serie', () => {
     const bars = [{ name: 'Lluvia', type: 'bar', legend: true }]
     expect(legendSample(bars, bars[0]!)).toBe(bars[0])
+  })
+})
+
+describe('legendGroups', () => {
+  it('una entrada por nombre: sin grupo primero y después cada grupo por orden de aparición', () => {
+    const series = [
+      { name: 'Lluvia A', type: 'bar', legend: true, legendGroup: 'Precipitación' },
+      { name: 'EPS p10–p90', type: 'range', legend: true },
+      { name: 'Caudal', type: 'line', legend: true },
+      { name: 'Caudal', type: 'line', legend: true },
+      { name: 'Oculta', type: 'line', legend: false },
+      { name: 'Lluvia B', type: 'bar', legend: true, legendGroup: 'Precipitación' },
+    ]
+    expect(
+      legendGroups(series).map(({ group, entries }) => [group, entries.map((e) => e.name)]),
+    ).toEqual([
+      // Las bandas, al final de su línea aunque se dibujen antes.
+      [undefined, ['Caudal', 'EPS p10–p90']],
+      ['Precipitación', ['Lluvia A', 'Lluvia B']],
+    ])
   })
 })

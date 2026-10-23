@@ -41,7 +41,8 @@ describe('composeImage · SVG', () => {
     expect(svg).toContain('>Banda</text>')
     expect(svg).not.toContain('>Lluvia</text>')
     expect(svg).toMatch(/<line [^>]*stroke="#c1"/)
-    expect(svg).toMatch(/<rect [^>]*fill="#c3" fill-opacity="0.5"/)
+    // La banda, con su opacidad real y un borde de su color (como en la leyenda HTML).
+    expect(svg).toMatch(/<rect [^>]*fill="#c3" fill-opacity="[\d.]+" stroke="#c3"/)
   })
 
   it('escapa los nombres de las series', async () => {

@@ -143,6 +143,34 @@ export function axisTitleFits(title: string | undefined, height: number): boolea
 }
 
 /**
+ * Entradas de la leyenda por grupo (`legendGroup`): una por nombre, sin
+ * grupo primero y después cada grupo en el orden en que aparece. Dentro de
+ * cada grupo, las bandas (`range`) van al final: se dibujan antes que las
+ * líneas (para quedar debajo), pero en la leyenda acompañan a su línea.
+ */
+export function legendGroups<
+  S extends { name: string; type: string; legend: boolean; legendGroup?: string },
+>(series: readonly S[]): { group?: string; entries: S[] }[] {
+  const seen = new Set<string>()
+  const groups = new Map<string | undefined, S[]>([[undefined, []]])
+  for (const entry of series) {
+    if (!entry.legend || seen.has(entry.name)) continue
+    seen.add(entry.name)
+    if (!groups.has(entry.legendGroup)) groups.set(entry.legendGroup, [])
+    groups.get(entry.legendGroup)!.push(entry)
+  }
+  return [...groups]
+    .filter(([, entries]) => entries.length)
+    .map(([group, entries]) => ({
+      group,
+      entries: [
+        ...entries.filter((entry) => entry.type !== 'range'),
+        ...entries.filter((entry) => entry.type === 'range'),
+      ],
+    }))
+}
+
+/**
  * Serie que da la muestra de una entrada de la leyenda (las series con el
  * mismo nombre comparten entrada): la línea, si alguna lo es, para que se
  * vea su trazo (la previsión "EPS" es una línea en el caudal y barras en la

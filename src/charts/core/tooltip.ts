@@ -89,8 +89,12 @@ export function tooltipHtml(
   x: number | string,
   seriesId?: string,
 ): string {
+  const time = escapeHtml(spec.xAxis.formatTooltip(x))
+  // Solo la fecha (`tooltip: 'time'`), p. ej. con los valores en la leyenda.
+  if (spec.tooltip && spec.tooltip.content === 'time')
+    return `<div style="font-weight:600">${time}</div>`
   const rows = tooltipRows(spec, x, seriesId)
-  const header = `<div style="font-weight:600;margin-bottom:4px">${escapeHtml(spec.xAxis.formatTooltip(x))}</div>`
+  const header = `<div style="font-weight:600;margin-bottom:4px">${time}</div>`
   const body = rows
     .map(
       (row) =>
