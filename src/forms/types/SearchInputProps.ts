@@ -1,4 +1,5 @@
 import type { FieldProps } from './common'
+import type { IconValue } from '@/core/types/icon'
 
 /** Etiqueta de una sugerencia (tipo de estación, origen...). */
 export interface SearchSuggestionTag {
@@ -13,8 +14,8 @@ export interface SearchSuggestionTag {
 /** Acción de una sugerencia (p. ej. "Centrar en el mapa"), con su botón de icono. */
 export interface SearchSuggestionAction {
   id: string
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). */
+  icon: IconValue
   /** Nombre accesible y tooltip. */
   label: string
   disabled?: boolean
@@ -28,8 +29,8 @@ export interface SearchSuggestion<T = unknown> {
   label: string
   /** Texto secundario (tipo, código, provincia...). */
   description?: string
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon?: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). */
+  icon?: IconValue
   /** Grupo con título ("Estaciones", "Municipios"...). Se respeta el orden de llegada. */
   group?: string
   /** Datos del proyecto (coordenadas, la entidad completa...), que vuelven en `select`. */

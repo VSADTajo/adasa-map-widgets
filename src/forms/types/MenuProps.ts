@@ -1,4 +1,5 @@
 import type { ButtonVariant, ControlSize } from './common'
+import type { IconValue } from '@/core/types/icon'
 
 /** Datos comunes de una opción de `ASMenu`. */
 interface MenuItemBase {
@@ -6,8 +7,8 @@ interface MenuItemBase {
   id: string
   /** Texto visible. */
   label: string
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon?: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). */
+  icon?: IconValue
   /** Texto secundario bajo la etiqueta. */
   description?: string
   /** No se puede elegir; el teclado la salta. */
@@ -67,7 +68,7 @@ export interface MenuProps {
   /** Texto del botón y nombre accesible del menú. */
   label: string
   /** Icono del botón: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon?: string
+  icon?: IconValue
   /** Botón solo con icono: `label` pasa a ser su nombre accesible y su tooltip. */
   iconOnly?: boolean
   /** Contador o texto corto junto al botón (p. ej. cuántas opciones hay marcadas). */

@@ -1,21 +1,28 @@
+import type { IconValue } from './icon'
+
 /**
- * Props de `ASIcon`: un icono SVG de 24 × 24 a partir de su trazado.
+ * Props de `ASIcon`: un icono, venga de un trazado SVG, de un componente de
+ * cualquier librería o de un nombre (`'mdi:layers'`) que traduce `provideIcons`.
  *
  * @example
  * ```vue
  * <script setup>
  * import { mdiFilter } from '@mdi/js'
+ * import { Map } from 'lucide-vue-next'
  * </script>
- * <ASIcon :path="mdiFilter" />
+ * <ASIcon :icon="mdiFilter" />
+ * <ASIcon :icon="Map" />
+ * <ASIcon icon="tabler:map" />
  * ```
  */
 export interface IconProps {
+  /** El icono (ver `IconValue`). */
+  icon?: IconValue
   /**
-   * Atributo `d` del `<path>` en una caja de 24 × 24, el formato de
-   * `@mdi/js` (p. ej. `mdiFilter`). La librería no depende de `@mdi/js`:
-   * cada proyecto importa solo los iconos que usa.
+   * @deprecated Usa `icon`. Atributo `d` del `<path>`: se mantiene por
+   * compatibilidad y equivale a `icon` con un trazado.
    */
-  path: string
+  path?: string
   /**
    * Lado: un número son píxeles; un string se usa tal cual (`'1em'`
    * para que siga al tamaño del texto).

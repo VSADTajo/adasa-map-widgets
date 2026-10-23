@@ -1,27 +1,15 @@
 import type { Component } from 'vue'
 import type { WidgetPosition } from '@/core/types/common'
 import type { MapLibraryOption } from '@/map/types/map'
+import type { PropField } from './propTypes'
 
 export type { MapLibraryOption }
 
-/** Tipo de control de formulario usado para editar una prop de un widget registrado. */
-export type WidgetPropFieldType = 'string' | 'number' | 'boolean' | 'select' | 'color'
-
-/** Describe un campo editable en el editor de props del compositor de widgets. */
-export interface WidgetPropField {
-  /** Nombre de la prop (camelCase, como en el componente Vue). */
-  key: string
-  /** Etiqueta legible mostrada en el formulario. */
-  label: string
-  type: WidgetPropFieldType
-  /** Valor inicial con el que se precarga el editor al colocar el widget. */
-  default: string | number | boolean
-  /** Opciones disponibles, solo para `type: 'select'`. */
-  options?: string[]
-  min?: number
-  max?: number
-  step?: number
-}
+/**
+ * Campo editable del compositor de widgets: el mismo de la galería
+ * (`PropField`), porque el compositor deriva sus campos de `registry.ts`.
+ */
+export type WidgetPropField = PropField
 
 /**
  * Entrada del registro de widgets disponibles para componer sobre el mapa

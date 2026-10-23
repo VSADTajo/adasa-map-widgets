@@ -95,6 +95,36 @@ describe('ASAppMobileMenu', () => {
     })
   })
 
+  it('las secciones de abajo van al final; contador y motivo de las deshabilitadas', async () => {
+    const wrapper = mount(ASAppMobileMenu, {
+      props: {
+        open: true,
+        sections: [
+          { id: 'ajustes', label: 'Ajustes', icon: 'M0 0', position: 'bottom' },
+          { id: 'avisos', label: 'Avisos', icon: 'M0 0', badge: 2 },
+          {
+            id: 'sim',
+            label: 'Simulaciones',
+            icon: 'M0 0',
+            disabled: true,
+            disabledReason: 'Sin permisos',
+          },
+        ] satisfies AppSection[],
+      },
+    })
+    const items = wrapper.findAll('.as-app-mobile-menu__item')
+    expect(items.map((item) => item.find('.as-app-mobile-menu__text').text())).toEqual([
+      'Avisos',
+      'Simulaciones Sin permisos',
+      'Ajustes',
+    ])
+    expect(items[0]!.find('.as-app-mobile-menu__badge').text()).toBe('2')
+    expect(items[0]!.attributes('aria-label')).toBe('Avisos (2)')
+    expect(items[1]!.attributes('aria-disabled')).toBe('true')
+    await items[1]!.trigger('click')
+    expect(wrapper.emitted('select')).toBeUndefined()
+  })
+
   it('elegir emite select; tocar fuera emite update:open false', async () => {
     const wrapper = mount(ASAppMobileMenu, { props: { open: true, sections } })
     await wrapper.findAll('.as-app-mobile-menu__item')[0]!.trigger('click')

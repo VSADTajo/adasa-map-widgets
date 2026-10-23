@@ -122,3 +122,103 @@ const alternar = (id: string) => (seccion.value = seccion.value === id ? null : 
 .app__mapa { flex: 1; min-width: 0; }
 </style>`,
 }
+
+/** Cómo declarar las secciones de un proyecto, con iconos de tres orígenes. */
+export const sectionsExample: CodeExample = {
+  title: 'Secciones propias (AppSection[])',
+  description:
+    "Cada proyecto decide cuántas secciones hay, su orden, si van arriba o abajo de la barra (position) y su icono: un trazado de @mdi/js, un componente de cualquier librería o un nombre ('mdi:alert') que traduce provideIcons. badge, disabled y hidden pueden salir del estado (avisos activos, rol del usuario...).",
+  code: `<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { mdiLayers, mdiCog } from '@mdi/js'
+import { Map } from 'lucide-vue-next'
+import { ASAppShell, type AppSection } from '@vsadtajo/adasa-ui/layout'
+
+const props = defineProps<{ avisosActivos: number; esAdmin: boolean }>()
+
+const secciones = computed<AppSection[]>(() => [
+  { id: 'capas', label: 'Capas', icon: mdiLayers }, // trazado de @mdi/js
+  { id: 'avisos', label: 'Avisos', icon: 'mdi:alert', badge: props.avisosActivos }, // nombre
+  {
+    id: 'simulaciones',
+    label: 'Simulaciones',
+    icon: 'tabler:chart-dots',
+    disabled: !props.esAdmin,
+    disabledReason: 'Solo para administradores',
+  },
+  { id: 'admin', label: 'Administración', icon: mdiCog, hidden: !props.esAdmin },
+  { id: 'mapasbase', label: 'Mapas base', icon: Map, position: 'bottom' }, // componente (Lucide)
+])
+const seccion = ref<string | null>(null)
+</script>
+
+<template>
+  <ASAppShell :sections="secciones" v-model:active-section="seccion">
+    <!-- slots: brand, search, actions, section, detail y el mapa -->
+  </ASAppShell>
+</template>`,
+}
+
+/** Cómo registrar `provideIcons` en un proyecto, según de dónde salgan sus iconos. */
+export const iconResolverExamples: CodeExample[] = [
+  {
+    title: 'Sin registrar nada: trazados y componentes',
+    description:
+      'Un trazado de @mdi/js o un componente de cualquier librería funcionan sin configurar nada. Con @mdi/js, cada icono se importa por su nombre y el bundle solo lleva los que se usan.',
+    code: `<script setup lang="ts">
+import { mdiLayers } from '@mdi/js'
+import { Map } from 'lucide-vue-next'
+import { ASButton } from '@vsadtajo/adasa-ui/forms'
+</script>
+
+<template>
+  <ASButton :icon="mdiLayers">Capas</ASButton>
+  <ASButton :icon="Map">Mapa</ASButton>
+</template>`,
+  },
+  {
+    title: 'Por nombre con Iconify (cualquier colección)',
+    description:
+      "provideIcons se llama una vez en la raíz (App.vue). A partir de ahí, cualquier icono se escribe como 'colección:nombre' ('mdi:layers', 'tabler:map', 'lucide:map'...). Iconify descarga cada icono de su API la primera vez; sin conexión a internet, registra las colecciones con addCollection.",
+    code: `<script setup lang="ts">
+// App.vue
+import { Icon } from '@iconify/vue'
+import { provideIcons } from '@vsadtajo/adasa-ui'
+
+provideIcons((name) =>
+  name.includes(':') ? { component: Icon, props: { icon: name } } : undefined,
+)
+</script>
+
+<!-- En cualquier componente: -->
+<ASButton icon="mdi:layers">Capas</ASButton>`,
+  },
+  {
+    title: 'Por nombre con la fuente @mdi/font (como en Vuetify)',
+    description:
+      "Para proyectos que ya cargan la fuente de Material Design Icons: los nombres 'mdi-…' se pintan con sus clases.",
+    code: `// main.ts
+import '@mdi/font/css/materialdesignicons.css'
+
+// App.vue
+provideIcons((name) => (name.startsWith('mdi-') ? { class: \`mdi \${name}\` } : undefined))
+
+// En cualquier componente:
+// <ASButton icon="mdi-layers">Capas</ASButton>`,
+  },
+  {
+    title: 'Por nombre con un mapa propio (solo los iconos que usa el proyecto)',
+    description:
+      'Sin dependencias en tiempo de ejecución ni descargas: un objeto con los trazados de @mdi/js que necesita la aplicación.',
+    code: `import { mdiAlert, mdiLayers, mdiMap } from '@mdi/js'
+import { provideIcons } from '@vsadtajo/adasa-ui'
+
+const ICONOS: Record<string, string> = {
+  capas: mdiLayers,
+  avisos: mdiAlert,
+  mapa: mdiMap,
+}
+
+provideIcons((name) => (ICONOS[name] ? { path: ICONOS[name] } : undefined))`,
+  },
+]

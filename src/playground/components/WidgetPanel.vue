@@ -21,7 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [instanceId: string]
   remove: [instanceId: string]
-  'update-prop': [instanceId: string, key: string, value: string | number | boolean]
+  'update-prop': [instanceId: string, key: string, value: unknown]
 }>()
 
 const selectedPlacement = computed(
@@ -45,7 +45,7 @@ const code = computed(() => {
   )
 })
 
-function handleUpdateField(key: string, value: string | number | boolean): void {
+function handleUpdateField(key: string, value: unknown): void {
   if (!selectedPlacement.value) return
   emit('update-prop', selectedPlacement.value.instanceId, key, value)
 }

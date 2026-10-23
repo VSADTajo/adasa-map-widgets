@@ -61,8 +61,11 @@ Cada dominio (`core`, `map`, `charts` y los futuros `table`, `forms`, `detail`, 
 
 ### Iconos
 
-- **Un icono es un trazado SVG**: el atributo `d` de un `<path>` en una caja de 24 × 24, el formato de `@mdi/js`. Toda prop de icono (`icon`, `prefixIcon`, `AppSection.icon`...) es un `string` con ese trazado, y se pinta con `ASIcon` (`@/core/components/ASIcon.vue`), que usa `currentColor`.
-- **La librería no depende de `@mdi/js`** ni de ninguna fuente o sprite de iconos: cada proyecto importa solo los que usa (`import { mdiFilter } from '@mdi/js'`) y no hay peticiones extra ni problemas de CSP.
+- **Toda prop de icono es un `IconValue`** (`@/core/types/icon`) y se pinta con `ASIcon` (`@/core/components/ASIcon.vue`), con `currentColor`. Nunca se pinta un icono con un `<svg>` propio. Un `IconValue` puede ser:
+  - un trazado SVG de 24 × 24 (el formato de `@mdi/js`), que se detecta con `isSvgPath`;
+  - un componente de cualquier librería (Lucide, Font Awesome...), o `{ component, props }`;
+  - un nombre (`'mdi:layers'`, `'mdi-layers'`...), que traduce el resolvedor que el proyecto registra con `provideIcons` a un trazado, un componente o las clases de una fuente. Si nadie lo resuelve, deja un hueco del mismo tamaño y avisa una vez en consola.
+- **La librería no depende de ninguna librería de iconos** (ni `@mdi/js`, ni Iconify, ni fuentes): el proyecto elige. En el playground están como `devDependencies`, y su resolvedor está en `src/playground/utils/icons.ts` (carga los juegos completos aparte, con `import()`).
 - **Set interno mínimo** en `src/core/icons/icons.ts` (`ICONS`, de Material Design Icons): solo entra un icono si lo usa un componente de la librería. No se exporta.
 - **Slot como vía de escape** (`#icon`, `#prefix`, `#suffix`...) para lo que no sea un trazado de un color: logos, SVG multicolor, imágenes.
 - Decorativo por defecto (`aria-hidden`): el nombre accesible lo pone el control que lo contiene. Un botón solo con icono exige `label` (`ASIconButton`).

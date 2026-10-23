@@ -38,6 +38,8 @@ export {
 export { readTokens } from './utils/readTokens'
 export { default as ASIcon } from './components/ASIcon.vue'
 export type { IconProps } from './types/IconProps'
+export { provideIcons, useIconResolver, isSvgPath } from './composables/useIcons'
+export type { IconComponentValue, IconResolver, IconValue, ResolvedIcon } from './types/icon'
 export { nearestTimeIndex } from './utils/time'
 
 export type {

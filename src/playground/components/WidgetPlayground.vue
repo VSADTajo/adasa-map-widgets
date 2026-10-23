@@ -151,7 +151,7 @@ function selectWidget(instanceId: string): void {
   selectedId.value = instanceId
 }
 
-function updateProp(instanceId: string, key: string, value: string | number | boolean): void {
+function updateProp(instanceId: string, key: string, value: unknown): void {
   const placement = placements.value.find((item) => item.instanceId === instanceId)
   if (placement) placement.props[key] = value
 }

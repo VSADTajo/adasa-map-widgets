@@ -1,9 +1,24 @@
+import { defineAsyncComponent } from 'vue'
 import LayoutPieceDemo from './components/LayoutPieceDemo.vue'
 import type { PropField } from './propTypes'
 import type { RegistryEntry } from './registry'
-import { DEMO_SECTIONS } from './utils/appShellExample'
+import {
+  APP_LANGUAGE_DOC,
+  APP_LOGO_DOC,
+  APP_SECTION_DOC,
+  APP_USER_DOC,
+  ICON_VALUE_DOC,
+  RESOLVED_ICON_DOC,
+} from './typeDocs'
+import { sectionOptions, SECTIONS_FIELD } from './utils/appShellExample'
 import { formsToSnippet } from './utils/formsExample'
-import { appSearchSuggestions, DEMO_LOGOS, DEMO_USER } from './utils/layoutExample'
+import {
+  appSearchSuggestions,
+  DEMO_LOGOS,
+  DEMO_USER,
+  iconResolverExamples,
+  sectionsExample,
+} from './utils/layoutExample'
 
 /**
  * Entradas de las piezas del layout (las que coordina `ASAppShell`, y las
@@ -20,8 +35,11 @@ const SECTION_FIELD: PropField = {
   key: 'activeSection',
   label: 'Sección abierta',
   type: 'select',
-  options: ['', ...DEMO_SECTIONS.map((section) => section.id)],
+  options: [''],
+  optionsFrom: sectionOptions,
   default: 'capas',
+  docType: 'string | null',
+  description: 'Se elige entre las secciones del JSON.',
 }
 
 /** Nombre del listener de Vue para un evento: `update:x` → `onUpdate:x`; `a-b` → `onAB`. */
@@ -146,6 +164,7 @@ const SHEET_SCHEMA: PropField[] = [
 ]
 
 const MOBILE_MENU_SCHEMA: PropField[] = [
+  SECTIONS_FIELD,
   { key: 'open', label: 'Desplegado (v-model)', type: 'boolean', default: true },
   SECTION_FIELD,
 ]
@@ -162,8 +181,28 @@ const TOP_BAR_SCHEMA: PropField[] = [
 ]
 
 const RAIL_SCHEMA: PropField[] = [
+  SECTIONS_FIELD,
   SECTION_FIELD,
   { key: 'width', label: 'Ancho (px)', type: 'number', default: 56, min: 40, max: 96, step: 4 },
+]
+
+const ICON_SCHEMA: PropField[] = [
+  {
+    key: 'icon',
+    label: 'Icono',
+    type: 'string',
+    default: 'mdi:layers',
+    docType: 'IconValue',
+    description: "Prueba 'tabler:map', 'mdi-map' o pega un trazado SVG.",
+  },
+  { key: 'size', label: 'Tamaño (px)', type: 'number', default: 24, min: 12, max: 96, step: 4 },
+  {
+    key: 'label',
+    label: 'Nombre accesible',
+    type: 'string',
+    default: '',
+    description: 'Sin él, el icono es decorativo (aria-hidden).',
+  },
 ]
 
 const PANEL_HEADER_SCHEMA: PropField[] = [
@@ -211,6 +250,7 @@ export const layoutEntries: RegistryEntry[] = [
     propsSchema: BRAND_SCHEMA,
     events: [],
     staticProps: { logos: DEMO_LOGOS },
+    types: [APP_LOGO_DOC],
     toSnippet: formsToSnippet('ASAppBrand', BRAND_SCHEMA, { extra: [':logos="logos"'] }),
     notes:
       'Cada logo: { src, alt, href?, height?, mobileHeight?, hideOnMobile? }. Con "Reducido" se ve como en móvil: sin el logo del ministerio (hideOnMobile) ni el subtítulo.',
@@ -256,6 +296,7 @@ export const layoutEntries: RegistryEntry[] = [
     description:
       'Avatar con el menú del usuario (el UserMenu de TAJO): nombre y correo, tema oscuro, idioma, opciones propias y cerrar sesión.',
     propsSchema: USER_MENU_SCHEMA,
+    types: [APP_USER_DOC, APP_LANGUAGE_DOC],
     events: [
       { name: 'update:theme', payload: "'light' | 'dark'", description: 'Interruptor de tema.' },
       { name: 'update:locale', payload: 'string', description: 'Idioma elegido.' },
@@ -289,10 +330,9 @@ export const layoutEntries: RegistryEntry[] = [
     description: 'Barra vertical de iconos de sección (el DesktopRail de TAJO).',
     propsSchema: RAIL_SCHEMA,
     events: [{ name: 'toggle', payload: 'string', description: 'Sección pulsada.' }],
-    staticProps: { sections: DEMO_SECTIONS },
-    toSnippet: formsToSnippet('ASAppRail', RAIL_SCHEMA, {
-      extra: [':sections="secciones"', '@toggle="alternar"'],
-    }),
+    types: [APP_SECTION_DOC, ICON_VALUE_DOC],
+    examples: [sectionsExample],
+    toSnippet: formsToSnippet('ASAppRail', RAIL_SCHEMA, { extra: ['@toggle="alternar"'] }),
     bindings: (values, log) => ({
       onToggle: (id) => {
         values.activeSection = values.activeSection === id ? '' : id
@@ -358,9 +398,9 @@ export const layoutEntries: RegistryEntry[] = [
       { name: 'update:open', payload: 'boolean', description: 'Se cerró tocando fuera.' },
       { name: 'select', payload: 'string', description: 'Sección elegida.' },
     ],
-    staticProps: { sections: DEMO_SECTIONS },
+    types: [APP_SECTION_DOC, ICON_VALUE_DOC],
     toSnippet: formsToSnippet('ASAppMobileMenu', MOBILE_MENU_SCHEMA, {
-      extra: [':sections="secciones"', 'v-model:open="menu"', '@select="abrir"'],
+      extra: ['v-model:open="menu"', '@select="abrir"'],
     }),
     bindings: logBindings(['update:open', 'select'], {
       'update:open': 'open',
@@ -379,4 +419,21 @@ export const layoutEntries: RegistryEntry[] = [
     }),
     bindings: logBindings(['close']),
   }),
+  {
+    id: 'as-icon',
+    name: 'ASIcon',
+    category: 'layout',
+    description:
+      'Iconos de cualquier librería. Todas las props de icono (secciones, botones, menús, sugerencias...) aceptan lo mismo: un trazado de @mdi/js, un componente (Lucide, Font Awesome...) o un nombre que traduce provideIcons (Iconify, una fuente de iconos o un mapa propio). Abajo, la misma barra con cada origen.',
+    propsSchema: ICON_SCHEMA,
+    events: [],
+    types: [ICON_VALUE_DOC, RESOLVED_ICON_DOC],
+    examples: iconResolverExamples,
+    // Aparte: importa @mdi/js, que entero (lo usa el resolvedor del playground) pesa ~3 MB.
+    component: defineAsyncComponent(() => import('./components/IconsDemo.vue')),
+    toProps: withoutEmpty,
+    toSnippet: formsToSnippet('ASIcon', ICON_SCHEMA),
+    notes:
+      "El playground registra provideIcons con: 'mdi:…' → @mdi/js, 'mdi-…' → @mdi/font y cualquier otro 'prefijo:nombre' → Iconify (tabler incluido sin conexión). Escribe otro nombre en icon para probarlo.",
+  },
 ]

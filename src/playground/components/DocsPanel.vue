@@ -27,8 +27,9 @@ function typeParts(field: PropField): string[] {
   return [field.type]
 }
 
+/** Los arrays y objetos (props JSON) son datos de ejemplo del editor, no un valor por defecto. */
 function defaultOf(field: PropField): string {
-  return field.default === '' ? '—' : String(field.default)
+  return field.default === '' || typeof field.default === 'object' ? '—' : String(field.default)
 }
 </script>
 
@@ -73,6 +74,40 @@ function defaultOf(field: PropField): string {
       </tbody>
     </table>
     <p v-else class="pg-docs__empty">Sin props editables en este playground.</p>
+
+    <template v-if="props.entry.types?.length">
+      <h3 class="pg-docs__heading">Tipos</h3>
+      <section v-for="type in props.entry.types" :key="type.name" class="pg-docs__type-doc">
+        <h4 class="pg-docs__type-name">
+          <code>{{ type.name }}</code>
+        </h4>
+        <p class="pg-docs__type-description">{{ type.description }}</p>
+        <table class="pg-docs__table">
+          <thead>
+            <tr>
+              <th>{{ type.union ? 'Forma' : 'Campo' }}</th>
+              <th>Tipo</th>
+              <th v-if="!type.union">Default</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="field in type.fields" :key="field.key">
+              <td>
+                <code>{{ field.key }}{{ type.union || field.required ? '' : '?' }}</code>
+              </td>
+              <td>
+                <code>{{ field.type }}</code>
+              </td>
+              <td v-if="!type.union">
+                <code>{{ field.default ?? '—' }}</code>
+              </td>
+              <td>{{ field.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </template>
 
     <template v-if="props.entry.layerOptionsSchema">
       <h3 class="pg-docs__heading">Opciones de la capa (<code>options</code>)</h3>
@@ -202,6 +237,24 @@ function defaultOf(field: PropField): string {
 
 .pg-docs__type-part {
   white-space: nowrap;
+}
+
+.pg-docs__type-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.pg-docs__type-name {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.pg-docs__type-description {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--pg-text-muted);
 }
 
 .pg-docs__empty {

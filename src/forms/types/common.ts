@@ -1,3 +1,5 @@
+import type { IconValue } from '@/core/types/icon'
+
 /** Tamaño de un control de formulario: alto `--as-control-height-<tamaño>` (28, 36 o 44 px). */
 export type ControlSize = 'sm' | 'md' | 'lg'
 
@@ -16,7 +18,7 @@ export interface SelectOption {
   /** No se puede elegir; el teclado la salta. */
   disabled?: boolean
   /** Trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon?: string
+  icon?: IconValue
   /** Texto secundario bajo la etiqueta. */
   description?: string
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ASIcon from '@/core/components/ASIcon.vue'
+import { hasBadge, orderedSections, sectionLabel } from '@/layout/utils/sections'
 import { useLocale } from '@/core/composables/useLocale'
 import type { AppMobileMenuEmits, AppMobileMenuProps } from '@/layout/types/AppPanelsProps'
 
@@ -30,7 +31,8 @@ const props = withDefaults(defineProps<AppMobileMenuProps>(), {
 
 const emit = defineEmits<AppMobileMenuEmits>()
 const { t } = useLocale()
-const visibleSections = computed(() => props.sections.filter((section) => !section.hidden))
+/** Visibles, con las de abajo (ajustes, mapas base...) al final, como en la barra de iconos. */
+const visibleSections = computed(() => orderedSections(props.sections))
 </script>
 
 <template>
@@ -47,12 +49,29 @@ const visibleSections = computed(() => props.sections.filter((section) => !secti
         <button
           type="button"
           class="as-app-mobile-menu__item"
-          :class="{ 'as-app-mobile-menu__item--active': section.id === props.activeSection }"
+          :class="{
+            'as-app-mobile-menu__item--active': section.id === props.activeSection,
+            'as-app-mobile-menu__item--disabled': section.disabled,
+          }"
+          :aria-label="sectionLabel(section, t)"
+          :title="section.tooltip"
           :aria-pressed="section.id === props.activeSection"
-          @click="emit('select', section.id)"
+          :aria-disabled="section.disabled || undefined"
+          @click="!section.disabled && emit('select', section.id)"
         >
-          <ASIcon :path="section.icon" />
-          {{ section.label }}
+          <ASIcon :icon="section.icon" />
+          <span class="as-app-mobile-menu__text">
+            {{ section.label }}
+            <small
+              v-if="section.disabled && section.disabledReason"
+              class="as-app-mobile-menu__reason"
+            >
+              {{ section.disabledReason }}
+            </small>
+          </span>
+          <span v-if="hasBadge(section)" class="as-app-mobile-menu__badge" aria-hidden="true">
+            {{ section.badge }}
+          </span>
         </button>
       </li>
     </ul>
@@ -114,9 +133,40 @@ const visibleSections = computed(() => props.sections.filter((section) => !secti
   cursor: pointer;
 }
 
-.as-app-mobile-menu__item:hover,
+.as-app-mobile-menu__item:not(.as-app-mobile-menu__item--disabled):hover,
 .as-app-mobile-menu__item--active {
   background: var(--as-app-chrome-active, rgba(255, 255, 255, 0.16));
+}
+
+.as-app-mobile-menu__item--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.as-app-mobile-menu__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.as-app-mobile-menu__reason {
+  font-size: var(--as-font-size-xs, 0.75rem);
+  font-weight: var(--as-font-weight-regular, 400);
+  color: var(--as-app-chrome-text-muted, rgba(255, 255, 255, 0.72));
+}
+
+.as-app-mobile-menu__badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: var(--as-radius-full, 9999px);
+  background: var(--as-color-danger, light-dark(#dc2626, #f87171));
+  color: var(--as-color-danger-contrast, light-dark(#ffffff, #0f172a));
+  font-size: var(--as-font-size-xs, 0.75rem);
+  font-weight: var(--as-font-weight-bold, 700);
+  line-height: 20px;
+  text-align: center;
 }
 
 .as-app-mobile-menu__item:focus-visible {

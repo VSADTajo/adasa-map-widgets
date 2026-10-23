@@ -69,11 +69,11 @@ function onClick(event: MouseEvent): void {
   >
     <span class="as-button__content">
       <template v-if="hasIcon && props.iconPosition === 'start'">
-        <slot name="icon"><ASIcon class="as-button__icon" :path="props.icon!" /></slot>
+        <slot name="icon"><ASIcon class="as-button__icon" :icon="props.icon" /></slot>
       </template>
       <span v-if="slots.default" class="as-button__label"><slot /></span>
       <template v-if="hasIcon && props.iconPosition === 'end'">
-        <slot name="icon"><ASIcon class="as-button__icon" :path="props.icon!" /></slot>
+        <slot name="icon"><ASIcon class="as-button__icon" :icon="props.icon" /></slot>
       </template>
     </span>
     <span v-if="props.loading" class="as-button__spinner">
