@@ -77,20 +77,35 @@ async function loadVectorGrid(Leaflet: typeof L): Promise<void> {
   await import('leaflet.vectorgrid')
 }
 
+/** Opacidades por defecto de un trazado de Leaflet (`L.Path`). */
+const LEAFLET_PATH_OPACITY = 1
+const LEAFLET_PATH_FILL_OPACITY = 0.2
+
 /**
  * Envuelve un `style` por feature (nuestro tipo agnóstico) añadiéndole la
  * opacidad de la capa. `L.GeoJSON` no tiene `setOpacity` (solo `L.TileLayer`
  * la tiene): hay que colar la opacidad dentro del propio `style`.
+ *
+ * La opacidad de la capa MULTIPLICA la del estilo (como en MapLibre): un
+ * relleno translúcido sigue siéndolo al bajar la opacidad, en vez de
+ * volverse opaco con `opacity: 1`.
  */
-function withOpacity(
+export function withOpacity(
   style: ((feature: GeoJsonFeature) => Record<string, unknown>) | undefined,
   opacity: number | undefined,
 ): L.StyleFunction | undefined {
   if (!style && opacity === undefined) return undefined
-  return (feature) => ({
-    ...(style?.(feature as unknown as GeoJsonFeature) ?? {}),
-    ...(opacity === undefined ? {} : { opacity, fillOpacity: opacity }),
-  })
+  return (feature) => {
+    const base = style?.(feature as unknown as GeoJsonFeature) ?? {}
+    if (opacity === undefined) return base
+    const own = (key: string, fallback: number): number =>
+      typeof base[key] === 'number' ? (base[key] as number) : fallback
+    return {
+      ...base,
+      opacity: own('opacity', LEAFLET_PATH_OPACITY) * opacity,
+      fillOpacity: own('fillOpacity', LEAFLET_PATH_FILL_OPACITY) * opacity,
+    }
+  }
 }
 
 /**

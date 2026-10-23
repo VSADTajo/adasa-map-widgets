@@ -15,8 +15,12 @@ export { default as ASDatePicker } from './components/ASDatePicker.vue'
 export { default as ASDateRangePicker } from './components/ASDateRangePicker.vue'
 export { default as ASSearchInput } from './components/ASSearchInput.vue'
 export { default as ASMenu } from './components/ASMenu.vue'
+export { default as ASSlider } from './components/ASSlider.vue'
+export { default as ASCollapsible } from './components/ASCollapsible.vue'
+export { default as ASTreeList } from './components/ASTreeList.vue'
 
 export { hydrologicalYearStart } from './utils/dates'
+export { checkState, findNode, isGroup, leafIds, toggleNode } from './utils/tree'
 
 export type {
   ButtonVariant,
@@ -63,3 +67,14 @@ export type {
   MenuRadioItem,
   MenuSeparator,
 } from './types/MenuProps'
+export type { SliderEmits, SliderProps } from './types/SliderProps'
+export type { CollapsibleEmits, CollapsibleProps } from './types/CollapsibleProps'
+export type {
+  TreeCheckState,
+  TreeListEmits,
+  TreeListProps,
+  TreeNode,
+  TreeNodeAction,
+  TreeNodeSlotProps,
+  TreeSelection,
+} from './types/TreeListProps'

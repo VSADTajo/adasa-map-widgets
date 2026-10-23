@@ -117,6 +117,8 @@ export const es = {
   'forms.removeOption': 'Quitar {label}',
   'forms.moreSelected': '{count} más seleccionadas',
   'forms.options': 'Opciones',
+  'treeList.empty': 'Sin elementos',
+  'treeList.opacity': 'Opacidad de {label}',
 
   'dates.chooseDate': 'Elegir fecha',
   'dates.chooseRange': 'Elegir periodo',
@@ -311,6 +313,8 @@ export const en: Messages = {
   'forms.removeOption': 'Remove {label}',
   'forms.moreSelected': '{count} more selected',
   'forms.options': 'Options',
+  'treeList.empty': 'No items',
+  'treeList.opacity': '{label} opacity',
 
   'dates.chooseDate': 'Choose date',
   'dates.chooseRange': 'Choose period',

@@ -12,7 +12,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas `ASApp*` (barra, marca, buscador, menú de usuario, barra de iconos, paneles): la estructura de las aplicaciones de mapa |
-| `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput` y `ASFormField` |
+| `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput`, `ASSlider`, `ASFormField`, y para paneles `ASCollapsible` y `ASTreeList` |
 | `@vsadtajo/adasa-ui/detail`    | Ficha de una estación: `ASDetailHeader`, `ASCard`, `ASStatusBadge` y tarjetas hidrológicas (`ASAlertStatus`, `ASObservedSummary`, `ASThresholdSummary`, `ASValueMatrix`, `ASThresholdLegend`) |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
 
@@ -54,6 +54,9 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASDatePicker`](src/forms/components/ASDatePicker.vue)                 | `/forms`  | Fecha (y hora opcional): se escribe o se elige en un calendario              | —                                   |
 | [`ASDateRangePicker`](src/forms/components/ASDateRangePicker.vue)       | `/forms`  | Periodo con atajos (últimas 24 h, año hidrológico...) y calendario           | —                                   |
 | [`ASSearchInput`](src/forms/components/ASSearchInput.vue)               | `/forms`  | Buscador con sugerencias asíncronas (`fetchSuggestions`)                     | —                                   |
+| [`ASSlider`](src/forms/components/ASSlider.vue)                         | `/forms`  | Slider (range nativo) con el valor formateado (`format`)                     | —                                   |
+| [`ASCollapsible`](src/forms/components/ASCollapsible.vue)               | `/forms`  | Sección plegable con título, contador y acciones (`v-model:open`)            | —                                   |
+| [`ASTreeList`](src/forms/components/ASTreeList.vue)                     | `/forms`  | Árbol con selección (capas, estaciones, escenarios), opacidad y acciones     | —                                   |
 | [`ASFormField`](src/forms/components/ASFormField.vue)                   | `/forms`  | Etiqueta, ayuda y error enlazados a cualquier control                        | —                                   |
 | [`ASDetailHeader`](src/detail/components/ASDetailHeader.vue)            | `/detail` | Cabecera de una ficha: título, etiquetas y cerrar, fija arriba               | —                                   |
 | [`ASCard`](src/detail/components/ASCard.vue)                            | `/detail` | Tarjeta con título, acciones, esqueleto de carga y texto sin datos           | —                                   |
@@ -453,8 +456,47 @@ import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/form
       id: r.codigo, label: r.nombre, description: r.tipo, group: r.grupo, data: r,
     }))
   ```
+- **`ASSlider`** es un `<input type="range">` nativo: `format` da el texto del valor, a la vista y en `aria-valuetext`; emite `update:modelValue` al moverlo y `change` al soltarlo.
 - **Tema**: sin prop `theme` ni `provideTheme`, no fuerzan ninguno y heredan el del contenedor (un formulario en un panel oscuro se ve oscuro).
 - **Controles propios**: `ASFormField` da a cualquier control la misma etiqueta, ayuda y error, y le pasa por el slot el `id` y el `aria-describedby`.
+
+### Paneles de capas: `ASCollapsible` + `ASTreeList`
+
+Para los paneles laterales (una sección de `ASAppShell`, un `ASAppDrawer`) o cualquier lista jerárquica con selección. Es lo que en TAJO hace `ItemsLayersGroup`, pero sin stores:
+
+```vue
+<ASCollapsible title="Estaciones" :badge="visibles.length">
+  <ASTreeList
+    v-model="visibles"
+    v-model:opacities="opacidades"
+    :items="estaciones"
+    label="Capas de estaciones"
+    @node-action="onAccion"
+  />
+</ASCollapsible>
+```
+
+```ts
+const estaciones: TreeNode[] = [
+  {
+    id: 'saih',
+    label: 'Estaciones SAIH',
+    children: [
+      { id: 'AR', label: 'Aforo en río', swatch: '#2a78d6', badge: 42, opacity: true },
+      { id: 'E', label: 'Embalses', icon: mdiWater, opacity: true },
+      { id: 'piezo', label: 'Piezómetros', disabled: true, disabledReason: 'Sin datos' },
+    ],
+  },
+  { id: 'eventos', label: 'Eventos pasados', children: [], emptyText: 'No hay eventos guardados' },
+]
+```
+
+- **`v-model`** son los ids de las **hojas** seleccionadas; el estado de cada grupo (marcado, desmarcado o a medias) sale de ellas. `v-model:expanded` y `v-model:opacities` (de 0 a 1) son opcionales.
+- **`selection`**: `'multiple'` (casillas; la de un grupo marca o desmarca sus hojas seleccionables), `'single'` (una hoja a la vez; pulsarla otra vez la quita, salvo `:deselectable="false"`) o `'none'` (solo lista: `node-click`).
+- **Cada `TreeNode`** puede llevar `description`, `icon`, `swatch` (muestra de color), `badge`, `disabled` con `disabledReason`, `loading` (indicador en lugar de la casilla), `opacity` (slider bajo la hoja seleccionada) y `actions` (botones que emiten `node-action`). El evento `expand` sirve para cargar los hijos de un grupo al desplegarlo.
+- **Teclado** (patrón *tree* de WAI-ARIA): ↑/↓ entre filas, → despliega o entra, ← pliega o sube al grupo, Inicio/Fin, Espacio selecciona e Intro despliega. Tab pasa al slider y los botones de la fila enfocada.
+- **La lógica del proyecto** (stores, capas excluyentes entre grupos) va en el `get`/`set` de un `computed` que se pasa como `v-model`. Para calcular lo mismo fuera del componente, `leafIds`, `checkState`, `toggleNode`, `findNode` e `isGroup` se exportan.
+- `ASCollapsible` sigue el patrón *disclosure* (botón con `aria-expanded` dentro de un encabezado `headingLevel`); cerrada, el contenido sigue montado pero inerte. Slot `#actions` para botones en la cabecera.
 
 **Iconos.** Las props de icono aceptan cualquier [`IconValue`](#iconos). Para logos o SVG multicolor, los componentes tienen slots (`#icon`, `#prefix`, `#suffix`).
 
