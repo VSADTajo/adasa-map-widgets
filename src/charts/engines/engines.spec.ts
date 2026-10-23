@@ -335,3 +335,54 @@ describe('legendGroups', () => {
     ])
   })
 })
+
+describe('degradado de un área en los tres motores', () => {
+  const gradientSpec = resolveSpec(
+    {
+      series: [
+        {
+          id: 'p',
+          name: 'Previsión',
+          type: 'area',
+          data: points(1, 3),
+          color: '#ff0000',
+          gradient: { from: 0.6, to: 0.1 },
+        },
+      ],
+    },
+    fakeTokens(),
+    fakeLocale,
+  )
+
+  it('ECharts: LinearGradient vertical de la opacidad from a to', () => {
+    const area = (toEChartsOption(gradientSpec, 400) as Any).series[0].areaStyle
+    expect(area.color).toMatchObject({ type: 'linear', x: 0, y: 0, x2: 0, y2: 1 })
+    expect(area.color.colorStops).toEqual([
+      { offset: 0, color: 'rgba(255, 0, 0, 0.6)' },
+      { offset: 1, color: 'rgba(255, 0, 0, 0.1)' },
+    ])
+  })
+
+  it('Chart.js: degradado de canvas sobre el área del gráfico (color liso antes de conocerla)', () => {
+    const background = (toChartJsConfigs(gradientSpec)[0] as Any).data.datasets[0].backgroundColor
+    expect(typeof background).toBe('function')
+    expect(background({ chart: { ctx: {} } })).toBe('rgba(255, 0, 0, 0.6)')
+    const stops: [number, string][] = []
+    const ctx = {
+      createLinearGradient: () => ({
+        addColorStop: (offset: number, color: string) => stops.push([offset, color]),
+      }),
+    }
+    background({ chart: { ctx, chartArea: { top: 10, bottom: 200 } } })
+    expect(stops).toEqual([
+      [0, 'rgba(255, 0, 0, 0.6)'],
+      [1, 'rgba(255, 0, 0, 0.1)'],
+    ])
+  })
+
+  it("ApexCharts: fill.type 'gradient' con sus opacidades por serie", () => {
+    const fill = (toApexOptions(gradientSpec, [400], 'g')[0] as Any).fill
+    expect(fill.type).toEqual(['gradient'])
+    expect(fill.gradient).toMatchObject({ type: 'vertical', opacityFrom: [0.6], opacityTo: [0.1] })
+  })
+})

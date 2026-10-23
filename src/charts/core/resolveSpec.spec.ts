@@ -208,3 +208,28 @@ describe('resolveSpec', () => {
     expect(spec.series[0]!.points).toEqual([])
   })
 })
+
+describe('resolveSpec · degradado de las áreas (gradient)', () => {
+  const area = (extra: Partial<ChartSeries> = {}) =>
+    resolve({ series: [line('a', { type: 'area', ...extra })] }).series[0]!
+
+  it('sin gradient, relleno liso; con true, de 0,5 junto a la línea a 0,05 en la base', () => {
+    expect(area().gradient).toBeUndefined()
+    expect(area({ gradient: true }).gradient).toEqual({ from: 0.5, to: 0.05 })
+  })
+
+  it('from sale de la opacidad de la serie si no se da; to y from propios', () => {
+    expect(area({ gradient: true, opacity: 0.4 }).gradient).toEqual({ from: 0.4, to: 0.05 })
+    expect(area({ gradient: { from: 0.7, to: 0 } }).gradient).toEqual({ from: 0.7, to: 0 })
+  })
+
+  it('solo en áreas, y con patterns manda la trama', () => {
+    expect(resolve({ series: [line('a', { gradient: true })] }).series[0]!.gradient).toBeUndefined()
+    const withPatterns = resolve({
+      series: [line('a', { type: 'area', gradient: true })],
+      patterns: true,
+    })
+    expect(withPatterns.series[0]!.pattern).toBeDefined()
+    expect(withPatterns.series[0]!.gradient).toBeUndefined()
+  })
+})

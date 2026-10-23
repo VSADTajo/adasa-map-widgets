@@ -239,8 +239,18 @@ export function toApexOptions(
       },
       // Con `patterns`, los rellenos son la tesela del patrón (con la opacidad ya en ella).
       fill: {
-        type: patterns.map((tile) => (tile ? 'image' : 'solid')),
+        type: patterns.map((tile, i) =>
+          tile ? 'image' : panelSeries[i]!.gradient ? 'gradient' : 'solid',
+        ),
         opacity: panelSeries.map((s, i) => (patterns[i] ? 1 : s.opacity)),
+        // Degradado vertical de cada área (de `from` junto a la línea a `to` en la base).
+        gradient: {
+          type: 'vertical',
+          shadeIntensity: 0,
+          opacityFrom: panelSeries.map((s) => s.gradient?.from ?? s.opacity),
+          opacityTo: panelSeries.map((s) => s.gradient?.to ?? s.opacity),
+          stops: [0, 100],
+        },
         image: {
           src: patterns.map((tile) => tile ?? ''),
           width: PATTERN_SIZE,

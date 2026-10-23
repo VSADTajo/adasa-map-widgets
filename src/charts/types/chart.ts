@@ -30,6 +30,14 @@ export type ChartRangePoint = [x: ChartX, low: number | null, high: number | nul
  * Trazo de una línea: continua, discontinua (rayas), de puntos o de punto y
  * raya (`'dashdot'`, p. ej. para una tercera previsión).
  */
+/** Degradado del relleno de un área (`gradient` de una serie). */
+export interface ChartGradient {
+  /** Opacidad junto a la línea. @default la de la serie (`opacity`) o 0,5 */
+  from?: number
+  /** Opacidad en la base del área. @default 0.05 */
+  to?: number
+}
+
 export type ChartLineStyle = 'solid' | 'dashed' | 'dotted' | 'dashdot'
 
 /** Eje Y. Una gráfica admite de 1 a 4. */
@@ -95,6 +103,14 @@ export interface ChartSeries {
   showPoints?: boolean
   /** Opacidad del relleno de `area`, `range` y `bar`. */
   opacity?: number
+  /**
+   * Relleno de un `area` en degradado vertical: de la opacidad `from` junto
+   * a la línea a la opacidad `to` en la base (p. ej. una previsión de
+   * lluvia que se desvanece). `true` usa los valores por defecto. Con
+   * `patterns`, manda la trama.
+   * @default false
+   */
+  gradient?: boolean | ChartGradient
   /** Apilar las barras/áreas con el mismo `stack`. */
   stack?: string
   /** Mostrar en la leyenda. @default true */

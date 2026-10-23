@@ -117,6 +117,11 @@ export interface ResolvedSeries {
    * y colores de la tesela, comunes a los tres motores y a la leyenda.
    */
   pattern?: { kind: ChartPatternKind; background: string; stroke: string }
+  /**
+   * Degradado del relleno de un área (de `from` junto a la línea a `to` en
+   * la base). Sin él, relleno liso; con `pattern`, no se usa.
+   */
+  gradient?: { from: number; to: number }
   /** `[x, y]` (o `[x, low, high]` en `range`), con X normalizado: ms en ejes temporales. */
   points: [number | string, number | null][]
   ranges: [number | string, number | null, number | null][]
@@ -183,6 +188,10 @@ function normalizeX(x: ChartX, type: 'time' | 'category' | 'value'): number | st
   if (typeof x === 'string' && type === 'time') return Date.parse(x)
   return x
 }
+
+/** Opacidad del degradado de un área junto a la línea y en la base. */
+const GRADIENT_FROM = 0.5
+const GRADIENT_TO = 0.05
 
 const DEFAULT_OPACITY: Record<ChartSeriesType, number> = {
   line: 1,
@@ -315,6 +324,18 @@ export function resolveSpec(
       showPoints: input.showPoints ?? input.type === 'scatter',
       opacity,
       pattern,
+      gradient:
+        input.type === 'area' && input.gradient && !pattern
+          ? {
+              from: fillOpacity(
+                (typeof input.gradient === 'object' && input.gradient.from) ||
+                  input.opacity ||
+                  GRADIENT_FROM,
+              ),
+              to:
+                (typeof input.gradient === 'object' ? input.gradient.to : undefined) ?? GRADIENT_TO,
+            }
+          : undefined,
       stack: input.stack,
       legend: input.legend ?? true,
       legendGroup: input.legendGroup,

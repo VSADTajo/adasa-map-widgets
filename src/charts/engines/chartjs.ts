@@ -38,9 +38,27 @@ const STEP = { start: 'before', middle: 'middle', end: 'after' } as const
  * opacidad ya en la tesela) si hay `patterns`. La tesela va al doble de
  * resolución y se reduce a la mitad, para que sea nítida.
  */
-function fill(series: ResolvedSeries): string | CanvasPattern {
+/**
+ * Relleno de un área en degradado vertical: se crea al dibujar, cuando ya
+ * se conoce el área del gráfico (hasta entonces, el color liso).
+ */
+function gradientFill(series: ResolvedSeries, gradient: { from: number; to: number }) {
+  return (context: {
+    chart: { ctx: CanvasRenderingContext2D; chartArea?: { top: number; bottom: number } }
+  }) => {
+    const area = context.chart.chartArea
+    if (!area) return withAlpha(series.color, gradient.from)
+    const canvasGradient = context.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom)
+    canvasGradient.addColorStop(0, withAlpha(series.color, gradient.from))
+    canvasGradient.addColorStop(1, withAlpha(series.color, gradient.to))
+    return canvasGradient
+  }
+}
+
+function fill(series: ResolvedSeries): string | CanvasPattern | ReturnType<typeof gradientFill> {
   const tile = series.pattern ? patternTile(series.pattern.kind, series.pattern, 2) : null
   const pattern = tile?.getContext('2d')?.createPattern(tile, 'repeat')
+  if (!pattern && series.gradient) return gradientFill(series, series.gradient)
   if (!pattern) return withAlpha(series.color, series.opacity)
   pattern.setTransform(new DOMMatrix().scale(0.5))
   return pattern

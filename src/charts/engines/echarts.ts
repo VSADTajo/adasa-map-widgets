@@ -1,5 +1,6 @@
 import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
 import { extent as valueExtent } from '@/charts/core/extent'
+import { withAlpha } from '@/charts/core/color'
 import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
 import type { ChartX } from '@/charts/types/chart'
@@ -395,9 +396,25 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
  */
 function fill(s: ResolvedSeries): { color: unknown; opacity: number } {
   const tile = s.pattern ? patternTile(s.pattern.kind, s.pattern, 2) : null
-  return tile
-    ? { color: { image: tile, repeat: 'repeat', scaleX: 0.5, scaleY: 0.5 }, opacity: 1 }
-    : { color: s.color, opacity: s.opacity }
+  if (tile)
+    return { color: { image: tile, repeat: 'repeat', scaleX: 0.5, scaleY: 0.5 }, opacity: 1 }
+  if (s.gradient) {
+    return {
+      color: {
+        type: 'linear',
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [
+          { offset: 0, color: withAlpha(s.color, s.gradient.from) },
+          { offset: 1, color: withAlpha(s.color, s.gradient.to) },
+        ],
+      },
+      opacity: 1,
+    }
+  }
+  return { color: s.color, opacity: s.opacity }
 }
 
 /**
