@@ -47,7 +47,7 @@ const { t } = useLocale()
 
     <ul v-if="props.tags.length && !props.loading" class="as-detail-header__tags">
       <li v-for="tag in props.tags" :key="tag.label" class="as-detail-header__tag">
-        <ASIcon v-if="tag.icon" :path="tag.icon" :size="14" />
+        <ASIcon v-if="tag.icon" :icon="tag.icon" :size="14" />
         {{ tag.label }}
       </li>
     </ul>

@@ -51,7 +51,7 @@ const visibleSections = computed(() => props.sections.filter((section) => !secti
           :aria-pressed="section.id === props.activeSection"
           @click="emit('select', section.id)"
         >
-          <ASIcon :path="section.icon" />
+          <ASIcon :icon="section.icon" />
           {{ section.label }}
         </button>
       </li>

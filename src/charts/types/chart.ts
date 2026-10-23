@@ -1,5 +1,6 @@
 import type { AlertLevel } from '@/core/types/theme'
 import type { DateFormat, MeasureUnit } from '@/core/utils/format'
+import type { IconValue } from '@/core/types/icon'
 
 /**
  * Motor que dibuja la gráfica. Los props son los mismos para los tres: se
@@ -191,8 +192,8 @@ interface ChartToolbarControl {
   id: string
   /** Texto, o nombre accesible y tooltip si lleva `icon`. */
   label: string
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). Con él, el botón es solo icono. */
-  icon?: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). Con él, el botón es solo icono. */
+  icon?: IconValue
   disabled?: boolean
   /** Por qué está deshabilitado (tooltip). */
   disabledReason?: string
@@ -231,7 +232,7 @@ export interface ChartToolbarSelect extends ChartToolbarControl {
 export interface ChartToolbarMenuItem {
   id: string
   label: string
-  icon?: string
+  icon?: IconValue
   description?: string
   /** Si se pasa, la opción es una casilla marcada o no (p. ej. "Percentiles de caudal"). */
   pressed?: boolean

@@ -545,7 +545,7 @@ defineExpose({
                 <ASIcon
                   v-if="option.icon"
                   class="as-listbox__option-icon"
-                  :path="option.icon"
+                  :icon="option.icon"
                   :size="18"
                 />
                 <span class="as-listbox__option-text">

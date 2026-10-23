@@ -1,4 +1,5 @@
 import type { ButtonVariant, ControlSize } from './common'
+import type { IconValue } from '@/core/types/icon'
 
 /**
  * Props de `ASIconButton`: botón cuadrado solo con icono.
@@ -10,10 +11,10 @@ import type { ButtonVariant, ControlSize } from './common'
  */
 export interface IconButtonProps {
   /**
-   * Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). Opcional si se usa
+   * Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). Opcional si se usa
    * el slot `icon` (un SVG propio, p. ej. de trazo en vez de relleno).
    */
-  icon?: string
+  icon?: IconValue
   /** Nombre accesible (`aria-label`) y tooltip nativo (`title`). Obligatorio: el botón no tiene texto. */
   label: string
   /**

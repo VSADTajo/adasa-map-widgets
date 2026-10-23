@@ -57,7 +57,7 @@ const groups = computed(() => [
           :aria-controls="props.controls"
           @click="emit('toggle', section.id)"
         >
-          <ASIcon :path="section.icon" />
+          <ASIcon :icon="section.icon" />
         </button>
       </li>
     </ul>

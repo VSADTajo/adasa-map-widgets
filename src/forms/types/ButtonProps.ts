@@ -1,4 +1,5 @@
 import type { ButtonVariant, ControlSize } from './common'
+import type { IconValue } from '@/core/types/icon'
 
 /**
  * Props de `ASButton`.
@@ -28,8 +29,8 @@ export interface ButtonProps {
    * @default 'button'
    */
   type?: 'button' | 'submit' | 'reset'
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). El slot `icon` tiene prioridad. */
-  icon?: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). El slot `icon` tiene prioridad. */
+  icon?: IconValue
   /**
    * Lado del icono respecto al texto.
    * @default 'start'

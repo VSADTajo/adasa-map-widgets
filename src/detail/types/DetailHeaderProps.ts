@@ -1,9 +1,11 @@
+import type { IconValue } from '@/core/types/icon'
+
 /** Etiqueta de `ASDetailHeader` (zona, municipio, tipo de estación, área...). */
 export interface DetailTag {
   /** Texto ("Zona Alta", "Aranjuez", "Área: 1.234,5 km²"). */
   label: string
-  /** Icono: trazado SVG de 24 × 24 (formato `@mdi/js`). */
-  icon?: string
+  /** Icono: trazado SVG (`@mdi/js`), componente o nombre (ver `IconValue`). */
+  icon?: IconValue
 }
 
 /**

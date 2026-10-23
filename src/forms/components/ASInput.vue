@@ -155,7 +155,7 @@ defineExpose({
       @click="focusFromBox"
     >
       <span v-if="$slots.prefix || props.prefixIcon" class="as-control-box__affix">
-        <slot name="prefix"><ASIcon class="as-control-box__icon" :path="props.prefixIcon!" /></slot>
+        <slot name="prefix"><ASIcon class="as-control-box__icon" :icon="props.prefixIcon" /></slot>
       </span>
       <input
         v-bind="inputAttrs"
@@ -194,7 +194,7 @@ defineExpose({
         props.unit
       }}</span>
       <span v-if="$slots.suffix || props.suffixIcon" class="as-control-box__affix">
-        <slot name="suffix"><ASIcon class="as-control-box__icon" :path="props.suffixIcon!" /></slot>
+        <slot name="suffix"><ASIcon class="as-control-box__icon" :icon="props.suffixIcon" /></slot>
       </span>
     </div>
   </ASFormField>

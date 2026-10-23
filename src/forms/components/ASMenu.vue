@@ -266,7 +266,7 @@ defineExpose({
               size="100%"
             />
           </span>
-          <ASIcon v-if="entry.icon" class="as-menu__icon" :path="entry.icon" :size="18" />
+          <ASIcon v-if="entry.icon" class="as-menu__icon" :icon="entry.icon" :size="18" />
           <span class="as-menu__text">
             {{ entry.label }}
             <small v-if="entry.description" class="as-menu__description">

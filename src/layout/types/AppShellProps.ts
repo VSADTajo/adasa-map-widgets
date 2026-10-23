@@ -1,3 +1,5 @@
+import type { IconValue } from '@/core/types/icon'
+
 /** Una sección de la aplicación: un icono en la barra lateral y su panel. */
 export interface AppSection {
   /** Id estable (p. ej. `'capas'`). Es el valor de `v-model:active-section`. */
@@ -8,7 +10,7 @@ export interface AppSection {
    * Trazado SVG del icono, en una caja de 24 × 24 (el atributo `d` de un
    * `<path>`). Encaja con `@mdi/js`: `import { mdiLayers } from '@mdi/js'`.
    */
-  icon: string
+  icon: IconValue
   /** Grupo de la barra de iconos: arriba o abajo del todo. @default 'top' */
   position?: 'top' | 'bottom'
   /** Oculta la sección (p. ej. según el rol del usuario). @default false */

@@ -1,4 +1,5 @@
 import type { FieldProps } from './common'
+import type { IconValue } from '@/core/types/icon'
 
 /** Tipo de `ASInput`. */
 export type InputType = 'text' | 'number' | 'email' | 'password' | 'tel' | 'url' | 'search'
@@ -30,9 +31,9 @@ export interface InputProps extends FieldProps {
   /** Solo lectura: se enfoca y se copia, pero no se edita. */
   readonly?: boolean
   /** Icono a la izquierda: trazado SVG de 24 × 24 (formato `@mdi/js`). El slot `prefix` tiene prioridad. */
-  prefixIcon?: string
+  prefixIcon?: IconValue
   /** Icono a la derecha. El slot `suffix` tiene prioridad. */
-  suffixIcon?: string
+  suffixIcon?: IconValue
   /** Unidad a la derecha del valor (`'m³/s'`, `'mm'`...). Se anuncia junto al campo. */
   unit?: string
   /** Botón para vaciar el campo cuando tiene valor. */

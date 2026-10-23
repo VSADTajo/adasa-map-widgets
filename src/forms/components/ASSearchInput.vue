@@ -380,7 +380,7 @@ defineExpose({
                 <ASIcon
                   v-if="suggestion.icon"
                   class="as-listbox__option-icon"
-                  :path="suggestion.icon"
+                  :icon="suggestion.icon"
                   :size="18"
                 />
                 <span class="as-listbox__option-text">
@@ -433,7 +433,7 @@ defineExpose({
                   @mousedown.prevent
                   @click.stop="runAction(action.id, suggestion)"
                 >
-                  <ASIcon :path="action.icon" :size="16" />
+                  <ASIcon :icon="action.icon" :size="16" />
                 </button>
               </slot>
             </li>
