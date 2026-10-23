@@ -11,7 +11,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) y `ASIcon` |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
 | `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
-| `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas (`ASAppTopBar`, `ASAppRail`, `ASAppPanelHeader`): la estructura de las aplicaciones de mapa |
+| `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas `ASApp*` (barra, marca, buscador, menú de usuario, barra de iconos, paneles): la estructura de las aplicaciones de mapa |
 | `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput` y `ASFormField` |
 | `@vsadtajo/adasa-ui/detail`    | Ficha de una estación: `ASDetailHeader`, `ASCard`, `ASStatusBadge` y tarjetas hidrológicas (`ASAlertStatus`, `ASObservedSummary`, `ASThresholdSummary`, `ASValueMatrix`, `ASThresholdLegend`) |
 | `@vsadtajo/adasa-ui/style.css` | Tokens de tema y estilos de todos los componentes                                               |
@@ -36,6 +36,14 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
 | [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
 | [`ASAppPanelHeader`](src/layout/components/ASAppPanelHeader.vue)        | `/layout` | Cabecera de panel: título y botón de cerrar con flecha                       | —                                   |
+| [`ASAppBrand`](src/layout/components/ASAppBrand.vue)                    | `/layout` | Logos, nombre y subtítulo de la aplicación en la barra                       | —                                   |
+| [`ASAppSearch`](src/layout/components/ASAppSearch.vue)                  | `/layout` | Buscador de la barra (sobre `ASSearchInput`)                                 | —                                   |
+| [`ASAppUserMenu`](src/layout/components/ASAppUserMenu.vue)              | `/layout` | Avatar con el menú del usuario: tema, idioma y cerrar sesión                 | —                                   |
+| [`ASAppDrawer`](src/layout/components/ASAppDrawer.vue)                  | `/layout` | Panel de sección de escritorio que empuja el contenido                       | —                                   |
+| [`ASAppDetailPanel`](src/layout/components/ASAppDetailPanel.vue)        | `/layout` | Panel de detalle que entra por la derecha                                    | —                                   |
+| [`ASAppBottomSheet`](src/layout/components/ASAppBottomSheet.vue)        | `/layout` | Panel móvil que sube desde abajo, con asa para ampliarlo                     | —                                   |
+| [`ASAppMobileMenu`](src/layout/components/ASAppMobileMenu.vue)          | `/layout` | Menú de secciones del móvil, encima de la barra                              | —                                   |
+| [`ASMenu`](src/forms/components/ASMenu.vue)                             | `/forms`  | Botón que despliega un menú de acciones, casillas y radios                   | —                                   |
 | [`ASButton`](src/forms/components/ASButton.vue)                         | `/forms`  | Botón primary / secondary / ghost / danger, con icono y estado de carga      | —                                   |
 | [`ASIconButton`](src/forms/components/ASIconButton.vue)                 | `/forms`  | Botón cuadrado solo con icono; opcionalmente interruptor (`v-model:pressed`) | —                                   |
 | [`ASInput`](src/forms/components/ASInput.vue)                           | `/forms`  | Campo de texto o número: iconos, unidad, borrar, coma decimal                | —                                   |
@@ -304,9 +312,11 @@ Para verlo funcionando, abre el compositor del playground (`#composer`). Activa 
 
 ```vue
 <ASAppShell :sections="secciones" v-model:active-section="seccion" v-model:detail-open="detalle">
-  <template #brand><img src="/logo.svg" alt="SAIH Tajo" /></template>
-  <template #search><MiBuscador /></template>
-  <template #actions><MiMenuUsuario /></template>
+  <template #brand><ASAppBrand :logos="logos" title="Visor" /></template>
+  <template #search>
+    <ASAppSearch :fetch-suggestions="buscar" @select="abrirFicha" @suggestion-action="centrar" />
+  </template>
+  <template #actions><ASAppUserMenu :user="usuario" @logout="cerrarSesion" /></template>
 
   <template #section="{ section, close, mobile }">
     <ASAppPanelHeader :title="section.label" :direction="mobile ? 'down' : 'left'" @close="close" />
@@ -349,6 +359,27 @@ const detalle = computed({
   },
 })
 ```
+
+### Piezas
+
+`ASAppShell` coordina piezas que también son componentes públicos, cada una con su entrada en el playground. Las equivalencias con el `MainLayout.vue` de los visores SAIH:
+
+| Pieza | En los visores SAIH | Qué hace |
+| --- | --- | --- |
+| `ASAppTopBar` | `TopBar.vue` | Marco de la barra, con los slots `brand`, `search` y `actions` |
+| `ASAppBrand` | logos de `TopBar.vue` | Logos (`{ src, alt, href?, hideOnMobile? }`), nombre y subtítulo; dentro del shell en móvil se reduce sola |
+| `ASAppSearch` | autocompletado de `TopBar.vue` | `ASSearchInput` en forma de píldora, con etiquetas, acciones ("Centrar en el mapa") y avisos de no disponible por sugerencia |
+| `ASAppUserMenu` | `UserMenu.vue` | Avatar con nombre y correo, tema oscuro, idioma, opciones propias y "Cerrar sesión" (solo emite `logout`) |
+| `ASAppRail` | `DesktopRail.vue` | Barra de iconos de sección |
+| `ASAppDrawer` | `SecondaryDrawer.vue` | Panel de sección que empuja el contenido |
+| `ASAppDetailPanel` | `RightNavigation.vue` | Panel de detalle por la derecha, desde `offset` |
+| `ASAppBottomSheet` | `MobileBottomDrawer.vue` | Panel móvil que sube desde abajo, con asa para ampliarlo |
+| `ASAppMobileMenu` | menú móvil de `TopBar.vue` | Secciones encima de la barra móvil |
+| `ASAppPanelHeader` | — | Cabecera de un panel de sección |
+
+`ASAppUserMenu` cambia el tema y el idioma de `provideTheme` y `provideLocale`. Con `v-model:theme` y `v-model:locale`, los controla el proyecto (p. ej. para guardarlos). Las piezas de la barra saben si el shell está en móvil con `useAppShellContext()`.
+
+Si un proyecto necesita otra estructura, las mismas piezas se montan a mano: el ejemplo "Layout montado pieza a pieza" de la entrada `ASAppShell` del playground reproduce el `MainLayout.vue` de TAJO. Lo habitual, de todas formas, es usar `ASAppShell`, que ya coordina la reapertura al cambiar de sección, Escape y el móvil.
 
 **Color corporativo de cada proyecto**: la barra y la barra de iconos usan `--as-app-chrome` (por defecto, el azul marino `#1d283a` de los visores SAIH) y los paneles, `--as-app-panel-*`. Cada proyecto pone el suyo:
 
@@ -401,7 +432,9 @@ import { ASButton, ASInput, ASSelect, ASCheckbox } from '@vsadtajo/adasa-ui/form
   - tras `debounce` ms y con `minChars` caracteres;
   - aborta la petición anterior con la `signal`, y una respuesta tardía nunca pisa a la nueva;
   - agrupa por `group`, resalta lo buscado y anuncia "Buscando…" y el número de resultados;
-  - Intro sin sugerencia activa emite `submit` (búsqueda libre, p. ej. de direcciones).
+  - Intro sin sugerencia activa emite `submit` (búsqueda libre, p. ej. de direcciones);
+  - cada sugerencia puede traer `tags` (texto y color; el texto se pone blanco u oscuro según el fondo), `actions` (botones de icono que emiten `suggestion-action`; Mayús + Intro ejecuta la primera) y `unavailable` con su motivo. Para un diseño libre, el slot `#suggestion`;
+  - `hide-label` oculta la etiqueta a la vista sin quitarla como nombre accesible.
 
   ```ts
   const buscar: FetchSuggestions = async (q, signal) =>

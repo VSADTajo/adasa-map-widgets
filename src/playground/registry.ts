@@ -30,6 +30,8 @@ import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appSh
 import { formsEntries } from './registryForms'
 import { mapCodeExamples } from './utils/mapCodeExamples'
 import { detailEntries } from './registryDetail'
+import { layoutEntries } from './registryLayout'
+import { manualLayoutExample } from './utils/layoutExample'
 import {
   CHART_SERIES_FIELDS,
   HYDROGRAPH_SERIES_FIELDS,
@@ -1719,6 +1721,7 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: { sections: DEMO_SECTIONS },
+    examples: [manualLayoutExample],
     toProps: appShellToProps,
     toSnippet: appShellToSnippet,
     notes:
@@ -1735,6 +1738,7 @@ export const registry: RegistryEntry[] = [
       },
     }),
   },
+  ...layoutEntries,
   ...formsEntries,
   ...detailEntries,
 ]

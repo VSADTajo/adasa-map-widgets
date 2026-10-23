@@ -2,13 +2,18 @@
 import { ref } from 'vue'
 import ASAppShell from '@/layout/components/ASAppShell.vue'
 import ASAppPanelHeader from '@/layout/components/ASAppPanelHeader.vue'
+import ASAppBrand from '@/layout/components/ASAppBrand.vue'
+import ASAppSearch from '@/layout/components/ASAppSearch.vue'
+import ASAppUserMenu from '@/layout/components/ASAppUserMenu.vue'
+import { appSearchSuggestions, DEMO_LOGOS, DEMO_USER } from '../utils/layoutExample'
 import ASMap from '@/map/components/ASMap.vue'
 import type { AppShellEmits, AppShellProps } from '@/layout/types/AppShellProps'
 
 /**
  * Ejemplo de `ASAppShell` para el playground: un visor con mapa, secciones
- * de muestra y el panel de detalle (vacío por ahora), que se abre al hacer
- * clic en el mapa. Los props y v-models del playground pasan tal cual al
+ * de muestra, la marca, el buscador y el menú de usuario en la barra, y el
+ * panel de detalle (vacío por ahora), que se abre al hacer clic en el mapa
+ * o al elegir una sugerencia del buscador. Los props y v-models del playground pasan tal cual al
  * shell; los contenidos de los slots son de ejemplo.
  */
 // Los booleanos sin valor serían false: se fijan los mismos valores por defecto que el shell.
@@ -19,6 +24,7 @@ const props = withDefaults(defineProps<AppShellProps>(), {
 const emit = defineEmits<AppShellEmits>()
 
 const searchText = ref('')
+const fetchSuggestions = appSearchSuggestions()
 const DEMO_ITEMS: Record<string, string[]> = {
   capas: ['Estaciones SAIH', 'Zonas', 'Mapas meteo', 'EFAS', 'Avisos AEMET'],
   avisos: ['Aviso amarillo · Sierra de Gredos', 'Aviso naranja · Alto Tajo'],
@@ -35,19 +41,18 @@ const DEMO_ITEMS: Record<string, string[]> = {
     @update:detail-open="emit('update:detailOpen', $event)"
   >
     <template #brand>
-      <span class="demo-brand">ADASA <small>visor</small></span>
+      <ASAppBrand :logos="DEMO_LOGOS" title="Visor" />
     </template>
     <template #search>
-      <input
+      <ASAppSearch
         v-model="searchText"
-        class="demo-search"
-        type="search"
-        placeholder="Buscar estación, subcuenca o zona"
-        aria-label="Buscar"
+        placeholder="Estación, municipio o código"
+        :fetch-suggestions="fetchSuggestions"
+        @select="emit('update:detailOpen', true)"
       />
     </template>
     <template #actions>
-      <span class="demo-avatar" aria-label="Usuario" role="img">PC</span>
+      <ASAppUserMenu :user="DEMO_USER" />
     </template>
 
     <template #section="{ section, close, mobile }">
@@ -78,41 +83,6 @@ const DEMO_ITEMS: Record<string, string[]> = {
 </template>
 
 <style scoped>
-.demo-brand {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.demo-brand small {
-  font-weight: 400;
-  opacity: 0.8;
-}
-
-.demo-search {
-  box-sizing: border-box;
-  width: 100%;
-  height: 40px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 20px;
-  font: inherit;
-  background: #ffffff;
-  color: #0f172a;
-}
-
-.demo-avatar {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ffffff;
-  color: var(--as-app-chrome, #1d283a);
-  font-weight: 700;
-  font-size: 0.8rem;
-}
-
 .demo-list {
   margin: 0;
   padding: 0 16px 16px;

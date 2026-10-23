@@ -96,6 +96,9 @@ export const es = {
   'layout.closeSearch': 'Cerrar búsqueda',
   'layout.expandSheet': 'Ampliar panel',
   'layout.collapseSheet': 'Reducir panel',
+  'layout.userMenu': 'Menú de usuario',
+  'layout.darkTheme': 'Tema oscuro',
+  'layout.logout': 'Cerrar sesión',
 
   'hydrograph.discharge': 'Caudal',
   'hydrograph.level': 'Nivel',
@@ -285,6 +288,9 @@ export const en: Messages = {
   'layout.closeSearch': 'Close search',
   'layout.expandSheet': 'Expand panel',
   'layout.collapseSheet': 'Collapse panel',
+  'layout.userMenu': 'User menu',
+  'layout.darkTheme': 'Dark theme',
+  'layout.logout': 'Sign out',
 
   'hydrograph.discharge': 'Discharge',
   'hydrograph.level': 'Level',

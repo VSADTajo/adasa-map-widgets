@@ -54,7 +54,7 @@ const RULES = {
   },
   // El layout no depende de ningún paquete: el mapa (o lo que sea) va en su slot.
   './layout': {
-    domains: ['core', 'layout'],
+    domains: ['core', 'forms', 'layout'],
     packages: [],
   },
   // Las primitivas de formulario no dependen de ningún paquete.
