@@ -54,6 +54,7 @@ Lo que no se puede igualar del todo, por cómo funciona cada librería:
 | Tramas (`patterns`) | Tesela común como patrón de imagen         | Tesela común como `CanvasPattern`                                 | Tesela común como relleno `image`                             |
 | Cursor desde el teclado | Cruceta y tooltip                      | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda (el tooltip no se puede abrir desde código); el anuncio al lector de pantalla es el mismo |
 | `syncGroup` (cursor remoto) | Cruceta y tooltip                  | Cruceta y tooltip                                                 | Cruceta y valores de la leyenda; **el tooltip no se puede abrir desde código** |
+| Trazos (`lineStyle`) | `'dashdot'` con el patrón `[8, 3, 2, 3]` | `borderDash` `[8, 3, 2, 3]` | `strokeDashArray` en texto (`'8 3 2 3'`), que Apex pasa tal cual al `stroke-dasharray` del SVG |
 | Alineación entre gráficas sueltas | Exacta (`containShape: false`) | Exacta                                                        | Con barras, Apex añade margen al eje X: queda algo desplazado respecto a una de líneas |
 
 `syncGroup` (`core/sync.ts`) no depende de ningún motor: cada gráfica avisa al grupo de su cursor y su zoom con valores de X normalizados (ms en ejes temporales), y aplica los que le llegan con `showCursor`/`zoomTo` de su motor. Lo que llega del grupo no se reenvía, y un fallo en una gráfica no rompe a las demás.

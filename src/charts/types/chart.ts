@@ -26,7 +26,11 @@ export type ChartPoint = [x: ChartX, y: number | null]
 /** Punto de una banda (`type: 'range'`): `[x, inferior, superior]`. */
 export type ChartRangePoint = [x: ChartX, low: number | null, high: number | null]
 
-export type ChartLineStyle = 'solid' | 'dashed' | 'dotted'
+/**
+ * Trazo de una línea: continua, discontinua (rayas), de puntos o de punto y
+ * raya (`'dashdot'`, p. ej. para una tercera previsión).
+ */
+export type ChartLineStyle = 'solid' | 'dashed' | 'dotted' | 'dashdot'
 
 /** Eje Y. Una gráfica admite de 1 a 4. */
 export interface ChartYAxis {
@@ -95,6 +99,15 @@ export interface ChartSeries {
   stack?: string
   /** Mostrar en la leyenda. @default true */
   legend?: boolean
+  /**
+   * Grupo de la leyenda: las series de un grupo van en su propia línea (o
+   * bloque, con la leyenda a un lado), encabezada por el nombre del grupo.
+   * Las series sin grupo van primero, sin título.
+   * @example 'Precipitación'
+   */
+  legendGroup?: string
+  /** Texto en la leyenda, si debe ser más corto que `name` (p. ej. dentro de su grupo). Por defecto, `name`. */
+  legendLabel?: string
   /** Mostrar en el tooltip. @default true */
   tooltip?: boolean
 }
@@ -148,6 +161,12 @@ export interface ChartXAxisConfig {
 export interface ChartTooltipConfig {
   /** `'shared'`: todas las series en el instante bajo el cursor; `'item'`: solo el punto señalado. @default 'shared' */
   mode?: 'shared' | 'item'
+  /**
+   * Qué muestra: `'values'`, la fecha y el valor de cada serie; `'time'`,
+   * solo la fecha (p. ej. con los valores en la leyenda, `legendValues`).
+   * @default 'values'
+   */
+  content?: 'values' | 'time'
 }
 
 /** Lado de la gráfica donde va la leyenda. */
@@ -358,8 +377,12 @@ export interface ChartProps {
    * gráficas de la misma estación o de varias estaciones en paralelo.
    */
   syncGroup?: string
-  /** Tooltip al pasar el cursor. @default true (modo `'shared'`) */
-  tooltip?: boolean | ChartTooltipConfig
+  /**
+   * Tooltip al pasar el cursor: `true` (fecha y valores), `false` (ninguno),
+   * `'time'` (solo la fecha) o su configuración (`ChartTooltipConfig`).
+   * @default true (modo `'shared'`)
+   */
+  tooltip?: boolean | 'time' | ChartTooltipConfig
   /**
    * Leyenda: `false` la oculta; una posición (`'top'`, `'bottom'`, `'left'`,
    * `'right'`) la coloca. @default `'top'` si hay 2 o más series en la leyenda

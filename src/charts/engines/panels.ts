@@ -1,7 +1,7 @@
 import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { tooltipRows } from '@/charts/core/tooltip'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
-import { layoutPanels } from './types'
+import { layoutPanels, legendGroups, legendSample } from './types'
 
 /**
  * Para los motores que no saben repartir varios paneles con ejes a ambos
@@ -107,11 +107,22 @@ export function createFrame(element: HTMLElement): { legend: HTMLElement; host: 
   return { legend, host }
 }
 
+/** Trazo de la muestra de una línea en la leyenda (atributo `stroke-dasharray`). */
+const LEGEND_DASH = {
+  solid: '',
+  dashed: '4 3',
+  dotted: '1.5 2.5',
+  dashdot: '5 2.5 1.5 2.5',
+} as const
+
 function legendMarker(series: ResolvedChartSpec['series'][number]): string {
   if (series.type === 'line' || series.type === 'scatter') {
-    const dash =
-      series.lineStyle === 'dashed' ? '4 3' : series.lineStyle === 'dotted' ? '1.5 2.5' : ''
+    const dash = LEGEND_DASH[series.lineStyle]
     return `<svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${series.color}" stroke-width="2.5" stroke-dasharray="${dash}"/></svg>`
+  }
+  // Banda: su opacidad real (p10–p90 más tenue que p25–p75) y un borde del color para verla siempre.
+  if (series.type === 'range' && !series.pattern) {
+    return `<span aria-hidden="true" style="position:relative;display:inline-block;width:14px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px ${series.color}"><span style="position:absolute;inset:0;border-radius:2px;background:${series.color};opacity:${series.opacity}"></span></span>`
   }
   // Con `patterns`, la muestra lleva la misma trama que el relleno.
   const tile = series.pattern ? patternDataUrl(series.pattern.kind, series.pattern, 2) : null
@@ -146,6 +157,9 @@ export function legendValues(
  * Devuelve una función para mostrar los valores de las series en el
  * instante `x` (con `legendValues`), o borrarlos con `null`.
  */
+/** Ids de los títulos de grupo de la leyenda (para `aria-labelledby`). */
+let groupCounter = 0
+
 export function renderLegend(
   element: HTMLElement,
   legend: HTMLElement,
@@ -188,14 +202,14 @@ export function renderLegend(
 
   const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
   const valueSpans = new Map<string, HTMLElement>()
-  const seen = new Set<string>()
-  for (const series of spec.series) {
-    if (!series.legend || seen.has(series.name)) continue
-    seen.add(series.name)
+
+  function appendItem(container: HTMLElement, series: ResolvedChartSpec['series'][number]): void {
     const item = document.createElement('button')
     item.type = 'button'
     item.setAttribute('aria-pressed', String(!hidden.has(series.name)))
-    item.innerHTML = `${legendMarker(series)}<span>${escape(series.name)}</span>`
+    // Dentro de un grupo se ve el texto corto, pero se anuncia el nombre completo.
+    if (series.legendLabel !== series.name) item.setAttribute('aria-label', series.name)
+    item.innerHTML = `${legendMarker(legendSample(spec.series, series))}<span>${escape(series.legendLabel)}</span>`
     Object.assign(item.style, {
       display: 'inline-flex',
       alignItems: 'center',
@@ -219,7 +233,43 @@ export function renderLegend(
       valueSpans.set(series.name, value)
     }
     item.addEventListener('click', () => onToggle(series.name))
-    legend.appendChild(item)
+    container.appendChild(item)
+  }
+
+  const groups = legendGroups(spec.series)
+  if (groups.length <= 1 && !groups[0]?.group) {
+    for (const series of groups[0]?.entries ?? []) appendItem(legend, series)
+  } else {
+    // Con grupos (p. ej. la precipitación del hidrograma), cada uno en su línea con su título.
+    Object.assign(legend.style, {
+      flexDirection: 'column',
+      alignItems: vertical ? 'flex-start' : 'stretch',
+    } satisfies Partial<CSSStyleDeclaration>)
+    for (const { group, entries } of groups) {
+      const row = document.createElement('div')
+      row.setAttribute('role', 'group')
+      Object.assign(row.style, {
+        display: 'flex',
+        flexDirection: vertical ? 'column' : 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: vertical ? 'flex-start' : 'center',
+        gap: vertical ? '4px' : '4px 16px',
+      } satisfies Partial<CSSStyleDeclaration>)
+      if (group) {
+        const title = document.createElement('span')
+        title.textContent = group
+        title.id = `as-legend-group-${++groupCounter}`
+        row.setAttribute('aria-labelledby', title.id)
+        Object.assign(title.style, {
+          fontWeight: '600',
+          color: spec.theme.textMuted,
+        } satisfies Partial<CSSStyleDeclaration>)
+        row.appendChild(title)
+      }
+      for (const series of entries) appendItem(row, series)
+      legend.appendChild(row)
+    }
   }
 
   return (x) => {

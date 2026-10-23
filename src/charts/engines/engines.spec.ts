@@ -9,7 +9,10 @@ import { toApexOptions } from './apexcharts'
 import {
   alignedTimeTicks,
   axisTitleFits,
+  fittedAxisTitle,
   layoutPanels,
+  legendGroups,
+  legendSample,
   niceRound,
   niceTickCount,
   ticksForHeight,
@@ -24,7 +27,7 @@ const spec = resolveSpec(
   buildHydrograph(
     {
       discharge: {
-        observed: points(10, 12),
+        observed: [{ id: 'o', name: 'Observado', values: points(10, 12) }],
         forecasts: [
           {
             id: 'eps',
@@ -34,7 +37,7 @@ const spec = resolveSpec(
           },
         ],
       },
-      precipitation: { observed: points(1, 2) },
+      precipitation: { observed: [{ id: 'o', name: 'Observado', values: points(1, 2) }] },
       thresholds: [{ value: 25, level: 'rojo' }],
       now: T0,
       bands: ['p10-p90'],
@@ -87,8 +90,13 @@ describe('toEChartsOption', () => {
     expect(now.map((m: Any) => m.label.show)).toEqual([true, false])
   })
 
-  it('la leyenda no incluye las bandas', () => {
-    expect(option.legend.data).toEqual(['Observado', 'EPS'])
+  it('la leyenda incluye las bandas de percentiles (y la lluvia, con su nombre completo)', () => {
+    expect(option.legend.data).toEqual([
+      'Precipitación · Observado',
+      'EPS p10–p90',
+      'Observado',
+      'EPS',
+    ])
   })
 })
 
@@ -167,8 +175,8 @@ describe('toApexOptions', () => {
 
   it('usa el id como nombre interno: "Observado" aparece en dos paneles sin confundirse', () => {
     const names = options.flatMap((o) => o.series.map((s: Any) => s.name))
-    expect(names).toContain('precipitation-observed')
-    expect(names).toContain('discharge-observed')
+    expect(names).toContain('precipitation-observed-o')
+    expect(names).toContain('discharge-observed-o')
     expect(new Set(names).size).toBe(names.length)
   })
 })
@@ -202,6 +210,20 @@ describe('utilidades de maquetación', () => {
     expect(niceRound(0, 'up')).toBe(0)
   })
 
+  it.each([
+    [651.62, 'up', 0.3, 651.65],
+    [651.31, 'down', 0.3, 651.3],
+    [651.6, 'up', 0.3, 651.6],
+    [212.7, 'up', 212.7, 250],
+    [812.4, 'down', 15, 810],
+    [5, 'up', 0, 5],
+  ] as const)(
+    'niceRound(%s, %s, rango %s) → %s: el paso sale del rango',
+    (value, dir, span, expected) => {
+      expect(niceRound(value, dir, span)).toBe(expected)
+    },
+  )
+
   it('ticksForHeight: una marca cada ~40 px, entre 2 y 6', () => {
     expect(ticksForHeight(60)).toBe(2)
     expect(ticksForHeight(160)).toBe(4)
@@ -214,6 +236,14 @@ describe('utilidades de maquetación', () => {
     expect(niceTickCount(0, 30, 6)).toBe(6) // 5
   })
 
+  it('fittedAxisTitle: el título entero si cabe; si no, solo la unidad; si tampoco, ninguno', () => {
+    const axis = { title: 'Precipitación (mm/h)', unit: 'mm/h' }
+    expect(fittedAxisTitle(axis, 200)).toBe('Precipitación (mm/h)')
+    expect(fittedAxisTitle(axis, 80)).toBe('mm/h')
+    expect(fittedAxisTitle(axis, 20)).toBeUndefined()
+    expect(fittedAxisTitle({ title: 'Precipitación' }, 80)).toBeUndefined()
+  })
+
   it('axisTitleFits oculta los títulos que no caben enteros en el panel', () => {
     expect(axisTitleFits('Precipitación (mm)', 80)).toBe(false)
     expect(axisTitleFits('Precipitación (mm)', 200)).toBe(true)
@@ -224,5 +254,84 @@ describe('utilidades de maquetación', () => {
     const ticks = alignedTimeTicks(at(-50).getTime(), at(70).getTime())
     expect(ticks.every((t) => new Date(t).getHours() === 0)).toBe(true)
     expect(ticks).toContain(T0.getTime())
+  })
+})
+
+describe('trazos de línea en los tres motores', () => {
+  /** Una serie por trazo, para comparar la traducción de cada motor. */
+  const styles = ['solid', 'dashed', 'dotted', 'dashdot'] as const
+  const lines = resolveSpec(
+    {
+      series: styles.map((lineStyle) => ({
+        id: lineStyle,
+        name: lineStyle,
+        type: 'line' as const,
+        data: points(1, 2),
+        lineStyle,
+        lineWidth: 3,
+      })),
+    },
+    fakeTokens(),
+    fakeLocale,
+  )
+
+  it('ECharts: tipos con nombre y el punto y raya como patrón; el grosor, tal cual', () => {
+    const series = (toEChartsOption(lines, 400) as Any).series
+    expect(series.map((s: Any) => s.lineStyle.type)).toEqual([
+      'solid',
+      'dashed',
+      'dotted',
+      [8, 3, 2, 3],
+    ])
+    expect(series.every((s: Any) => s.lineStyle.width === 3)).toBe(true)
+  })
+
+  it('Chart.js: borderDash distinto para cada trazo', () => {
+    const datasets = (toChartJsConfigs(lines)[0] as Any).data.datasets
+    const dashes = datasets.map((d: Any) => JSON.stringify(d.borderDash))
+    expect(dashes).toEqual(['[]', '[6,4]', '[2,3]', '[8,3,2,3]'])
+    expect(new Set(dashes).size).toBe(4)
+  })
+
+  it('ApexCharts: un dashArray por serie, el punto y raya como patrón en texto', () => {
+    const options = toApexOptions(lines, [400], 'g')[0] as Any
+    expect(options.stroke.dashArray).toEqual([0, 6, 2, '8 3 2 3'])
+  })
+})
+
+describe('legendSample', () => {
+  const series = [
+    { name: 'EPS', type: 'bar', legend: true },
+    { name: 'Observado', type: 'line', legend: true },
+    { name: 'EPS', type: 'line', legend: true },
+  ]
+
+  it('la muestra de un nombre con línea es la línea (para ver su trazo)', () => {
+    expect(legendSample(series, series[0]!)).toBe(series[2])
+  })
+
+  it('sin línea con ese nombre, la propia serie', () => {
+    const bars = [{ name: 'Lluvia', type: 'bar', legend: true }]
+    expect(legendSample(bars, bars[0]!)).toBe(bars[0])
+  })
+})
+
+describe('legendGroups', () => {
+  it('una entrada por nombre: sin grupo primero y después cada grupo por orden de aparición', () => {
+    const series = [
+      { name: 'Lluvia A', type: 'bar', legend: true, legendGroup: 'Precipitación' },
+      { name: 'EPS p10–p90', type: 'range', legend: true },
+      { name: 'Caudal', type: 'line', legend: true },
+      { name: 'Caudal', type: 'line', legend: true },
+      { name: 'Oculta', type: 'line', legend: false },
+      { name: 'Lluvia B', type: 'bar', legend: true, legendGroup: 'Precipitación' },
+    ]
+    expect(
+      legendGroups(series).map(({ group, entries }) => [group, entries.map((e) => e.name)]),
+    ).toEqual([
+      // Las bandas, al final de su línea aunque se dibujen antes.
+      [undefined, ['Caudal', 'EPS p10–p90']],
+      ['Precipitación', ['Lluvia A', 'Lluvia B']],
+    ])
   })
 })

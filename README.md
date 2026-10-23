@@ -31,7 +31,7 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASMapLegend`](src/map/components/ASMapLegend.vue)                     | `/map`    | Leyenda de las capas dinámicas                                               | —                                   |
 | [`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)         | `/map`    | Grupo de botones de selección única                                          | —                                   |
 | [`ASChart`](src/charts/components/ASChart.vue)                          | `/charts` | Gráfica cartesiana: líneas, barras, áreas, bandas y dispersión; 1–4 ejes Y, paneles | `echarts`, `chart.js` o `apexcharts` (a elegir) |
-| [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación y caudal/nivel, observado y previsto, umbrales     | el motor de `ASChart`               |
+| [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación, caudal (y entrada/salida), volumen y nivel, observado y previsto, umbrales | el motor de `ASChart`               |
 | [`ASAppShell`](src/layout/components/ASAppShell.vue)                    | `/layout` | Layout de aplicación de mapa: barra, iconos, panel de sección y de detalle; escritorio y móvil | —                  |
 | [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
 | [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
@@ -88,7 +88,7 @@ Ningún widget de control importa una librería de mapas: solo `ASMap` y el sist
 ## Gráficas (`@vsadtajo/adasa-ui/charts`)
 
 - **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
-- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y color del observado con `observedName`/`observedColor` (y `name`/`color` de cada previsión). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo del observado con `observedName`/`style` de cada variable, y de cada previsión con `name`/`style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
 
 **Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
 
@@ -121,11 +121,113 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
 />
 
 <ASHydrographChart
-  :discharge="{ observed: caudal, forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }] }"
-  :precipitation="{ observed: lluvia }"
+  :discharge="{
+    observed: [{ id: 'saih', name: 'Observado', values: caudal }],
+    forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles }],
+  }"
+  :precipitation="{ observed: [{ id: 'saih', name: 'Lluvia', values: lluvia }] }"
   :thresholds="[{ value: 90, level: 'amarillo' }, { value: 130, level: 'naranja' }]"
 />
 ```
+
+**Forma de cada variable.** `discharge`, `inflow`, `outflow`, `volume`, `level` y `precipitation` tienen la misma forma (`HydroVariable`): una lista de **observados** y otra de **previsiones**, y cada serie lleva su `id`, su `name` y su `style`:
+
+```ts
+{
+  observed: [
+    { id: 'saih', name: 'SAIH', values: caudal, style: { color: '#2a78d6' } },
+    { id: 'aforos', name: 'Aforos manuales', values: aforos, style: { color: '#6250d6', type: 'dotted' } },
+  ],
+  forecasts: [
+    { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834' } },
+    { id: 'eps', name: 'EPS', values: mediana, percentiles, style: { type: 'dashdot' }, bandStyle: { 'p10-p90': { opacity: 0.1 } } },
+  ],
+  unit: 'm³/s',
+}
+```
+
+Puede haber varios observados por variable (p. ej. la estación SAIH y los aforos manuales del mismo punto). El primero lleva el color de la variable y los siguientes, otros de la paleta: con varios, conviene darles `color`.
+
+**Leyenda del hidrograma.** La precipitación va en su propia línea de la leyenda, con su título ("Precipitación", o su `label`), debajo de las series del caudal. Sus series se llaman "Precipitación · <nombre>" en el tooltip, la tabla y el CSV, así que una lluvia "Observado" no se confunde con el caudal "Observado" y cada una se oculta por separado. Con `legend-values`, los valores de la lluvia salen también en esa segunda línea.
+
+**Embalses y otras magnitudes en la misma gráfica.** Además de `discharge`, el panel principal admite:
+
+| Prop      | Qué es             | Eje                                  | Unidad por defecto            |
+| --------- | ------------------ | ------------------------------------ | ----------------------------- |
+| `inflow`  | Caudal de entrada  | el del caudal (compartido)           | `m³/s`                        |
+| `outflow` | Caudal de salida   | el del caudal (compartido)           | `m³/s`                        |
+| `volume`  | Volumen embalsado  | propio                               | `hm³`                         |
+| `level`   | Nivel o cota       | propio                               | `m` (`unit: 'msnm'` para cotas) |
+
+Todas son `HydroVariable` (observado y previsiones con percentiles, como `discharge`), y `discharge` es opcional: una gráfica de embalse puede llevar solo entrada, salida, volumen y nivel. Volumen y nivel colocan su eje en el lado con menos ejes, sin forzar el 0; cada variable tiene un color fijo (que no cambia al ocultar previsiones) y sus previsiones se llaman "Variable · Fuente". Los umbrales van al eje de su `variable`:
+
+```vue
+<ASHydrographChart
+  :inflow="{
+    observed: [{ id: 'saih', name: 'Entrada', values: entrada }],
+    forecasts: [{ id: 'eps', name: 'EPS', values: entradaEps }],
+  }"
+  :outflow="{ observed: [{ id: 'saih', name: 'Salida', values: salida }] }"
+  :volume="{ observed: [{ id: 'saih', name: 'Volumen', values: volumen }] }"
+  :level="{ observed: [{ id: 'saih', name: 'Cota', values: cota }], unit: 'msnm' }"
+  :thresholds="[
+    { value: 826, level: 'amarillo', variable: 'volume', label: 'Resguardo' },
+    { value: 649.9, level: 'rojo', variable: 'level', label: 'Cota máxima' },
+  ]"
+/>
+```
+
+**Estilo de cada serie.** Cada observado y cada previsión lleva su `style` (`HydroLineStyle`), con `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color.
+
+```vue
+<ASHydrographChart
+  :discharge="{
+    observed: [{ id: 'saih', name: 'Observado', values: caudal, style: { color: '#2a78d6', width: 3 } }],
+    forecasts: [
+      { id: 'harmonie', name: 'Harmonie', values: harmonie, style: { color: '#eb6834', type: 'dashed' } },
+      { id: 'eps', name: 'EPS', values: eps, percentiles, style: { color: '#05a873', width: 2, type: 'dashdot' } },
+    ],
+  }"
+/>
+```
+
+**Percentiles (bandas de incertidumbre).** Una previsión por conjuntos (p. ej. EPS) puede traer, además de su mediana en `values`, cuatro percentiles en `percentiles`. Se dibujan como dos bandas sombreadas debajo de la línea:
+
+| Banda       | Entre                 | Qué indica                              | Opacidad por defecto |
+| ----------- | --------------------- | --------------------------------------- | -------------------- |
+| `'p10-p90'` | `p10` y `p90`         | el 80 % de los miembros (más ancha)     | 0,15                 |
+| `'p25-p75'` | `p25` y `p75`         | el 50 % central (más estrecha y marcada) | 0,3                  |
+
+- **Datos**: cada percentil es una serie `[instante, valor]` como `values`, y cada par (p10 con p90, p25 con p75) tiene que ir en los mismos instantes. Si falta uno del par, esa banda no se dibuja.
+- **Cuáles se ven**: la prop `bands` (`['p10-p90', 'p25-p75']` por defecto; `[]` las oculta), que el botón "Percentiles" de la barra cambia con `v-model:bands`.
+- **Aspecto**: `bandStyle` de la previsión, por banda (`HydroBandStyle`): `color` (por defecto, el de la línea de la previsión), `opacity`, `name` y `legend`.
+- **Leyenda**: cada banda tiene su entrada ("EPS p10–p90"), con su color y su opacidad; al pulsarla se oculta. `legend: false` la quita de la leyenda.
+- **Tooltip, tabla y CSV**: cada banda sale con su inferior y su superior.
+
+```vue
+<ASHydrographChart
+  :discharge="{
+    observed: [{ id: 'saih', name: 'Observado', values: caudal }],
+    forecasts: [
+      {
+        id: 'eps',
+        name: 'EPS',
+        values: mediana,
+        percentiles: { p10, p25, p75, p90 },
+        style: { color: '#05a873', type: 'dashdot' },
+        bandStyle: {
+          'p10-p90': { opacity: 0.1, name: 'EPS (80 % de los miembros)' },
+          'p25-p75': { color: '#047857', opacity: 0.35 },
+        },
+      },
+    ],
+  }"
+/>
+```
+
+**Unidades.** Cada variable lleva su `unit`, que sale en el título del eje, el tooltip, la tabla y el CSV. La precipitación usa `mm` por defecto (acumulada en cada intervalo); para intensidad, `unit: 'mm/h'`. En un panel bajo, si el título completo ("Precipitación (mm/h)") no cabe, el eje muestra solo la unidad ("mm/h").
+
+Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed-<id>`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
 
 ### Props, eventos y métodos
 
@@ -141,7 +243,7 @@ Las dos gráficas comparten nombres, tipos y valores por defecto: `ASHydrographC
 | `now`                        | `false`                       | **`true`**                 | Línea "Ahora" (`true` = la hora actual, o una fecha)        |
 | `current-time`               | —                             | —                          | Línea del instante seleccionado (`v-model:current-time`)    |
 | `sync-group`                 | —                             | —                          | Comparte cursor, tooltip y zoom con otras gráficas          |
-| `tooltip`                    | `true`                        | `true`                     | Tooltip (`'shared'` o `'item'`)                              |
+| `tooltip`                    | `true`                        | `true`                     | Tooltip: `true` (fecha y valores), `'time'` (solo la fecha), `false` o `{ mode: 'shared' \| 'item', content: 'values' \| 'time' }` |
 | `legend`, `legend-values`    | automática, `false`           | automática, `false`        | Leyenda y valores bajo el cursor                            |
 | `zoom`                       | `false`                       | `false`                    | Zoom horizontal (y barra en ECharts)                        |
 | `toolbar`, `file-name`       | solo "Restablecer zoom" con zoom, `'grafica'` | igual      | descargas, pantalla completa, elementos propios y, en el hidrograma, sus acciones |
@@ -238,7 +340,9 @@ Sin configurar nada:
   - Intro elige ese instante (emite `time-select`, como un clic) y Esc quita el cursor.
   - Cada paso se anuncia al lector de pantalla ("18/10/2026, 06:00: Caudal 69,2 m³/s, Lluvia 0,8 mm") y mueve también el cursor de las gráficas de su `sync-group`.
 - **Tabla de datos alternativa**: oculta a la vista, pero accesible a los lectores de pantalla. Con más de 500 filas se recorta (el CSV las lleva todas). Se desactiva con `:data-table="false"`.
-- **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle`. Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
+- **Grupos en la leyenda** (`legendGroup` en cada serie): las series de un grupo van en su propia línea, con el nombre del grupo como título; las que no tienen grupo, primero. `legendLabel` es el texto en la leyenda si debe ser más corto que `name` (el nombre completo se sigue anunciando y sale en el tooltip y el CSV).
+- **Tooltip con solo la fecha** (`tooltip="time"`): útil con `legend-values`, que ya muestra los valores en la leyenda.
+- **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle` (`'solid'`, `'dashed'`, `'dotted'` o `'dashdot'`). Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
 
 El contraste se comprueba en los dos temas: las tramas, contra su relleno (`patterns.spec.ts`), y los textos de la barra, contra la superficie y el fondo de los botones al pasar el ratón (`tokens.spec.ts`).
 

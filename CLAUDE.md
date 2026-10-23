@@ -104,7 +104,7 @@ Los widgets flotantes sobre el mapa comparten las props `position`, `offset` (nu
   - `formatNumber`.
   - `formatDate(fecha, preset | opcionesIntl | { pattern })`.
   - `formatDuration`.
-  - `formatUnit(valor, 'm³/s' | 'mm' | 'hm³' | 'm' | '%' | '°C')`.
+  - `formatUnit(valor, 'm³/s' | 'mm' | 'mm/h' | 'hm³' | 'm' | '%' | '°C')`.
 
   Ya van ligados al idioma activo, y fuera de un componente se usan las versiones puras de `src/core/utils/format.ts`.
 - **Idiomas**:

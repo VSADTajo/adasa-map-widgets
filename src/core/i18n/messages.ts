@@ -109,6 +109,10 @@ export const es = {
   'hydrograph.forecast': 'Previsto',
   'hydrograph.band': '{source} {range}',
   'hydrograph.threshold': 'Umbral {level}',
+  'hydrograph.inflow': 'Caudal de entrada',
+  'hydrograph.outflow': 'Caudal de salida',
+  'hydrograph.volume': 'Volumen',
+  'hydrograph.variableForecast': '{variable} · {source}',
 
   'forms.loading': 'Cargando…',
   'forms.clear': 'Borrar',
@@ -305,6 +309,10 @@ export const en: Messages = {
   'hydrograph.forecast': 'Forecast',
   'hydrograph.band': '{source} {range}',
   'hydrograph.threshold': 'Threshold {level}',
+  'hydrograph.inflow': 'Inflow',
+  'hydrograph.outflow': 'Outflow',
+  'hydrograph.volume': 'Volume',
+  'hydrograph.variableForecast': '{variable} · {source}',
 
   'forms.loading': 'Loading…',
   'forms.clear': 'Clear',

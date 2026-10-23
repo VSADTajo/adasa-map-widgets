@@ -1,7 +1,7 @@
 import type { HydroThreshold } from '@/charts/types/HydrographProps'
 import type { AlertThresholds, MeasureSeries, TimePoint } from '@/detail/types/hydro'
 import type { DetailTag } from '@/detail/types/DetailHeaderProps'
-import { exampleDischarge, exampleThresholds } from './chartExamples'
+import { exampleDischarge, exampleFlowPoints, exampleThresholds } from './chartExamples'
 
 /**
  * Datos de ejemplo de las tarjetas de detalle: los mismos del hidrograma del
@@ -23,7 +23,7 @@ export const DEMO_OBSERVED: MeasureSeries = {
   id: 'observado',
   label: 'Observado',
   unit: 'm³/s',
-  data: exampleDischarge.observed!,
+  data: exampleFlowPoints,
 }
 
 export const DEMO_FORECASTS: MeasureSeries[] = [

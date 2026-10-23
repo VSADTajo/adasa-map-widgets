@@ -35,7 +35,7 @@ export interface ResolvedChartSpec {
   yAxes: ResolvedYAxis[]
   series: ResolvedSeries[]
   annotations: { x: ResolvedXAnnotation[]; y: ResolvedYAnnotation[] }
-  tooltip: false | { mode: 'shared' | 'item' }
+  tooltip: false | { mode: 'shared' | 'item'; content: 'values' | 'time' }
   legend: false | { position: 'top' | 'bottom' | 'left' | 'right'; values: boolean }
   zoom: false | { slider: boolean }
   animation: boolean
@@ -104,6 +104,10 @@ export interface ResolvedSeries {
   opacity: number
   stack?: string
   legend: boolean
+  /** Grupo de la leyenda (su propia línea). */
+  legendGroup?: string
+  /** Texto en la leyenda (por defecto, `name`). */
+  legendLabel: string
   tooltip: boolean
   yAxis: string
   yAxisIndex: number
@@ -313,6 +317,8 @@ export function resolveSpec(
       pattern,
       stack: input.stack,
       legend: input.legend ?? true,
+      legendGroup: input.legendGroup,
+      legendLabel: input.legendLabel ?? input.name,
       tooltip: input.tooltip ?? true,
       yAxis: axis.id,
       yAxisIndex,
@@ -440,7 +446,13 @@ export function resolveSpec(
     tooltip:
       props.tooltip === false
         ? false
-        : { mode: (typeof props.tooltip === 'object' && props.tooltip.mode) || 'shared' },
+        : {
+            mode: (typeof props.tooltip === 'object' && props.tooltip.mode) || 'shared',
+            content:
+              props.tooltip === 'time'
+                ? 'time'
+                : (typeof props.tooltip === 'object' && props.tooltip.content) || 'values',
+          },
     legend:
       legendOption === false
         ? false

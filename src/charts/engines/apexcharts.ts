@@ -5,7 +5,7 @@ import { tooltipHtml } from '@/charts/core/tooltip'
 import { parseColor } from '@/core/utils/contrast'
 import type { ChartX } from '@/charts/types/chart'
 import {
-  axisTitleFits,
+  fittedAxisTitle,
   niceRound,
   niceTickCount,
   ticksForHeight,
@@ -18,7 +18,11 @@ import { composeImage } from './exportImage'
 type Options = Record<string, unknown>
 
 const X_LABELS_SPACE = 28
-const DASH = { solid: 0, dashed: 6, dotted: 2 } as const
+/**
+ * `strokeDashArray` de ApexCharts acaba en el atributo `stroke-dasharray` del
+ * SVG: el punto y raya se pasa como patrón en texto (raya, hueco, punto, hueco).
+ */
+const DASH = { solid: 0, dashed: 6, dotted: 2, dashdot: '8 3 2 3' } as const
 
 let groupCounter = 0
 
@@ -106,9 +110,10 @@ export function toApexOptions(
         })(),
       )
       if (!range) return {}
+      const span = range[1] - range[0]
       return {
-        min: axis.min ?? niceRound(range[0], 'down'),
-        max: axis.max ?? niceRound(range[1], 'up'),
+        min: axis.min ?? niceRound(range[0], 'down', span),
+        max: axis.max ?? niceRound(range[1], 'up', span),
       }
     }
 
@@ -141,15 +146,11 @@ export function toApexOptions(
             ? niceTickCount(scale.min, scale.max, ticksForHeight(panelHeight))
             : ticksForHeight(panelHeight),
         title: {
-          // Sin título si no cabe entero en el panel (un título cortado es peor que
-          // ninguno). Se deja un espacio duro: Apex reserva el mismo ancho y los
-          // paneles siguen alineados.
+          // Si el título no cabe entero en el panel, solo la unidad (o nada: un
+          // título cortado es peor que ninguno). Sin título se deja un espacio
+          // duro: Apex reserva el mismo ancho y los paneles siguen alineados.
           text: visible
-            ? axisTitleFits(axis.title, panelHeight)
-              ? axis.title
-              : axis.title
-                ? ' '
-                : undefined
+            ? (fittedAxisTitle(axis, panelHeight) ?? (axis.title ? ' ' : undefined))
             : undefined,
           style: { color: theme.textMuted, fontFamily: theme.fontFamily, fontWeight: 400 },
         },

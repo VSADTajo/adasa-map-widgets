@@ -32,7 +32,17 @@ import {
   sectionOptions,
   SECTIONS_FIELD,
 } from './utils/appShellExample'
-import { APP_SECTION_DOC, ICON_VALUE_DOC } from './typeDocs'
+import {
+  APP_SECTION_DOC,
+  HYDRO_BAND_STYLE_DOC,
+  HYDRO_FORECAST_DOC,
+  HYDRO_LINE_STYLE_DOC,
+  HYDRO_OBSERVED_DOC,
+  HYDRO_THRESHOLD_DOC,
+  HYDRO_VARIABLE_DOC,
+  HYDROGRAPH_TOOLBAR_DOC,
+  ICON_VALUE_DOC,
+} from './typeDocs'
 import { formsEntries } from './registryForms'
 import { mapCodeExamples } from './utils/mapCodeExamples'
 import { detailEntries } from './registryDetail'
@@ -40,7 +50,9 @@ import { layoutEntries } from './registryLayout'
 import { manualLayoutExample, sectionsExample } from './utils/layoutExample'
 import {
   CHART_SERIES_FIELDS,
+  HYDROGRAPH_DOC_FIELDS,
   HYDROGRAPH_SERIES_FIELDS,
+  HYDROGRAPH_VARIABLE_FIELDS,
   chartToProps,
   chartToSnippet,
   hydrographToProps,
@@ -231,7 +243,16 @@ const CHART_THEME_FIELD: PropField = {
   description: 'Vacío: hereda el tema global (provideTheme) o el de la página.',
 }
 const CHART_INTERACTION_FIELDS: PropField[] = [
-  { key: 'tooltip', label: 'Tooltip', type: 'boolean', default: true },
+  {
+    key: 'tooltip',
+    label: 'Tooltip',
+    type: 'select',
+    options: ['true', 'time', 'false'],
+    default: 'true',
+    docType: "boolean | 'time' | ChartTooltipConfig",
+    description:
+      "true: fecha y valores; 'time': solo la fecha (p. ej. con los valores en la leyenda); false: sin tooltip.",
+  },
   {
     key: 'legend',
     label: 'Posición de la leyenda',
@@ -326,6 +347,35 @@ const CHART_EVENTS: EventDoc[] = [
     description: 'El rango visible cambió por zoom.',
   },
   { name: 'ready', payload: '{ library, instance }', description: 'El motor terminó de dibujar.' },
+]
+/** Los de ASChart más los propios del hidrograma (sus acciones de la barra y sus v-model). */
+const HYDROGRAPH_EVENTS: EventDoc[] = [
+  ...CHART_EVENTS,
+  {
+    name: 'update:currentTime',
+    payload: 'Date',
+    description: 'Instante elegido en el eje de tiempo (v-model:current-time).',
+  },
+  {
+    name: 'update:visibleForecasts',
+    payload: 'string[]',
+    description: 'El selector de previsiones cambió las visibles (v-model:visible-forecasts).',
+  },
+  {
+    name: 'update:bands',
+    payload: 'HydroBand[]',
+    description: 'El botón de percentiles los mostró u ocultó (v-model:bands).',
+  },
+  {
+    name: 'threshold-focus',
+    payload: 'HydroThreshold | null',
+    description: '"Enfocar umbral": el umbral enfocado, o null al volver a todos.',
+  },
+  {
+    name: 'toolbar-action / toolbar-change',
+    payload: '{ id, value? }',
+    description: 'Elementos propios del proyecto en la barra (toolbar.items), como en ASChart.',
+  },
 ]
 const chartBindings = (
   values: Record<string, unknown>,
@@ -1034,7 +1084,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASHydrographChart',
     category: 'charts',
     description:
-      'Hidrograma: precipitación arriba (barras, eje invertido) y caudal o nivel abajo, con el eje temporal compartido. Observado sólido, previsto discontinuo con una línea "ahora", varias fuentes de previsión (Harmonie, EPS) con bandas de percentiles p10–p90 y p25–p75, y umbrales de aviso.',
+      'Hidrograma: precipitación arriba (barras, eje invertido) y caudal abajo, con el eje temporal compartido. En el panel del caudal admite caudal de entrada y de salida (mismo eje), volumen (hm³) y nivel (m o msnm), cada uno con su eje. Observado sólido, previsto discontinuo con una línea "ahora", varias fuentes de previsión (Harmonie, EPS) con bandas de percentiles, y umbrales de aviso por variable.',
     propsSchema: [
       CHART_LIBRARY_FIELD,
       {
@@ -1082,15 +1132,31 @@ export const registry: RegistryEntry[] = [
         step: 20,
       },
       CHART_THEME_FIELD,
+      ...HYDROGRAPH_VARIABLE_FIELDS,
       ...HYDROGRAPH_SERIES_FIELDS,
+      ...HYDROGRAPH_DOC_FIELDS,
     ],
-    events: CHART_EVENTS,
+    events: HYDROGRAPH_EVENTS,
+    types: [
+      HYDRO_VARIABLE_DOC,
+      HYDRO_OBSERVED_DOC,
+      HYDRO_FORECAST_DOC,
+      HYDRO_LINE_STYLE_DOC,
+      HYDRO_BAND_STYLE_DOC,
+      HYDRO_THRESHOLD_DOC,
+      HYDROGRAPH_TOOLBAR_DOC,
+    ],
     toProps: hydrographToProps,
     toSnippet: hydrographToSnippet,
     notes:
-      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el color de cada serie (`observedName`/`observedColor` y `name`/`color` de cada previsión). Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el estilo (color, grosor y trazo) de cada serie: `name`/`style` de cada observado y `name`/`style`/`bandStyle` de cada previsión. Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
     component: ASHydrographChart,
-    bindings: chartBindings,
+    bindings: (values, log) => ({
+      ...chartBindings(values, log),
+      'onUpdate:visibleForecasts': (ids: unknown) => log('update:visibleForecasts', ids),
+      'onUpdate:bands': (bands: unknown) => log('update:bands', bands),
+      onThresholdFocus: (threshold: unknown) => log('threshold-focus', threshold),
+    }),
   },
   buildLayerEntry({
     id: 'layer-geojson',

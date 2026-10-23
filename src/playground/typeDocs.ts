@@ -286,3 +286,198 @@ export const TREE_SLOT_DOC: TypeDoc = {
     { key: 'expanded', type: 'boolean', required: true, description: 'Si es un grupo desplegado.' },
   ],
 }
+
+export const HYDRO_VARIABLE_DOC: TypeDoc = {
+  name: 'HydroVariable',
+  description:
+    'Una variable del hidrograma (discharge, inflow, outflow, volume, level o precipitation): sus series observadas y sus previsiones, cada una con su nombre y su estilo.',
+  fields: [
+    {
+      key: 'observed',
+      type: 'HydroObserved[]',
+      description:
+        'Series observadas (una o varias, p. ej. SAIH y aforos manuales), cada una con su id, nombre, valores y estilo.',
+    },
+    {
+      key: 'forecasts',
+      type: 'HydroForecast[]',
+      description: 'Previsiones: discontinuas por defecto, con bandas de percentiles.',
+    },
+    {
+      key: 'unit',
+      type: 'string',
+      default: "'m³/s', 'hm³', 'm', 'mm'",
+      description:
+        "Unidad del eje ('msnm' para cotas; 'mm/h' para intensidad de lluvia). Entrada y salida usan la del caudal.",
+    },
+    { key: 'label', type: 'string', description: 'Título del eje y nombre de la variable.' },
+  ],
+}
+
+export const HYDRO_OBSERVED_DOC: TypeDoc = {
+  name: 'HydroObserved',
+  description:
+    'Una serie observada de una variable. Su serie es <variable>-observed-<id> (para seriesOverrides).',
+  fields: [
+    {
+      key: 'id',
+      type: 'string',
+      required: true,
+      description: "Id estable dentro de la variable (p. ej. 'saih').",
+    },
+    {
+      key: 'name',
+      type: 'string',
+      required: true,
+      description: 'Nombre en la leyenda, el tooltip, la tabla y el CSV.',
+    },
+    {
+      key: 'values',
+      type: 'HydroPoint[]',
+      required: true,
+      description: 'Puntos [instante, valor]; null deja un hueco.',
+    },
+    {
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'solid' }",
+      description:
+        'Color, grosor y trazo. El 1.º observado lleva el color de la variable; los siguientes, otros de la paleta (mejor darles color). En la lluvia, solo el color.',
+    },
+  ],
+}
+
+export const HYDRO_FORECAST_DOC: TypeDoc = {
+  name: 'HydroForecast',
+  description:
+    'Una fuente de previsión (Harmonie, EPS...). El mismo id en varias variables es la misma fuente (selector de previsiones).',
+  fields: [
+    { key: 'id', type: 'string', required: true, description: 'Id estable de la fuente.' },
+    {
+      key: 'name',
+      type: 'string',
+      required: true,
+      description: 'Nombre visible. Fuera del caudal, "Variable · Fuente".',
+    },
+    {
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'dashed' }",
+      description:
+        'Color, grosor y trazo de su línea; el color también tiñe sus bandas y sus barras de lluvia. Color por defecto: en caudal y lluvia, por fuente; en el resto, el de la variable.',
+    },
+    { key: 'values', type: 'HydroPoint[]', description: 'Serie determinista o mediana (p50).' },
+    {
+      key: 'percentiles',
+      type: '{ p10?, p25?, p75?, p90?: HydroPoint[] }',
+      description:
+        'Datos de las bandas de incertidumbre: p10 y p90 forman la banda p10–p90; p25 y p75, la p25–p75. Cada par en los mismos instantes. Cuáles se dibujan lo decide la prop bands (o su botón de la barra).',
+    },
+    {
+      key: 'bandStyle',
+      type: "Partial<Record<'p10-p90' | 'p25-p75', HydroBandStyle>>",
+      description:
+        'Aspecto de cada banda: color, opacidad, nombre y si sale en la leyenda. Por defecto, el color de la previsión, opacidad 0,15 / 0,3 y en la leyenda.',
+    },
+  ],
+}
+
+export const HYDRO_THRESHOLD_DOC: TypeDoc = {
+  name: 'HydroThreshold',
+  description: 'Umbral de aviso: una línea horizontal en el eje de su variable.',
+  fields: [
+    { key: 'value', type: 'number', required: true, description: 'Valor, en la unidad de su eje.' },
+    {
+      key: 'level',
+      type: "'normal' | 'amarillo' | 'naranja' | 'rojo' | string",
+      required: true,
+      description: 'Nivel de aviso: da el color.',
+    },
+    { key: 'label', type: 'string', default: "'Umbral <nivel>'", description: 'Etiqueta.' },
+    {
+      key: 'variable',
+      type: "'discharge' | 'volume' | 'level'",
+      default: "'discharge'",
+      description: 'Eje del umbral. Si esa variable no está, va al eje principal.',
+    },
+  ],
+}
+
+export const HYDROGRAPH_TOOLBAR_DOC: TypeDoc = {
+  name: 'HydrographToolbarConfig',
+  description: 'La barra de ASChart (png, svg, csv, items...) más tres acciones propias.',
+  fields: [
+    {
+      key: 'forecastSelector',
+      type: 'boolean',
+      default: 'true',
+      description: 'Selector de previsiones visibles (todas las variables).',
+    },
+    {
+      key: 'bandsToggle',
+      type: 'boolean',
+      default: 'true',
+      description: 'Muestra u oculta los percentiles.',
+    },
+    {
+      key: 'focusThreshold',
+      type: 'boolean',
+      default: 'true',
+      description: 'Enfoca los umbrales uno a uno.',
+    },
+  ],
+}
+
+export const HYDRO_LINE_STYLE_DOC: TypeDoc = {
+  name: 'HydroLineStyle',
+  description:
+    'Estilo de una serie del hidrograma: el style de cada observado y el de cada previsión.',
+  fields: [
+    {
+      key: 'color',
+      type: 'string',
+      description:
+        "Color CSS, o 'var(--as-data-cat-N)' para un color del tema que respete claro y oscuro.",
+    },
+    {
+      key: 'width',
+      type: 'number',
+      default: '2',
+      description: 'Grosor de la línea en px (no se usa en las barras de lluvia).',
+    },
+    {
+      key: 'type',
+      type: "'solid' | 'dashed' | 'dotted' | 'dashdot'",
+      default: "'solid' / 'dashed'",
+      description:
+        'Trazo: continua, discontinua, puntos o punto y raya. Por defecto, continua en el observado y discontinua en las previsiones.',
+    },
+  ],
+}
+
+export const HYDRO_BAND_STYLE_DOC: TypeDoc = {
+  name: 'HydroBandStyle',
+  description:
+    "Aspecto de una banda de percentiles, en bandStyle de la previsión: { 'p10-p90': {...}, 'p25-p75': {...} }.",
+  fields: [
+    {
+      key: 'color',
+      type: 'string',
+      default: 'el de la previsión',
+      description: 'Color del relleno.',
+    },
+    {
+      key: 'opacity',
+      type: 'number',
+      default: '0.15 / 0.3',
+      description: 'Opacidad del relleno (0–1): 0,15 en p10–p90 y 0,3 en p25–p75.',
+    },
+    {
+      key: 'name',
+      type: 'string',
+      default: "'<previsión> p10–p90'",
+      description: 'Nombre en la leyenda, el tooltip, la tabla y el CSV.',
+    },
+    { key: 'legend', type: 'boolean', default: 'true', description: 'Aparece en la leyenda.' },
+  ],
+}

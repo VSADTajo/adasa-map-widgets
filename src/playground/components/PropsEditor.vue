@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { PropField } from '../propTypes'
 import JsonField from './JsonField.vue'
 
@@ -21,6 +22,9 @@ const emit = defineEmits<{
   'update-field': [key: string, value: unknown]
 }>()
 
+/** Campos editables (los `docOnly` solo se documentan). */
+const editable = computed(() => props.schema.filter((field) => !field.docOnly))
+
 /** Opciones de un select: las calculadas con los valores actuales, si las hay. */
 function optionsOf(field: PropField): string[] {
   return field.optionsFrom?.(props.values) ?? field.options ?? []
@@ -42,10 +46,10 @@ function handleInput(field: PropField, event: Event): void {
 
 <template>
   <form class="pg-props-editor" @submit.prevent>
-    <p v-if="props.schema.length === 0" class="pg-props-editor__empty">
+    <p v-if="editable.length === 0" class="pg-props-editor__empty">
       Este componente no tiene props editables en el playground.
     </p>
-    <div v-for="field in props.schema" :key="field.key" class="pg-props-editor__field">
+    <div v-for="field in editable" :key="field.key" class="pg-props-editor__field">
       <label class="pg-props-editor__label" :for="`field-${field.key}`">{{ field.label }}</label>
 
       <select

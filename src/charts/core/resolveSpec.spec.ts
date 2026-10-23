@@ -177,8 +177,21 @@ describe('resolveSpec', () => {
     })
 
     it('tooltip compartido por defecto, desactivable', () => {
-      expect(resolve({ series: [line('a')] }).tooltip).toEqual({ mode: 'shared' })
+      expect(resolve({ series: [line('a')] }).tooltip).toEqual({
+        mode: 'shared',
+        content: 'values',
+      })
       expect(resolve({ series: [line('a')], tooltip: false }).tooltip).toBe(false)
+    })
+
+    it("tooltip: 'time' (o content: 'time') muestra solo la fecha", () => {
+      expect(resolve({ series: [line('a')], tooltip: 'time' }).tooltip).toEqual({
+        mode: 'shared',
+        content: 'time',
+      })
+      expect(
+        resolve({ series: [line('a')], tooltip: { mode: 'item', content: 'time' } }).tooltip,
+      ).toEqual({ mode: 'item', content: 'time' })
     })
 
     it('zoom desactivado por defecto; con barra si se activa', () => {

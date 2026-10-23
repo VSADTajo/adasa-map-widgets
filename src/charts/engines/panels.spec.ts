@@ -72,3 +72,55 @@ describe('renderLegend', () => {
     expect(toggled).toEqual(['Observado'])
   })
 })
+
+describe('renderLegend · grupos (legendGroup)', () => {
+  const grouped = resolveSpec(
+    {
+      series: [
+        {
+          id: 'rain',
+          name: 'Precipitación · Observado',
+          legendLabel: 'Observado',
+          legendGroup: 'Precipitación',
+          type: 'bar',
+          data: [[at(0), 2]],
+          yAxis: 'p',
+        },
+        { id: 'flow', name: 'Observado', type: 'line', data: [[at(0), 45]], yAxis: 'q' },
+      ],
+      yAxes: [
+        { id: 'p', unit: 'mm' },
+        { id: 'q', unit: 'm³/s' },
+      ],
+      legend: 'bottom',
+      legendValues: true,
+    },
+    fakeTokens(),
+    fakeLocale,
+  )
+
+  it('las series sin grupo en la primera línea; cada grupo en la suya, con su título', () => {
+    const legend = document.createElement('div')
+    renderLegend(document.createElement('div'), legend, grouped, new Set(), () => {})
+    const rows = [...legend.children] as HTMLElement[]
+    expect(rows.map((row) => row.textContent)).toEqual(['Observado', 'PrecipitaciónObservado'])
+    const title = rows[1]!.querySelector('span')!
+    expect(rows[1]!.getAttribute('aria-labelledby')).toBe(title.id)
+  })
+
+  it('el botón muestra el texto corto, se anuncia con el nombre completo y oculta solo su serie', () => {
+    const legend = document.createElement('div')
+    const toggled: string[] = []
+    const setValues = renderLegend(document.createElement('div'), legend, grouped, new Set(), (n) =>
+      toggled.push(n),
+    )
+    const rainButton = legend.children[1]!.querySelector('button')!
+    expect(rainButton.getAttribute('aria-label')).toBe('Precipitación · Observado')
+    rainButton.click()
+    expect(toggled).toEqual(['Precipitación · Observado'])
+    // Los valores de cada línea, en su sitio: la lluvia en la segunda.
+    setValues(at(0).getTime())
+    expect(rainButton.textContent).toMatch(/2\smm/)
+    expect(legend.children[0]!.textContent).toMatch(/45\sm³\/s/)
+  })
+})
