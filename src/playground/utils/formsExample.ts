@@ -134,6 +134,8 @@ export function formsToSnippet(
         if (value) attributes.push(name)
       } else if (field.type === 'number') {
         attributes.push(`:${name}="${value}"`)
+      } else if (field.type === 'json') {
+        attributes.push(`:${name}="${field.snippetVar ?? field.key}"`)
       } else {
         attributes.push(`${name}="${value}"`)
       }

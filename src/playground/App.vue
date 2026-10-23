@@ -11,6 +11,8 @@ import { registry, getEntry } from './registry'
 import { buildSnippet, getCategory } from './propTypes'
 import PreviewCanvas from './components/PreviewCanvas.vue'
 import { provideTheme } from '@/core/composables/useTheme'
+import { provideIcons } from '@/core/composables/useIcons'
+import { playgroundIcons } from './utils/icons'
 import { provideLocale, type LocaleCode } from '@/core/composables/useLocale'
 import type { ThemeMode } from '@/core/types/theme'
 
@@ -20,6 +22,8 @@ const MODE_LABELS: Record<ThemeMode, string> = { light: 'Claro', dark: 'Oscuro',
 
 // Idioma de los textos y formatos de todos los componentes del playground.
 const { locale, setLocale } = provideLocale('es')
+// Iconos por nombre ('mdi:layers', 'tabler:map', 'mdi-layers'), como en un proyecto.
+provideIcons(playgroundIcons)
 const locales: LocaleCode[] = ['es', 'en']
 
 /** Alterna entre la galería de un solo componente, el compositor de widgets sobre un mapa y los tokens de diseño. */
@@ -52,7 +56,9 @@ const logEntries = ref<LogEntry[]>([])
 function resetState(): void {
   for (const key of Object.keys(propValues)) delete propValues[key]
   for (const field of entry.value.propsSchema) {
-    propValues[field.key] = field.default
+    // Copia: el editor JSON no debe tocar los datos de ejemplo del registro.
+    propValues[field.key] =
+      typeof field.default === 'object' ? structuredClone(field.default) : field.default
   }
   Object.assign(propValues, entry.value.staticProps ?? {})
   slotContent.value = entry.value.slotDefault ?? ''
@@ -61,7 +67,7 @@ function resetState(): void {
 
 watch(activeId, resetState, { immediate: true })
 
-function updateField(key: string, value: string | number | boolean): void {
+function updateField(key: string, value: unknown): void {
   propValues[key] = value
 }
 

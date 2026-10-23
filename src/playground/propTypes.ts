@@ -1,5 +1,5 @@
 /** Tipo de control de formulario a renderizar en el editor de props en vivo. */
-export type PropFieldType = 'string' | 'number' | 'boolean' | 'select' | 'color'
+export type PropFieldType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'json'
 
 /** Describe un campo editable en el editor de props del playground. */
 export interface PropField {
@@ -8,10 +8,20 @@ export interface PropField {
   /** Etiqueta legible mostrada en el formulario. */
   label: string
   type: PropFieldType
-  /** Valor inicial con el que se precarga el editor. */
-  default: string | number | boolean
+  /** Valor inicial con el que se precarga el editor (un array u objeto en `type: 'json'`). */
+  default: string | number | boolean | object
   /** Opciones disponibles, solo para `type: 'select'`. */
   options?: string[]
+  /**
+   * Opciones calculadas con los valores actuales (p. ej. la sección abierta,
+   * a partir de las secciones que haya en el editor JSON). Tiene prioridad sobre `options`.
+   */
+  optionsFrom?: (values: Record<string, unknown>) => string[]
+  /**
+   * En `type: 'json'`, nombre de la variable en el snippet de código
+   * (`:sections="secciones"`): el JSON entero no cabría en él. Por defecto, `key`.
+   */
+  snippetVar?: string
   min?: number
   max?: number
   step?: number
@@ -29,6 +39,29 @@ export interface PropField {
    * convierte `toProps` en props reales, así que no se lista como prop del componente.
    */
   playgroundOnly?: boolean
+}
+
+/** Un campo (o una forma, en una unión) de un tipo documentado. */
+export interface TypeFieldDoc {
+  key: string
+  type: string
+  required?: boolean
+  /** Valor por defecto, como código (`"'top'"`, `'false'`). */
+  default?: string
+  description: string
+}
+
+/**
+ * Tipo auxiliar de una prop compleja (`AppSection`, `IconValue`...), para la
+ * sección "Tipos" de la documentación: con él se ve qué forma tiene cada
+ * elemento de un array sin ir al código fuente.
+ */
+export interface TypeDoc {
+  name: string
+  description: string
+  /** Es una unión: `fields` son sus formas posibles, no campos de un objeto. */
+  union?: boolean
+  fields: TypeFieldDoc[]
 }
 
 /** Documentación de un evento emitido por el componente. */
@@ -94,6 +127,8 @@ export interface ComponentDoc {
   events: EventDoc[]
   /** Contenido de slot por defecto (texto), si el componente admite slot. */
   slotDefault?: string
+  /** Tipos auxiliares de sus props complejas (sección "Tipos" de la documentación). */
+  types?: TypeDoc[]
   notes?: string
 }
 
@@ -118,6 +153,9 @@ export function buildSnippet(
       }
       if (field.type === 'number') {
         return `:${attrName}="${value}"`
+      }
+      if (field.type === 'json') {
+        return `:${attrName}="${field.snippetVar ?? field.key}"`
       }
       return `${attrName}="${value}"`
     })

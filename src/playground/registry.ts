@@ -26,12 +26,18 @@ import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
 import AppShellDemo from './components/AppShellDemo.vue'
 import HydrographToolbarDemo from './components/HydrographToolbarDemo.vue'
 import { hydrographToolbarExample } from './utils/chartToolbarExample'
-import { appShellToProps, appShellToSnippet, DEMO_SECTIONS } from './utils/appShellExample'
+import {
+  appShellToProps,
+  appShellToSnippet,
+  sectionOptions,
+  SECTIONS_FIELD,
+} from './utils/appShellExample'
+import { APP_SECTION_DOC, ICON_VALUE_DOC } from './typeDocs'
 import { formsEntries } from './registryForms'
 import { mapCodeExamples } from './utils/mapCodeExamples'
 import { detailEntries } from './registryDetail'
 import { layoutEntries } from './registryLayout'
-import { manualLayoutExample } from './utils/layoutExample'
+import { manualLayoutExample, sectionsExample } from './utils/layoutExample'
 import {
   CHART_SERIES_FIELDS,
   HYDROGRAPH_SERIES_FIELDS,
@@ -1646,11 +1652,14 @@ export const registry: RegistryEntry[] = [
     description:
       'Layout de aplicación de mapa: barra corporativa, barra de iconos que abre el panel de cada sección (empuja el mapa) y panel de detalle que entra por la derecha. En móvil, la barra va abajo, las secciones salen de su menú y suben desde abajo. Usa los presets Móvil/Tableta/Escritorio para verlo.',
     propsSchema: [
+      SECTIONS_FIELD,
       {
         key: 'activeSection',
         label: 'Sección abierta (v-model)',
         type: 'select',
-        options: ['', ...DEMO_SECTIONS.map((section) => section.id)],
+        options: [''],
+        optionsFrom: sectionOptions,
+        docType: 'string | null',
         default: '',
         description:
           'Vacío: panel cerrado. Pulsar otra sección cierra el panel y lo reabre con ella.',
@@ -1720,8 +1729,8 @@ export const registry: RegistryEntry[] = [
         description: 'Se cerró el detalle (botón o Escape): para v-model:detail-open.',
       },
     ],
-    staticProps: { sections: DEMO_SECTIONS },
-    examples: [manualLayoutExample],
+    types: [APP_SECTION_DOC, ICON_VALUE_DOC],
+    examples: [sectionsExample, manualLayoutExample],
     toProps: appShellToProps,
     toSnippet: appShellToSnippet,
     notes:
