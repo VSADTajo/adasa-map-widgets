@@ -95,8 +95,6 @@ export interface HydroForecast {
    * 2 px y discontinua.
    */
   style?: HydroLineStyle
-  /** @deprecated Usa `style.color`. Se mantiene por compatibilidad; `style.color` tiene prioridad. */
-  color?: string
   /** Serie determinista o mediana (p50): línea discontinua. */
   values?: HydroPoint[]
   /**
@@ -161,16 +159,8 @@ export interface HydroVariable {
   /**
    * Series observadas (ver `HydroObserved`): líneas en caudal, entrada,
    * salida, volumen y nivel, y barras en la precipitación.
-   *
-   * Por compatibilidad también admite un solo array de puntos (la forma
-   * anterior, obsoleta), con su nombre en `observedName` y su color en
-   * `observedColor`; su serie es `'<variable>-observed'`.
    */
-  observed?: HydroObserved[] | HydroPoint[]
-  /** @deprecated Con `observed` como lista, cada serie lleva su `name`. Solo para la forma anterior. */
-  observedName?: string
-  /** @deprecated Con `observed` como lista, cada serie lleva su `style.color`. Solo para la forma anterior. */
-  observedColor?: string
+  observed?: HydroObserved[]
   /**
    * Previsiones. En caudal y precipitación, cada fuente lleva su color (el
    * mismo en las dos). En entrada, salida, volumen y nivel, por defecto el

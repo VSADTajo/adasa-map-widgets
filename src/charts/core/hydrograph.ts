@@ -28,30 +28,12 @@ const BAND_PERCENTILES: Record<HydroBand, ['p10' | 'p25', 'p75' | 'p90']> = {
 const PRECIPITATION_AXIS = 'precipitation'
 const DISCHARGE_AXIS = 'discharge'
 
-/**
- * Las series observadas de una variable como lista. La forma anterior (un
- * solo array de puntos, con `observedName`/`observedColor`) pasa a una
- * entrada sin id, cuya serie conserva su id de siempre (`<variable>-observed`).
- */
-function observedList(variable: HydroVariable | undefined): HydroObserved[] {
-  const observed = variable?.observed ?? []
-  if (observed.length === 0) return []
-  if (Array.isArray(observed[0])) {
-    return [
-      {
-        id: '',
-        name: variable!.observedName!,
-        values: observed as HydroPoint[],
-        style: variable!.observedColor ? { color: variable!.observedColor } : undefined,
-      },
-    ]
-  }
-  return (observed as HydroObserved[]).filter((entry) => entry.values?.length)
-}
+/** Las series observadas de una variable que tienen puntos. */
+const observedList = (variable: HydroVariable | undefined): HydroObserved[] =>
+  (variable?.observed ?? []).filter((entry) => entry.values?.length)
 
-/** Id de la serie de un observado: `<variable>-observed` (forma anterior) o `<variable>-observed-<id>`. */
-const observedSeriesId = (key: string, entry: HydroObserved) =>
-  entry.id ? `${key}-observed-${entry.id}` : `${key}-observed`
+/** Id de la serie de un observado: `<variable>-observed-<id>`. */
+const observedSeriesId = (key: string, entry: HydroObserved) => `${key}-observed-${entry.id}`
 
 /**
  * Color por defecto del observado número `index` de una variable: el 1.º
@@ -148,11 +130,14 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     ),
   ]
   const colorOf = (forecast: HydroForecast) =>
-    forecast.style?.color ??
-    forecast.color ??
-    `var(--as-data-cat-${(sourceIds.indexOf(forecast.id) % 7) + 2})`
+    forecast.style?.color ?? `var(--as-data-cat-${(sourceIds.indexOf(forecast.id) % 7) + 2})`
   const observedColor = 'var(--as-data-cat-1)'
-  const observedName = t('hydrograph.observed')
+  // La lluvia va en su propia línea de la leyenda, con su título; y sus series
+  // se llaman "Precipitación · <nombre>" en el tooltip, la tabla y el CSV, para
+  // no confundirse con las del caudal (y ocultarse por separado).
+  const precipitationLabel = precipitation?.label ?? t('hydrograph.precipitation')
+  const precipitationName = (name: string) =>
+    t('hydrograph.variableForecast', { variable: precipitationLabel, source: name })
 
   // ── Variables en línea y sus ejes ──
   // El eje de caudal existe si hay caudal, entrada o salida (o si no hay nada más: siempre hay uno).
@@ -245,7 +230,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
             // Superpuesta: mismo panel que el caudal, con su eje a la derecha.
             panel: overlay ? DISCHARGE_AXIS : PRECIPITATION_AXIS,
             position: overlay ? ('right' as const) : ('left' as const),
-            label: precipitation!.label ?? t('hydrograph.precipitation'),
+            label: precipitationLabel,
             unit: precipitation!.unit ?? 'mm',
             inverse: inverted,
             // Superpuesta, se estira el eje para que las barras ocupen solo
@@ -269,7 +254,9 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     observedList(precipitation).forEach((entry, index) => {
       series.push({
         id: observedSeriesId('precipitation', entry),
-        name: entry.name ?? observedName,
+        name: precipitationName(entry.name),
+        legendLabel: entry.name,
+        legendGroup: precipitationLabel,
         type: 'bar',
         data: entry.values,
         yAxis: PRECIPITATION_AXIS,
@@ -280,7 +267,9 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       if (!forecast.values?.length) continue
       series.push({
         id: `precipitation-${forecast.id}`,
-        name: forecast.name,
+        name: precipitationName(forecast.name),
+        legendLabel: forecast.name,
+        legendGroup: precipitationLabel,
         type: 'bar',
         data: forecast.values,
         yAxis: PRECIPITATION_AXIS,
@@ -300,7 +289,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
       ? { name: forecast.name, color: colorOf(forecast) }
       : {
           name: t('hydrograph.variableForecast', { variable: line.label, source: forecast.name }),
-          color: forecast.style?.color ?? forecast.color ?? line.color,
+          color: forecast.style?.color ?? line.color,
         }
 
   // Bandas antes que las líneas, para que queden por debajo.
@@ -333,8 +322,7 @@ export function buildHydrograph(props: HydrographProps, t: LocaleContext['t']): 
     observedList(line.variable).forEach((entry, index) => {
       series.push({
         id: observedSeriesId(line.key, entry),
-        // Sin nombre (forma anterior): en caudal, "Observado"; en el resto, el de la variable.
-        name: entry.name ?? (line.key === 'discharge' ? observedName : line.label),
+        name: entry.name,
         type: 'line',
         data: entry.values,
         yAxis: line.axis,

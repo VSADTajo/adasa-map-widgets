@@ -116,13 +116,19 @@ const PLAYGROUND_ONLY = new Set(CHART_SERIES_FIELDS.map((field) => field.key))
 /** Textos que, vacíos en el formulario, significan "sin prop" (se usa el valor generado). */
 const OPTIONAL_TEXTS = new Set(['fileName', 'ariaLabel', 'description'])
 
+/** El selector del tooltip ('true' | 'time' | 'false') como el valor de la prop. */
+const tooltipProp = (value: unknown) => (value === 'time' ? 'time' : value !== 'false')
+
 /** Quita los controles que solo existen en el playground y los textos opcionales vacíos. */
 function componentProps(values: Values, playgroundOnly: Set<string> = PLAYGROUND_ONLY): Values {
-  return Object.fromEntries(
-    Object.entries(values).filter(
-      ([key, value]) => !playgroundOnly.has(key) && !(OPTIONAL_TEXTS.has(key) && value === ''),
+  return {
+    ...Object.fromEntries(
+      Object.entries(values).filter(
+        ([key, value]) => !playgroundOnly.has(key) && !(OPTIONAL_TEXTS.has(key) && value === ''),
+      ),
     ),
-  )
+    tooltip: tooltipProp(values.tooltip),
+  }
 }
 
 function chartModel(values: Values): { series: ChartSeries[]; yAxes: ChartYAxis[] } {
@@ -152,7 +158,8 @@ function commonAttributes(values: Values): string[] {
   const attributes: string[] = [`chart-library="${values.chartLibrary}"`]
   if (values.legend && values.legend !== 'top') attributes.push(`legend="${values.legend}"`)
   if (values.legendValues) attributes.push('legend-values')
-  if (values.tooltip === false) attributes.push(':tooltip="false"')
+  if (values.tooltip === 'false') attributes.push(':tooltip="false"')
+  if (values.tooltip === 'time') attributes.push('tooltip="time"')
   if (values.zoom) attributes.push('zoom')
   if (values.toolbar) attributes.push('toolbar')
   if (values.fileName) attributes.push(`file-name="${values.fileName}"`)
@@ -198,7 +205,7 @@ const LINE_TYPES = ['solid', 'dashed', 'dotted', 'dashdot']
 
 /**
  * Nombre y estilo (color, grosor y trazo) de una serie del hidrograma: el
- * observado (`observedName` y el `style` de la variable) o una previsión (`name` y `style`).
+ * observado o de una previsión (su `name` y su `style`).
  */
 function seriesStyleFields(
   prefix: string,

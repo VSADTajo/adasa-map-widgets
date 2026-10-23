@@ -40,11 +40,17 @@ const t1 = new Date(2026, 9, 18, 1)
 const props: HydrographProps = {
   discharge: {
     observed: [
-      [t0, 10],
-      [t1, 12],
+      {
+        id: 'o',
+        name: 'Observado',
+        values: [
+          [t0, 10],
+          [t1, 12],
+        ],
+      },
     ],
   },
-  precipitation: { observed: [[t0, 2]] },
+  precipitation: { observed: [{ id: 'o', name: 'Observado', values: [[t0, 2]] }] },
   thresholds: [{ value: 20, level: 'rojo' }],
   now: t1,
 }
@@ -106,7 +112,7 @@ describe('ASHydrographChart', () => {
       onRangeChange: (e: object) => void
     }
     handlers.onXClick(t1)
-    handlers.onPointClick({ seriesId: 'discharge-observed', x: t1, y: 12 })
+    handlers.onPointClick({ seriesId: 'discharge-observed-o', x: t1, y: 12 })
     handlers.onRangeChange({ start: t0, end: t1 })
     expect(wrapper.emitted('x-click')).toEqual([[{ x: t1 }]])
     expect(wrapper.emitted('time-select')).toEqual([[{ time: t1 }]])
@@ -121,7 +127,9 @@ describe('ASHydrographChart', () => {
     await flushPromises()
     const exposed = wrapper.vm as unknown as ChartExposed
     expect(await exposed.exportImage('svg')).toBe('data:svg')
-    expect(exposed.exportData()).toContain('Fecha y hora;Observado (mm);Observado (m³/s)')
+    expect(exposed.exportData()).toContain(
+      'Fecha y hora;Precipitación · Observado (mm);Observado (m³/s)',
+    )
     exposed.resetZoom()
     expect(engine.resetZoom).toHaveBeenCalled()
     expect(exposed.getInstance()).toEqual({ library: 'echarts' })
@@ -304,11 +312,11 @@ describe('ASHydrographChart · acciones propias de la barra', () => {
 describe('ASHydrographChart · embalse (entrada, salida, volumen y nivel)', () => {
   const t2 = new Date(2026, 9, 18, 2)
   const reservoir: HydrographProps = {
-    inflow: { observed: [[t0, 40]] },
-    outflow: { observed: [[t0, 20]] },
-    volume: { observed: [[t0, 812]] },
+    inflow: { observed: [{ id: 'o', name: 'Caudal de entrada', values: [[t0, 40]] }] },
+    outflow: { observed: [{ id: 'o', name: 'Caudal de salida', values: [[t0, 20]] }] },
+    volume: { observed: [{ id: 'o', name: 'Volumen', values: [[t0, 812]] }] },
     level: {
-      observed: [[t0, 651.2]],
+      observed: [{ id: 'o', name: 'Nivel', values: [[t0, 651.2]] }],
       unit: 'msnm',
       forecasts: [
         {
@@ -359,7 +367,7 @@ describe('ASHydrographChart · embalse (entrada, salida, volumen y nivel)', () =
     await wrapper.setProps({ visibleForecasts: [] })
     await flushPromises()
     expect(ids().some((id) => id.startsWith('level-eps'))).toBe(false)
-    expect(ids()).toContain('level-observed')
+    expect(ids()).toContain('level-observed-o')
     wrapper.unmount()
   })
 })

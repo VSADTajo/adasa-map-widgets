@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { buildHydrograph } from './hydrograph'
 import { at, fakeLocale } from './chart.fixtures'
-import type { HydroForecast, HydroPoint, HydrographProps } from '@/charts/types/HydrographProps'
+import type {
+  HydroForecast,
+  HydroObserved,
+  HydroPoint,
+  HydrographProps,
+} from '@/charts/types/HydrographProps'
 
 const points = (...values: number[]): HydroPoint[] => values.map((v, i) => [at(i), v])
+/** Un solo observado (id `o`): su serie es `<variable>-observed-o`. */
+const obs = (values: HydroPoint[], name = 'Observado'): HydroObserved[] => [
+  { id: 'o', name, values },
+]
 
 const props: HydrographProps = {
   discharge: {
-    observed: points(10, 12),
+    observed: obs(points(10, 12)),
     forecasts: [
       {
         id: 'eps',
@@ -24,7 +33,7 @@ const props: HydrographProps = {
     ],
   },
   precipitation: {
-    observed: points(1, 2),
+    observed: obs(points(1, 2)),
     forecasts: [{ id: 'harmonie', name: 'Harmonie', values: points(3, 4) }],
   },
   thresholds: [{ value: 25, level: 'naranja' }],
@@ -71,7 +80,7 @@ describe('buildHydrograph', () => {
 
   it('observado sólido y previsto discontinuo', () => {
     const series = build().series
-    const observed = series.find((s) => s.id === 'discharge-observed')!
+    const observed = series.find((s) => s.id === 'discharge-observed-o')!
     expect(observed.type).toBe('line')
     expect(observed.lineStyle ?? 'solid').toBe('solid')
     expect(series.find((s) => s.id === 'discharge-eps')).toMatchObject({
@@ -83,8 +92,8 @@ describe('buildHydrograph', () => {
   it('la misma fuente comparte color en lluvia y caudal; el observado usa el 1.º de la paleta', () => {
     const series = build().series
     const color = (id: string) => series.find((s) => s.id === id)!.color
-    expect(color('discharge-observed')).toBe('var(--as-data-cat-1)')
-    expect(color('precipitation-observed')).toBe('var(--as-data-cat-1)')
+    expect(color('discharge-observed-o')).toBe('var(--as-data-cat-1)')
+    expect(color('precipitation-observed-o')).toBe('var(--as-data-cat-1)')
     expect(color('discharge-harmonie')).toBe(color('precipitation-harmonie'))
     expect(color('discharge-eps')).not.toBe(color('discharge-harmonie'))
   })
@@ -92,7 +101,7 @@ describe('buildHydrograph', () => {
   it('dibuja las bandas p10–p90 y p25–p75 antes que las líneas, con su entrada en la leyenda', () => {
     const ids = build().series.map((s) => s.id)
     const bands = ['discharge-eps-p10-p90', 'discharge-eps-p25-p75']
-    expect(ids.indexOf(bands[0]!)).toBeLessThan(ids.indexOf('discharge-observed'))
+    expect(ids.indexOf(bands[0]!)).toBeLessThan(ids.indexOf('discharge-observed-o'))
     const band = build().series.find((s) => s.id === bands[0])!
     expect(band).toMatchObject({ type: 'range', legend: true, opacity: 0.15, name: 'EPS p10–p90' })
     expect(band.data[1]).toEqual([at(1), 15, 26])
@@ -172,17 +181,24 @@ describe('buildHydrograph · disposición de la precipitación', () => {
 })
 
 describe('buildHydrograph · nombres, colores y ejes de cada serie', () => {
-  it('nombre y color propios del observado, por variable', () => {
+  it('nombre y estilo propios de cada observado; la lluvia, con el nombre de su variable delante', () => {
     const series = build({
-      discharge: { ...props.discharge, observedName: 'Caudal medido', observedColor: '#111111' },
-      precipitation: { ...props.precipitation, observedName: 'Lluvia medida' },
+      discharge: {
+        ...props.discharge,
+        observed: [
+          { id: 'o', name: 'Caudal medido', values: points(1, 2), style: { color: '#111111' } },
+        ],
+      },
+      precipitation: { observed: obs(points(1, 2), 'Lluvia medida') },
     }).series
-    expect(series.find((s) => s.id === 'discharge-observed')).toMatchObject({
+    expect(series.find((s) => s.id === 'discharge-observed-o')).toMatchObject({
       name: 'Caudal medido',
       color: '#111111',
     })
-    expect(series.find((s) => s.id === 'precipitation-observed')).toMatchObject({
-      name: 'Lluvia medida',
+    expect(series.find((s) => s.id === 'precipitation-observed-o')).toMatchObject({
+      name: 'Precipitación · Lluvia medida',
+      legendLabel: 'Lluvia medida',
+      legendGroup: 'Precipitación',
       color: 'var(--as-data-cat-1)',
     })
   })
@@ -205,9 +221,9 @@ describe('buildHydrograph · nombres, colores y ejes de cada serie', () => {
   })
 
   it('seriesOverrides no puede cambiar el id ni los datos', () => {
-    const overrides = { 'discharge-observed': { id: 'otro', data: [] } } as never
+    const overrides = { 'discharge-observed-o': { id: 'otro', data: [] } } as never
     const observed = build({ seriesOverrides: overrides }).series.find(
-      (s) => s.id === 'discharge-observed',
+      (s) => s.id === 'discharge-observed-o',
     )!
     expect(observed.data).toHaveLength(2)
   })
@@ -228,14 +244,14 @@ describe('buildHydrograph · nombres, colores y ejes de cada serie', () => {
 
 describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
   const reservoir: HydrographProps = {
-    inflow: { observed: points(40, 55) },
+    inflow: { observed: obs(points(40, 55), 'Caudal de entrada') },
     outflow: {
-      observed: points(20, 25),
+      observed: obs(points(20, 25), 'Caudal de salida'),
       forecasts: [{ id: 'eps', name: 'EPS', values: points(25, 30) }],
     },
-    volume: { observed: points(812, 815) },
+    volume: { observed: obs(points(812, 815), 'Volumen') },
     level: {
-      observed: points(651.2, 651.4),
+      observed: obs(points(651.2, 651.4), 'Nivel'),
       unit: 'msnm',
       forecasts: [
         {
@@ -259,16 +275,16 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
       ['volume', 'hm³', 'right'],
       ['level', 'msnm', 'right'],
     ])
-    expect(byId(chart, 'inflow-observed')).toMatchObject({
+    expect(byId(chart, 'inflow-observed-o')).toMatchObject({
       yAxis: 'discharge',
       name: 'Caudal de entrada',
     })
-    expect(byId(chart, 'outflow-observed')).toMatchObject({
+    expect(byId(chart, 'outflow-observed-o')).toMatchObject({
       yAxis: 'discharge',
       name: 'Caudal de salida',
     })
-    expect(byId(chart, 'volume-observed')).toMatchObject({ yAxis: 'volume', name: 'Volumen' })
-    expect(byId(chart, 'level-observed')).toMatchObject({ yAxis: 'level', name: 'Nivel' })
+    expect(byId(chart, 'volume-observed-o')).toMatchObject({ yAxis: 'volume', name: 'Volumen' })
+    expect(byId(chart, 'level-observed-o')).toMatchObject({ yAxis: 'level', name: 'Nivel' })
   })
 
   it('todos en el panel principal; volumen y nivel sin forzar el 0 ni rejilla propia', () => {
@@ -281,7 +297,9 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
   it('colores fijos por variable, sin depender de las fuentes de previsión', () => {
     const chart = buildReservoir()
     expect(
-      ['inflow', 'outflow', 'volume', 'level'].map((key) => byId(chart, `${key}-observed`)!.color),
+      ['inflow', 'outflow', 'volume', 'level'].map(
+        (key) => byId(chart, `${key}-observed-o`)!.color,
+      ),
     ).toEqual([
       'var(--as-data-cat-4)',
       'var(--as-data-cat-5)',
@@ -304,7 +322,7 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
 
   it('con precipitación superpuesta, volumen y nivel van al lado con menos ejes', () => {
     const chart = buildReservoir({
-      precipitation: { observed: points(1, 2) },
+      precipitation: { observed: obs(points(1, 2)) },
       precipitationLayout: 'overlay',
     })
     expect(chart.yAxes!.map((a) => [a.id, a.position])).toEqual([
@@ -316,28 +334,29 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
   })
 
   it('caudal, entrada y salida juntos: un solo eje de caudal', () => {
-    const chart = build({ inflow: { observed: points(5, 6) }, outflow: { observed: points(4, 4) } })
+    const chart = build({
+      inflow: { observed: obs(points(5, 6)) },
+      outflow: { observed: obs(points(4, 4)) },
+    })
     expect(chart.yAxes!.map((a) => a.id)).toEqual(['precipitation', 'discharge'])
-    expect(byId(chart, 'discharge-observed')!.name).toBe('Observado')
+    expect(byId(chart, 'discharge-observed-o')!.name).toBe('Observado')
   })
 
   it('sin caudal, entrada ni salida, el primer eje es el del nivel, a la izquierda', () => {
-    const chart = buildHydrograph({ level: { observed: points(651, 652) } }, fakeLocale.t)
+    const chart = buildHydrograph({ level: { observed: obs(points(651, 652)) } }, fakeLocale.t)
     expect(chart.yAxes).toMatchObject([{ id: 'level', position: 'left', unit: 'm' }])
   })
 
-  it('label, unit, observedName y observedColor propios de cada variable', () => {
+  it('label y unit propios de cada variable, y nombre y color de su observado', () => {
     const chart = buildReservoir({
       volume: {
-        observed: points(1, 2),
+        observed: [{ id: 'o', name: 'Vol.', values: points(1, 2), style: { color: '#123456' } }],
         label: 'Embalsado',
         unit: 'hm3',
-        observedName: 'Vol.',
-        observedColor: '#123456',
       },
     })
     expect(chart.yAxes![1]).toMatchObject({ label: 'Embalsado', unit: 'hm3' })
-    expect(byId(chart, 'volume-observed')).toMatchObject({ name: 'Vol.', color: '#123456' })
+    expect(byId(chart, 'volume-observed-o')).toMatchObject({ name: 'Vol.', color: '#123456' })
   })
 
   it('cada umbral va al eje de su variable; sin esa variable, al principal', () => {
@@ -357,7 +376,7 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
     ])
     const onlyLevel = buildHydrograph(
       {
-        level: { observed: points(1, 2) },
+        level: { observed: obs(points(1, 2)) },
         thresholds: [{ value: 3, level: 'rojo', variable: 'volume' }],
       },
       fakeLocale.t,
@@ -368,10 +387,10 @@ describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
   it('yAxisOverrides y seriesOverrides también valen para volumen y nivel', () => {
     const chart = buildReservoir({
       yAxisOverrides: { level: { min: 640, max: 655 } },
-      seriesOverrides: { 'volume-observed': { lineStyle: 'dotted' } },
+      seriesOverrides: { 'volume-observed-o': { lineStyle: 'dotted' } },
     })
     expect(chart.yAxes!.find((a) => a.id === 'level')).toMatchObject({ min: 640, max: 655 })
-    expect(byId(chart, 'volume-observed')!.lineStyle).toBe('dotted')
+    expect(byId(chart, 'volume-observed-o')!.lineStyle).toBe('dotted')
   })
 })
 
@@ -381,7 +400,7 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
 
   it('por defecto: observado continuo y previsiones discontinuas, de 2 px', () => {
     const chart = build()
-    expect(byId(chart, 'discharge-observed')).toMatchObject({ lineStyle: 'solid', lineWidth: 2 })
+    expect(byId(chart, 'discharge-observed-o')).toMatchObject({ lineStyle: 'solid', lineWidth: 2 })
     expect(byId(chart, 'discharge-eps')).toMatchObject({ lineStyle: 'dashed', lineWidth: 2 })
   })
 
@@ -442,23 +461,6 @@ describe('buildHydrograph · estilo de cada serie (color, grosor y trazo)', () =
     })
     expect(byId(chart, 'discharge-harmonie-p10-p90')!.color).toBe('#00aa00')
     expect(byId(chart, 'precipitation-harmonie')!.color).toBe('#00aa00')
-  })
-
-  it('en una previsión, style.color tiene prioridad sobre color (obsoleto)', () => {
-    const chart = build({
-      discharge: {
-        forecasts: [
-          {
-            id: 'eps',
-            name: 'EPS',
-            values: points(1, 2),
-            color: '#cccccc',
-            style: { color: '#dddddd' },
-          },
-        ],
-      },
-    })
-    expect(byId(chart, 'discharge-eps')!.color).toBe('#dddddd')
   })
 
   it('también en entrada, salida, volumen y nivel', () => {
@@ -542,7 +544,7 @@ describe('buildHydrograph · aspecto de los percentiles (bandStyle)', () => {
 describe('buildHydrograph · unidad de la precipitación', () => {
   it("mm por defecto; 'mm/h' para intensidad, en el eje y en los valores", () => {
     expect(build().yAxes![0]!.unit).toBe('mm')
-    const chart = build({ precipitation: { observed: points(1, 2), unit: 'mm/h' } })
+    const chart = build({ precipitation: { observed: obs(points(1, 2)), unit: 'mm/h' } })
     expect(chart.yAxes![0]).toMatchObject({ id: 'precipitation', unit: 'mm/h' })
   })
 })
@@ -613,7 +615,11 @@ describe('buildHydrograph · varias series observadas por variable', () => {
         ],
       },
     })
-    expect(byId(chart, 'precipitation-observed-saih')).toMatchObject({ type: 'bar', name: 'SAIH' })
+    expect(byId(chart, 'precipitation-observed-saih')).toMatchObject({
+      type: 'bar',
+      name: 'Precipitación · SAIH',
+      legendLabel: 'SAIH',
+    })
     expect(byId(chart, 'precipitation-observed-aemet')).toMatchObject({
       type: 'bar',
       color: '#00aa00',
@@ -624,19 +630,32 @@ describe('buildHydrograph · varias series observadas por variable', () => {
     const chart = buildHydrograph(
       {
         level: { observed: [{ id: 'vacia', name: 'Vacía', values: [] }] },
-        discharge: { observed: points(1, 2) },
+        discharge: { observed: obs(points(1, 2)) },
       },
       fakeLocale.t,
     )
     expect(chart.yAxes!.map((axis) => axis.id)).toEqual(['discharge'])
   })
+})
 
-  it('la forma anterior (un array de puntos) sigue valiendo, con su id y observedName/observedColor', () => {
-    const chart = build({
-      discharge: { observed: points(1, 2), observedName: 'Medido', observedColor: '#aaaaaa' },
+describe('buildHydrograph · precipitación en su propia línea de la leyenda', () => {
+  it('sus series van al grupo "Precipitación", con el nombre completo en el tooltip y corto en la leyenda', () => {
+    const chart = build()
+    const rain = chart.series.filter((s) => s.yAxis === 'precipitation')
+    expect(rain.map((s) => [s.name, s.legendLabel, s.legendGroup])).toEqual([
+      ['Precipitación · Observado', 'Observado', 'Precipitación'],
+      ['Precipitación · Harmonie', 'Harmonie', 'Precipitación'],
+    ])
+    expect(chart.series.filter((s) => s.yAxis === 'discharge').every((s) => !s.legendGroup)).toBe(
+      true,
+    )
+  })
+
+  it('el grupo usa el label de la variable', () => {
+    const chart = build({ precipitation: { observed: obs(points(1, 2)), label: 'Lluvia' } })
+    expect(chart.series.find((s) => s.yAxis === 'precipitation')).toMatchObject({
+      name: 'Lluvia · Observado',
+      legendGroup: 'Lluvia',
     })
-    expect(byId(chart, 'discharge-observed')).toMatchObject({ name: 'Medido', color: '#aaaaaa' })
-    const plain = build({ discharge: { observed: points(1, 2) } })
-    expect(byId(plain, 'discharge-observed')!.name).toBe('Observado')
   })
 })

@@ -296,7 +296,7 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
       key: 'observed',
       type: 'HydroObserved[]',
       description:
-        'Series observadas (una o varias, p. ej. SAIH y aforos manuales). Por compatibilidad admite también un solo array de puntos (forma anterior, obsoleta).',
+        'Series observadas (una o varias, p. ej. SAIH y aforos manuales), cada una con su id, nombre, valores y estilo.',
     },
     {
       key: 'forecasts',
@@ -311,11 +311,6 @@ export const HYDRO_VARIABLE_DOC: TypeDoc = {
         "Unidad del eje ('msnm' para cotas; 'mm/h' para intensidad de lluvia). Entrada y salida usan la del caudal.",
     },
     { key: 'label', type: 'string', description: 'Título del eje y nombre de la variable.' },
-    {
-      key: 'observedName / observedColor',
-      type: 'string',
-      description: 'Obsoletas: solo para observed como array de puntos.',
-    },
   ],
 }
 
@@ -371,7 +366,6 @@ export const HYDRO_FORECAST_DOC: TypeDoc = {
       description:
         'Color, grosor y trazo de su línea; el color también tiñe sus bandas y sus barras de lluvia. Color por defecto: en caudal y lluvia, por fuente; en el resto, el de la variable.',
     },
-    { key: 'color', type: 'string', description: 'Obsoleta: usa style.color.' },
     { key: 'values', type: 'HydroPoint[]', description: 'Serie determinista o mediana (p50).' },
     {
       key: 'percentiles',

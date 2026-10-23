@@ -243,7 +243,16 @@ const CHART_THEME_FIELD: PropField = {
   description: 'Vacío: hereda el tema global (provideTheme) o el de la página.',
 }
 const CHART_INTERACTION_FIELDS: PropField[] = [
-  { key: 'tooltip', label: 'Tooltip', type: 'boolean', default: true },
+  {
+    key: 'tooltip',
+    label: 'Tooltip',
+    type: 'select',
+    options: ['true', 'time', 'false'],
+    default: 'true',
+    docType: "boolean | 'time' | ChartTooltipConfig",
+    description:
+      "true: fecha y valores; 'time': solo la fecha (p. ej. con los valores en la leyenda); false: sin tooltip.",
+  },
   {
     key: 'legend',
     label: 'Posición de la leyenda',

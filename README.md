@@ -146,7 +146,9 @@ Colores, textos y formatos salen de los tokens y del idioma activo: claro/oscuro
 }
 ```
 
-Puede haber varios observados por variable (p. ej. la estación SAIH y los aforos manuales del mismo punto). El primero lleva el color de la variable y los siguientes, otros de la paleta: con varios, conviene darles `color`. La forma anterior (`observed: caudal`, un solo array de puntos, con `observedName`/`observedColor`) sigue funcionando, pero está obsoleta.
+Puede haber varios observados por variable (p. ej. la estación SAIH y los aforos manuales del mismo punto). El primero lleva el color de la variable y los siguientes, otros de la paleta: con varios, conviene darles `color`.
+
+**Leyenda del hidrograma.** La precipitación va en su propia línea de la leyenda, con su título ("Precipitación", o su `label`), debajo de las series del caudal. Sus series se llaman "Precipitación · <nombre>" en el tooltip, la tabla y el CSV, así que una lluvia "Observado" no se confunde con el caudal "Observado" y cada una se oculta por separado. Con `legend-values`, los valores de la lluvia salen también en esa segunda línea.
 
 **Embalses y otras magnitudes en la misma gráfica.** Además de `discharge`, el panel principal admite:
 
@@ -175,7 +177,7 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 />
 ```
 
-**Estilo de cada serie.** Cada observado y cada previsión lleva su `style` (`HydroLineStyle`), con `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color. El `color` suelto de una previsión sigue funcionando, pero está obsoleto.
+**Estilo de cada serie.** Cada observado y cada previsión lleva su `style` (`HydroLineStyle`), con `color`, `width` (px) y `type`, que puede ser `'solid'` (continua), `'dashed'` (discontinua), `'dotted'` (puntos) o `'dashdot'` (punto y raya). Por defecto, el observado es continuo y las previsiones discontinuas, de 2 px. El color de una previsión tiñe también sus bandas de percentiles y sus barras de lluvia; en la precipitación (barras) solo cuenta el color.
 
 ```vue
 <ASHydrographChart
@@ -241,7 +243,7 @@ Las dos gráficas comparten nombres, tipos y valores por defecto: `ASHydrographC
 | `now`                        | `false`                       | **`true`**                 | Línea "Ahora" (`true` = la hora actual, o una fecha)        |
 | `current-time`               | —                             | —                          | Línea del instante seleccionado (`v-model:current-time`)    |
 | `sync-group`                 | —                             | —                          | Comparte cursor, tooltip y zoom con otras gráficas          |
-| `tooltip`                    | `true`                        | `true`                     | Tooltip (`'shared'` o `'item'`)                              |
+| `tooltip`                    | `true`                        | `true`                     | Tooltip: `true` (fecha y valores), `'time'` (solo la fecha), `false` o `{ mode: 'shared' \| 'item', content: 'values' \| 'time' }` |
 | `legend`, `legend-values`    | automática, `false`           | automática, `false`        | Leyenda y valores bajo el cursor                            |
 | `zoom`                       | `false`                       | `false`                    | Zoom horizontal (y barra en ECharts)                        |
 | `toolbar`, `file-name`       | solo "Restablecer zoom" con zoom, `'grafica'` | igual      | descargas, pantalla completa, elementos propios y, en el hidrograma, sus acciones |
@@ -338,6 +340,8 @@ Sin configurar nada:
   - Intro elige ese instante (emite `time-select`, como un clic) y Esc quita el cursor.
   - Cada paso se anuncia al lector de pantalla ("18/10/2026, 06:00: Caudal 69,2 m³/s, Lluvia 0,8 mm") y mueve también el cursor de las gráficas de su `sync-group`.
 - **Tabla de datos alternativa**: oculta a la vista, pero accesible a los lectores de pantalla. Con más de 500 filas se recorta (el CSV las lleva todas). Se desactiva con `:data-table="false"`.
+- **Grupos en la leyenda** (`legendGroup` en cada serie): las series de un grupo van en su propia línea, con el nombre del grupo como título; las que no tienen grupo, primero. `legendLabel` es el texto en la leyenda si debe ser más corto que `name` (el nombre completo se sigue anunciando y sale en el tooltip y el CSV).
+- **Tooltip con solo la fecha** (`tooltip="time"`): útil con `legend-values`, que ya muestra los valores en la leyenda.
 - **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle` (`'solid'`, `'dashed'`, `'dotted'` o `'dashdot'`). Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
 
 El contraste se comprueba en los dos temas: las tramas, contra su relleno (`patterns.spec.ts`), y los textos de la barra, contra la superficie y el fondo de los botones al pasar el ratón (`tokens.spec.ts`).

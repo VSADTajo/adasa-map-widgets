@@ -160,7 +160,7 @@ function filterForecasts(
   if (!variable?.forecasts) return variable
   const ids = sources.value.map((s) => s.id)
   const colorOf = (f: HydroForecast) =>
-    f.style?.color ?? f.color ?? `var(--as-data-cat-${(ids.indexOf(f.id) % 7) + 2})`
+    f.style?.color ?? `var(--as-data-cat-${(ids.indexOf(f.id) % 7) + 2})`
   return {
     ...variable,
     forecasts: variable.forecasts
