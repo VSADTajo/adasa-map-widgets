@@ -107,10 +107,17 @@ export function createFrame(element: HTMLElement): { legend: HTMLElement; host: 
   return { legend, host }
 }
 
+/** Trazo de la muestra de una línea en la leyenda (atributo `stroke-dasharray`). */
+const LEGEND_DASH = {
+  solid: '',
+  dashed: '4 3',
+  dotted: '1.5 2.5',
+  dashdot: '5 2.5 1.5 2.5',
+} as const
+
 function legendMarker(series: ResolvedChartSpec['series'][number]): string {
   if (series.type === 'line' || series.type === 'scatter') {
-    const dash =
-      series.lineStyle === 'dashed' ? '4 3' : series.lineStyle === 'dotted' ? '1.5 2.5' : ''
+    const dash = LEGEND_DASH[series.lineStyle]
     return `<svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${series.color}" stroke-width="2.5" stroke-dasharray="${dash}"/></svg>`
   }
   // Con `patterns`, la muestra lleva la misma trama que el relleno.

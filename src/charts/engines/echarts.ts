@@ -46,7 +46,13 @@ const SLIDER_SPACE = 34
 const PANEL_GAP = 18
 const EDGE = 12
 
-const LINE_TYPE = { solid: 'solid', dashed: 'dashed', dotted: 'dotted' } as const
+/** Punto y raya no tiene nombre en ECharts: se pasa el patrón (raya, hueco, punto, hueco). */
+const LINE_TYPE = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+  dashdot: [8, 3, 2, 3],
+} as const
 
 /** Sufijos de las series auxiliares que no son series del usuario. */
 const BAND_LOW = '__low'

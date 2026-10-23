@@ -30,7 +30,7 @@ type Dataset = Record<string, unknown> & { asId: string; label: string }
 
 const X_LABELS_SPACE = 28
 const BAND_LOW = '__low'
-const DASH = { solid: [], dashed: [6, 4], dotted: [2, 3] } as const
+const DASH = { solid: [], dashed: [6, 4], dotted: [2, 3], dashdot: [8, 3, 2, 3] } as const
 const STEP = { start: 'before', middle: 'middle', end: 'after' } as const
 
 /**

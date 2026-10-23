@@ -26,7 +26,11 @@ export type ChartPoint = [x: ChartX, y: number | null]
 /** Punto de una banda (`type: 'range'`): `[x, inferior, superior]`. */
 export type ChartRangePoint = [x: ChartX, low: number | null, high: number | null]
 
-export type ChartLineStyle = 'solid' | 'dashed' | 'dotted'
+/**
+ * Trazo de una línea: continua, discontinua (rayas), de puntos o de punto y
+ * raya (`'dashdot'`, p. ej. para una tercera previsión).
+ */
+export type ChartLineStyle = 'solid' | 'dashed' | 'dotted' | 'dashdot'
 
 /** Eje Y. Una gráfica admite de 1 a 4. */
 export interface ChartYAxis {

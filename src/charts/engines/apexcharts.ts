@@ -18,7 +18,11 @@ import { composeImage } from './exportImage'
 type Options = Record<string, unknown>
 
 const X_LABELS_SPACE = 28
-const DASH = { solid: 0, dashed: 6, dotted: 2 } as const
+/**
+ * `strokeDashArray` de ApexCharts acaba en el atributo `stroke-dasharray` del
+ * SVG: el punto y raya se pasa como patrón en texto (raya, hueco, punto, hueco).
+ */
+const DASH = { solid: 0, dashed: 6, dotted: 2, dashdot: '8 3 2 3' } as const
 
 let groupCounter = 0
 

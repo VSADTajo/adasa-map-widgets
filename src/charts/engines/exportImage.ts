@@ -40,7 +40,7 @@ function legendItems(spec: ResolvedChartSpec, hidden: Set<string>): ResolvedSeri
 }
 
 const isLine = (series: ResolvedSeries) => series.type === 'line' || series.type === 'scatter'
-const DASH = { solid: [], dashed: [4, 3], dotted: [1.5, 2.5] } as const
+const DASH = { solid: [], dashed: [4, 3], dotted: [1.5, 2.5], dashdot: [5, 2.5, 1.5, 2.5] } as const
 
 interface PlacedItem {
   series: ResolvedSeries

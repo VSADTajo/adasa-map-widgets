@@ -240,3 +240,45 @@ describe('utilidades de maquetación', () => {
     expect(ticks).toContain(T0.getTime())
   })
 })
+
+describe('trazos de línea en los tres motores', () => {
+  /** Una serie por trazo, para comparar la traducción de cada motor. */
+  const styles = ['solid', 'dashed', 'dotted', 'dashdot'] as const
+  const lines = resolveSpec(
+    {
+      series: styles.map((lineStyle) => ({
+        id: lineStyle,
+        name: lineStyle,
+        type: 'line' as const,
+        data: points(1, 2),
+        lineStyle,
+        lineWidth: 3,
+      })),
+    },
+    fakeTokens(),
+    fakeLocale,
+  )
+
+  it('ECharts: tipos con nombre y el punto y raya como patrón; el grosor, tal cual', () => {
+    const series = (toEChartsOption(lines, 400) as Any).series
+    expect(series.map((s: Any) => s.lineStyle.type)).toEqual([
+      'solid',
+      'dashed',
+      'dotted',
+      [8, 3, 2, 3],
+    ])
+    expect(series.every((s: Any) => s.lineStyle.width === 3)).toBe(true)
+  })
+
+  it('Chart.js: borderDash distinto para cada trazo', () => {
+    const datasets = (toChartJsConfigs(lines)[0] as Any).data.datasets
+    const dashes = datasets.map((d: Any) => JSON.stringify(d.borderDash))
+    expect(dashes).toEqual(['[]', '[6,4]', '[2,3]', '[8,3,2,3]'])
+    expect(new Set(dashes).size).toBe(4)
+  })
+
+  it('ApexCharts: un dashArray por serie, el punto y raya como patrón en texto', () => {
+    const options = toApexOptions(lines, [400], 'g')[0] as Any
+    expect(options.stroke.dashArray).toEqual([0, 6, 2, '8 3 2 3'])
+  })
+})
