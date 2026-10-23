@@ -22,6 +22,8 @@ import ASChart from './ASChart.vue'
 /**
  * Hidrograma para visores hidrológicos: precipitación arriba (barras con
  * el eje invertido) y caudal o nivel abajo, con el eje temporal compartido.
+ * En el panel del caudal admite también caudal de entrada y de salida (en su
+ * mismo eje), volumen y nivel (cada uno con su eje), p. ej. para un embalse.
  * Distingue observado (sólido) de previsto (discontinuo) con una línea
  * "ahora", admite varias fuentes de previsión (p. ej. Harmonie, EPS) con
  * bandas de incertidumbre por percentiles, y marca los umbrales de aviso
@@ -41,7 +43,12 @@ import ASChart from './ASChart.vue'
  */
 const props = withDefaults(defineProps<HydrographProps>(), {
   chartLibrary: 'echarts',
+  discharge: undefined,
   magnitude: 'flow',
+  inflow: undefined,
+  outflow: undefined,
+  volume: undefined,
+  level: undefined,
   precipitation: undefined,
   precipitationLayout: 'panel',
   precipitationInverted: true,
@@ -105,9 +112,23 @@ watch(
 /** Últimas bandas visibles, para volver a ellas al mostrar los percentiles. */
 let lastBands = bands.value.length ? bands.value : DEFAULT_BANDS
 
-/** Fuentes de previsión (id y nombre), en el orden en que llegan, sin repetir. */
+/** Variables en línea (todas menos la precipitación). */
+const lineVariables = computed(() =>
+  [props.discharge, props.inflow, props.outflow, props.volume, props.level].filter(
+    (variable): variable is HydroVariable => Boolean(variable),
+  ),
+)
+
+/**
+ * Fuentes de previsión (id y nombre), en el orden en que llegan, sin
+ * repetir: primero las de caudal y lluvia (las que llevan color de fuente).
+ */
 const sources = computed(() => {
-  const all = [...(props.discharge.forecasts ?? []), ...(props.precipitation?.forecasts ?? [])]
+  const all = [
+    ...(props.discharge?.forecasts ?? []),
+    ...(props.precipitation?.forecasts ?? []),
+    ...lineVariables.value.flatMap((variable) => variable.forecasts ?? []),
+  ]
   return [...new Map(all.map((f) => [f.id, f.name])).entries()].map(([id, name]) => ({ id, name }))
 })
 const visible = ref<string[] | undefined>(props.visibleForecasts)
@@ -118,17 +139,21 @@ watch(
 const visibleIds = computed(() => visible.value ?? sources.value.map((s) => s.id))
 
 const hasPercentiles = computed(() =>
-  (props.discharge.forecasts ?? []).some(
-    (f) => f.percentiles && Object.values(f.percentiles).some((p) => p?.length),
-  ),
+  lineVariables.value
+    .flatMap((variable) => variable.forecasts ?? [])
+    .some((f) => f.percentiles && Object.values(f.percentiles).some((p) => p?.length)),
 )
 
 /**
- * Previsiones filtradas por las visibles, con el color fijado antes de
- * filtrar: el color sigue a la fuente, no a su posición (ocultar una no
- * repinta las demás).
+ * Previsiones filtradas por las visibles. En caudal y lluvia (`sourceColor`),
+ * con el color fijado antes de filtrar: el color sigue a la fuente, no a su
+ * posición (ocultar una no repinta las demás). En el resto de variables, sus
+ * previsiones toman el color de la variable, que no depende del filtro.
  */
-function filterForecasts(variable: HydroVariable | undefined): HydroVariable | undefined {
+function filterForecasts(
+  variable: HydroVariable | undefined,
+  sourceColor = false,
+): HydroVariable | undefined {
   if (!variable?.forecasts) return variable
   const ids = sources.value.map((s) => s.id)
   const colorOf = (f: HydroForecast) =>
@@ -137,7 +162,7 @@ function filterForecasts(variable: HydroVariable | undefined): HydroVariable | u
     ...variable,
     forecasts: variable.forecasts
       .filter((f) => visibleIds.value.includes(f.id))
-      .map((f) => ({ ...f, color: colorOf(f) })),
+      .map((f) => (sourceColor ? { ...f, color: colorOf(f) } : f)),
   }
 }
 
@@ -236,8 +261,12 @@ const chartProps = computed(() =>
   buildHydrograph(
     {
       ...props,
-      discharge: filterForecasts(props.discharge)!,
-      precipitation: filterForecasts(props.precipitation),
+      discharge: filterForecasts(props.discharge, true),
+      precipitation: filterForecasts(props.precipitation, true),
+      inflow: filterForecasts(props.inflow),
+      outflow: filterForecasts(props.outflow),
+      volume: filterForecasts(props.volume),
+      level: filterForecasts(props.level),
       bands: bands.value,
       thresholds: focusedThreshold.value ? [focusedThreshold.value] : props.thresholds,
       toolbar: chartToolbar.value,

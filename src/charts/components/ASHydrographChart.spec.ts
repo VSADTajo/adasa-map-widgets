@@ -151,7 +151,7 @@ describe('ASHydrographChart · acciones propias de la barra', () => {
       { value: 15, level: 'amarillo' },
     ],
     discharge: {
-      observed: props.discharge.observed,
+      observed: props.discharge!.observed,
       forecasts: [
         {
           id: 'harmonie',
@@ -203,7 +203,7 @@ describe('ASHydrographChart · acciones propias de la barra', () => {
   it('cada acción se puede desactivar y solo aparece si tiene sentido', async () => {
     const wrapper = await mountChart({
       toolbar: { png: false, svg: false, csv: false, focusThreshold: false },
-      discharge: { observed: props.discharge.observed },
+      discharge: { observed: props.discharge!.observed },
     })
     // Sin previsiones ni percentiles, ni selector ni botón de percentiles.
     expect(wrapper.find('.as-chart__toolbar').exists()).toBe(false)
@@ -297,6 +297,69 @@ describe('ASHydrographChart · acciones propias de la barra', () => {
     ])
     await wrapper.find('button[aria-label="Elegir simulación"]').trigger('click')
     expect(wrapper.emitted('toolbar-action')).toEqual([[{ id: 'simulacion' }]])
+    wrapper.unmount()
+  })
+})
+
+describe('ASHydrographChart · embalse (entrada, salida, volumen y nivel)', () => {
+  const t2 = new Date(2026, 9, 18, 2)
+  const reservoir: HydrographProps = {
+    inflow: { observed: [[t0, 40]] },
+    outflow: { observed: [[t0, 20]] },
+    volume: { observed: [[t0, 812]] },
+    level: {
+      observed: [[t0, 651.2]],
+      unit: 'msnm',
+      forecasts: [
+        {
+          id: 'eps',
+          name: 'EPS',
+          values: [
+            [t1, 651.4],
+            [t2, 651.9],
+          ],
+          percentiles: {
+            p10: [
+              [t1, 651.3],
+              [t2, 651.5],
+            ],
+            p90: [
+              [t1, 651.5],
+              [t2, 652.3],
+            ],
+          },
+        },
+      ],
+    },
+    thresholds: [{ value: 652.5, level: 'rojo', variable: 'level' }],
+    now: t1,
+    toolbar: { png: false, svg: false, csv: false, focusThreshold: false },
+  }
+
+  it('dibuja sin discharge: cuatro variables en tres ejes y el umbral sobre el nivel', async () => {
+    const wrapper = mount(ASHydrographChart, { props: reservoir, attachTo: document.body })
+    await flushPromises()
+    const spec = specOf()
+    expect(spec.yAxes.map((axis) => axis.id)).toEqual(['discharge', 'volume', 'level'])
+    expect(spec.annotations.y[0]).toMatchObject({ yAxis: 'level', value: 652.5 })
+    wrapper.unmount()
+  })
+
+  it('el selector de previsiones y el botón de percentiles también cuentan el nivel', async () => {
+    const wrapper = mount(ASHydrographChart, { props: reservoir, attachTo: document.body })
+    await flushPromises()
+    const buttons = wrapper
+      .findAll('.as-chart__toolbar button')
+      .map((b) => b.attributes('aria-label'))
+    expect(buttons).toEqual(['Previsiones', 'Ocultar percentiles'])
+    const ids = () =>
+      (wrapper.findComponent(ASChart).props('series') as ChartSeries[]).map((s) => s.id)
+    expect(ids()).toContain('level-eps')
+    expect(ids()).toContain('level-eps-p10-p90')
+    await wrapper.setProps({ visibleForecasts: [] })
+    await flushPromises()
+    expect(ids().some((id) => id.startsWith('level-eps'))).toBe(false)
+    expect(ids()).toContain('level-observed')
     wrapper.unmount()
   })
 })

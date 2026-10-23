@@ -50,6 +50,7 @@ export type {
   HydroForecast,
   HydroVariable,
   HydroThreshold,
+  HydroThresholdVariable,
   HydroBand,
   HydrographProps,
   HydrographEmits,

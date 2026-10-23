@@ -225,3 +225,152 @@ describe('buildHydrograph · nombres, colores y ejes de cada serie', () => {
     expect(build({ toolbar: true }).toolbar).toBe(true)
   })
 })
+
+describe('buildHydrograph · entrada, salida, volumen y nivel', () => {
+  const reservoir: HydrographProps = {
+    inflow: { observed: points(40, 55) },
+    outflow: {
+      observed: points(20, 25),
+      forecasts: [{ id: 'eps', name: 'EPS', values: points(25, 30) }],
+    },
+    volume: { observed: points(812, 815) },
+    level: {
+      observed: points(651.2, 651.4),
+      unit: 'msnm',
+      forecasts: [
+        {
+          id: 'eps',
+          name: 'EPS',
+          values: points(651.4, 651.9),
+          percentiles: { p10: points(651.3, 651.5), p90: points(651.5, 652.3) },
+        },
+      ],
+    },
+  }
+  const buildReservoir = (extra: Partial<HydrographProps> = {}) =>
+    buildHydrograph({ ...reservoir, ...extra }, fakeLocale.t)
+  const byId = (chart: ReturnType<typeof build>, id: string) =>
+    chart.series.find((s) => s.id === id)
+
+  it('entrada y salida comparten el eje de caudal (m³/s); volumen y nivel, cada uno el suyo', () => {
+    const chart = buildReservoir()
+    expect(chart.yAxes!.map((a) => [a.id, a.unit, a.position])).toEqual([
+      ['discharge', 'm³/s', 'left'],
+      ['volume', 'hm³', 'right'],
+      ['level', 'msnm', 'right'],
+    ])
+    expect(byId(chart, 'inflow-observed')).toMatchObject({
+      yAxis: 'discharge',
+      name: 'Caudal de entrada',
+    })
+    expect(byId(chart, 'outflow-observed')).toMatchObject({
+      yAxis: 'discharge',
+      name: 'Caudal de salida',
+    })
+    expect(byId(chart, 'volume-observed')).toMatchObject({ yAxis: 'volume', name: 'Volumen' })
+    expect(byId(chart, 'level-observed')).toMatchObject({ yAxis: 'level', name: 'Nivel' })
+  })
+
+  it('todos en el panel principal; volumen y nivel sin forzar el 0 ni rejilla propia', () => {
+    const chart = buildReservoir()
+    expect(chart.panels).toEqual([{ id: 'discharge' }])
+    expect(chart.yAxes!.every((axis) => axis.panel === 'discharge')).toBe(true)
+    expect(chart.yAxes![1]).toMatchObject({ beginAtZero: false, grid: false })
+  })
+
+  it('colores fijos por variable, sin depender de las fuentes de previsión', () => {
+    const chart = buildReservoir()
+    expect(
+      ['inflow', 'outflow', 'volume', 'level'].map((key) => byId(chart, `${key}-observed`)!.color),
+    ).toEqual([
+      'var(--as-data-cat-4)',
+      'var(--as-data-cat-5)',
+      'var(--as-data-cat-6)',
+      'var(--as-data-cat-7)',
+    ])
+  })
+
+  it('sus previsiones: "Variable · Fuente", color de la variable, discontinuas y con bandas', () => {
+    const chart = buildReservoir()
+    expect(byId(chart, 'level-eps')).toMatchObject({
+      name: 'Nivel · EPS',
+      color: 'var(--as-data-cat-7)',
+      lineStyle: 'dashed',
+      yAxis: 'level',
+    })
+    expect(byId(chart, 'level-eps-p10-p90')).toMatchObject({ type: 'range', yAxis: 'level' })
+    expect(byId(chart, 'outflow-eps')).toMatchObject({ name: 'Caudal de salida · EPS' })
+  })
+
+  it('con precipitación superpuesta, volumen y nivel van al lado con menos ejes', () => {
+    const chart = buildReservoir({
+      precipitation: { observed: points(1, 2) },
+      precipitationLayout: 'overlay',
+    })
+    expect(chart.yAxes!.map((a) => [a.id, a.position])).toEqual([
+      ['precipitation', 'right'],
+      ['discharge', 'left'],
+      ['volume', 'right'],
+      ['level', 'left'],
+    ])
+  })
+
+  it('caudal, entrada y salida juntos: un solo eje de caudal', () => {
+    const chart = build({ inflow: { observed: points(5, 6) }, outflow: { observed: points(4, 4) } })
+    expect(chart.yAxes!.map((a) => a.id)).toEqual(['precipitation', 'discharge'])
+    expect(byId(chart, 'discharge-observed')!.name).toBe('Observado')
+  })
+
+  it('sin caudal, entrada ni salida, el primer eje es el del nivel, a la izquierda', () => {
+    const chart = buildHydrograph({ level: { observed: points(651, 652) } }, fakeLocale.t)
+    expect(chart.yAxes).toMatchObject([{ id: 'level', position: 'left', unit: 'm' }])
+  })
+
+  it('label, unit, observedName y observedColor propios de cada variable', () => {
+    const chart = buildReservoir({
+      volume: {
+        observed: points(1, 2),
+        label: 'Embalsado',
+        unit: 'hm3',
+        observedName: 'Vol.',
+        observedColor: '#123456',
+      },
+    })
+    expect(chart.yAxes![1]).toMatchObject({ label: 'Embalsado', unit: 'hm3' })
+    expect(byId(chart, 'volume-observed')).toMatchObject({ name: 'Vol.', color: '#123456' })
+  })
+
+  it('cada umbral va al eje de su variable; sin esa variable, al principal', () => {
+    const chart = buildReservoir({
+      thresholds: [
+        { value: 80, level: 'naranja' },
+        { value: 830, level: 'amarillo', variable: 'volume' },
+        { value: 652.5, level: 'rojo', variable: 'level', label: 'Cota máxima' },
+      ],
+    })
+    expect(
+      chart.annotations!.y!.map((a) => [a.yAxis, (a as { value: number }).value, a.label]),
+    ).toEqual([
+      ['discharge', 80, 'Umbral naranja'],
+      ['volume', 830, 'Umbral amarillo'],
+      ['level', 652.5, 'Cota máxima'],
+    ])
+    const onlyLevel = buildHydrograph(
+      {
+        level: { observed: points(1, 2) },
+        thresholds: [{ value: 3, level: 'rojo', variable: 'volume' }],
+      },
+      fakeLocale.t,
+    )
+    expect(onlyLevel.annotations!.y![0]!.yAxis).toBe('level')
+  })
+
+  it('yAxisOverrides y seriesOverrides también valen para volumen y nivel', () => {
+    const chart = buildReservoir({
+      yAxisOverrides: { level: { min: 640, max: 655 } },
+      seriesOverrides: { 'volume-observed': { lineStyle: 'dotted' } },
+    })
+    expect(chart.yAxes!.find((a) => a.id === 'level')).toMatchObject({ min: 640, max: 655 })
+    expect(byId(chart, 'volume-observed')!.lineStyle).toBe('dotted')
+  })
+})
