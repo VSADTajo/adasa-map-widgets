@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { HydroPoint } from '@/charts/types/HydrographProps'
 import {
+  aggregateDepth,
   convertPrecipitation,
   cumulativeAt,
   intervalHours,
@@ -8,6 +9,7 @@ import {
   toCumulative,
   toDepth,
   toIntensity,
+  typicalIntervalMinutes,
 } from './precipitation'
 
 const T0 = new Date(2026, 9, 18, 0, 0)
@@ -119,5 +121,37 @@ describe('cumulativeAt', () => {
     [500, 6],
   ])('a los %s min → %s', (minutes, expected) => {
     expect(cumulativeAt(cumulative, at(minutes))).toBe(expected)
+  })
+})
+
+describe('aggregateDepth', () => {
+  it('suma los mm de cada hora; cada valor va a la hora que lo contiene (marca el final)', () => {
+    const tenMinutes = series([10, 1], [20, 1], [60, 1], [70, 2], [120, 0.5])
+    expect(aggregateDepth(tenMinutes, 60)).toEqual(series([60, 3], [120, 2.5]))
+  })
+
+  it('alineado a la medianoche local: con 180 min, 03:00, 06:00...', () => {
+    const points = series([30, 1], [200, 2], [360, 1])
+    expect(aggregateDepth(points, 180).map(([date]) => date.getHours())).toEqual([3, 6])
+  })
+
+  it('negativos como 0; intervalo con solo huecos, null; sin datos, no aparece', () => {
+    expect(aggregateDepth(series([10, -1], [20, 2], [130, null]), 60)).toEqual(
+      series([60, 2], [180, null]),
+    )
+  })
+
+  it('sin intervalo válido, solo ordena', () => {
+    expect(values(aggregateDepth(series([60, 2], [0, 1]), 0))).toEqual([1, 2])
+  })
+})
+
+describe('typicalIntervalMinutes', () => {
+  it.each([
+    [series([0, 0], [10, 0], [20, 0]), 10],
+    [series([0, 0], [180, 0], [360, 0], [600, 0]), 180],
+    [series([0, 0]), 0],
+  ])('%#', (points, expected) => {
+    expect(typicalIntervalMinutes(points)).toBe(expected)
   })
 })

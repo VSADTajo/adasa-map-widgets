@@ -7,9 +7,11 @@
 export { default as ASChart } from './components/ASChart.vue'
 export { default as ASHydrographChart } from './components/ASHydrographChart.vue'
 export { buildHydrograph } from './core/hydrograph'
+export { columnGeometry } from './core/resolveSpec'
 export { default as ASPrecipitationChart } from './components/ASPrecipitationChart.vue'
 export { buildPrecipitation } from './core/precipitationChart'
 export {
+  aggregateDepth,
   convertPrecipitation,
   cumulativeAt,
   intervalHours,
@@ -17,6 +19,7 @@ export {
   toCumulative,
   toDepth,
   toIntensity,
+  typicalIntervalMinutes,
 } from './core/precipitation'
 export type {
   CumulativeOptions,

@@ -47,11 +47,8 @@ describe('buildPrecipitation', () => {
         },
         fakeLocale.t,
       )
-      // En columnas, con el punto de arranque (a 0) al principio del primer intervalo.
-      expect(values(chart, 'precipitation-a')).toEqual([0, 2, 4])
-      expect((byId(chart, 'precipitation-a').data as HydroPoint[])[0]![0]).toEqual(
-        new Date(T0.getTime() - 1_800_000),
-      )
+      // Solo los datos reales: las columnas son geometría de dibujo de ASChart.
+      expect(values(chart, 'precipitation-a')).toEqual([2, 4])
       expect(chart.yAxes![0]).toMatchObject({
         id: 'rate',
         unit: 'mm/h',
@@ -65,10 +62,10 @@ describe('buildPrecipitation', () => {
         { id: 'a', name: 'A', values: hourly(0, 6, 6), input: 'intensity', intervalMinutes: 30 },
       ]
       expect(values(buildPrecipitation({ series }, fakeLocale.t), 'precipitation-a')).toEqual([
-        0, 6, 6,
+        6, 6,
       ])
       const depth = buildPrecipitation({ series, rate: 'depth' }, fakeLocale.t)
-      expect(values(depth, 'precipitation-a')).toEqual([0, 3, 3])
+      expect(values(depth, 'precipitation-a')).toEqual([3, 3])
       expect(depth.yAxes![0]).toMatchObject({ unit: 'mm', label: 'Precipitación' })
     })
   })
@@ -78,7 +75,7 @@ describe('buildPrecipitation', () => {
       const chart = build()
       expect(byId(chart, 'precipitation-tr')).toMatchObject({
         type: 'area',
-        step: 'start',
+        columns: true,
         color: 'var(--as-data-cat-1)',
         opacity: 0.85,
         lineStyle: 'solid',
@@ -86,34 +83,18 @@ describe('buildPrecipitation', () => {
       })
       expect(byId(chart, 'precipitation-wrf')).toMatchObject({
         type: 'area',
-        step: 'start',
+        columns: true,
         color: 'var(--as-data-cat-2)',
         opacity: 0.5,
       })
     })
 
-    it('cada serie con el ancho de su intervalo, aunque se mezclen 10 min y 3 h', () => {
-      const tenMinutes: HydroPoint[] = [0, 10, 20].map((m) => [
-        new Date(T0.getTime() + m * 60_000),
-        1,
-      ])
-      const threeHours: HydroPoint[] = [3, 6].map((h) => [
-        new Date(T0.getTime() + h * 3_600_000),
-        6,
-      ])
+    it('con intervalMinutes, columnas de ese ancho fijo (aunque haya huecos)', () => {
       const chart = buildPrecipitation(
-        {
-          series: [
-            { id: 'a', name: 'A', values: tenMinutes },
-            { id: 'b', name: 'B', kind: 'forecast', values: threeHours },
-          ],
-        },
+        { series: [{ ...observed, intervalMinutes: 10 }] },
         fakeLocale.t,
       )
-      const start = (id: string) => (byId(chart, id).data as HydroPoint[])[0]![0].getTime()
-      expect(start('precipitation-a')).toBe(T0.getTime() - 10 * 60_000)
-      expect(start('precipitation-b')).toBe(T0.getTime())
-      expect(values(chart, 'precipitation-b')).toEqual([0, 2, 2])
+      expect(byId(chart, 'precipitation-tr').columns).toEqual({ width: 600_000 })
     })
 
     it('en área, la previsión lleva degradado y trazo discontinuo; en línea, el observado continuo', () => {
@@ -182,7 +163,7 @@ describe('buildPrecipitation', () => {
       )
       expect(byId(chart, 'precipitation-tr')).toMatchObject({
         type: 'area',
-        step: 'start',
+        columns: true,
         opacity: 0.8,
       })
       expect(byId(chart, 'precipitation-wrf')).toMatchObject({
@@ -310,5 +291,53 @@ describe('buildPrecipitation', () => {
       expect(byId(chart, 'cumulative-wrf').lineWidth).toBe(5)
       expect(chart.yAxes![0]!.max).toBe(30)
     })
+  })
+})
+
+describe('buildPrecipitation · intervalo común (interval)', () => {
+  /** Serie cada 10 min durante 1 h: 1 mm por intervalo. */
+  const tenMinutes: HydroPoint[] = [10, 20, 30, 40, 50, 60].map((m) => [
+    new Date(T0.getTime() + m * 60_000),
+    1,
+  ])
+  const threeHours: HydroPoint[] = [3, 6].map((h) => [new Date(T0.getTime() + h * 3_600_000), 6])
+  const build60 = (rate?: 'depth' | 'intensity') =>
+    buildPrecipitation(
+      {
+        interval: 60,
+        rate,
+        series: [
+          { id: 'tr', name: 'P. TR', values: tenMinutes, cumulative: true },
+          { id: 'ecmwf', name: 'ECMWF', kind: 'forecast', values: threeHours },
+        ],
+      },
+      fakeLocale.t,
+    )
+  const series = (chart: ReturnType<typeof build60>, id: string) =>
+    chart.series.find((s) => s.id === id)!
+
+  it('las series más finas suman sus mm al intervalo, con columnas de ese ancho', () => {
+    const depth = build60('depth')
+    expect(series(depth, 'precipitation-tr').data).toEqual([
+      [new Date(T0.getTime() + 3_600_000), 6],
+    ])
+    expect(series(depth, 'precipitation-tr').columns).toEqual({ width: 3_600_000 })
+    // En mm/h, 6 mm en una hora son 6 mm/h.
+    expect(series(build60(), 'precipitation-tr').data).toEqual([
+      [new Date(T0.getTime() + 3_600_000), 6],
+    ])
+  })
+
+  it('las más gruesas que el intervalo se quedan como están (no se reparte su lluvia)', () => {
+    const chart = build60('depth')
+    expect((series(chart, 'precipitation-ecmwf').data as HydroPoint[]).map(([, v]) => v)).toEqual([
+      6, 6,
+    ])
+    expect(series(chart, 'precipitation-ecmwf').columns).toBe(true)
+  })
+
+  it('el acumulado no cambia (se calcula con los datos originales)', () => {
+    const cumulative = series(build60(), 'cumulative-tr').data as HydroPoint[]
+    expect(cumulative.map(([, v]) => v)).toEqual([1, 2, 3, 4, 5, 6])
   })
 })

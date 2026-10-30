@@ -465,6 +465,16 @@ const PRECIPITATION_SCHEMA: PropField[] = [
     description: 'Intensidad en mm/h o mm por intervalo: cada serie se convierte desde su input.',
   },
   {
+    key: 'interval',
+    label: 'Intervalo común (interval, min)',
+    type: 'select',
+    options: ['', '10', '60', '180', '1440'],
+    default: '',
+    docType: 'number',
+    description:
+      'Δt del hietograma: las series más finas suman sus mm a él y todas sus columnas miden igual. Vacío: cada serie con su intervalo.',
+  },
+  {
     key: 'showCumulative',
     label: 'Acumulados (v-model:show-cumulative)',
     type: 'boolean',
@@ -1319,6 +1329,7 @@ export const registry: RegistryEntry[] = [
     toProps: (values) => ({
       chartLibrary: values.chartLibrary,
       rate: values.rate,
+      interval: values.interval ? Number(values.interval) : undefined,
       showCumulative: values.showCumulative,
       tooltip: values.tooltip === 'time' ? 'time' : values.tooltip !== 'false',
       legend: values.legend,

@@ -2,9 +2,9 @@ import type { LocaleContext } from '@/core/composables/useLocale'
 import {
   convertPrecipitation,
   cumulativeAt,
-  intervalHours,
-  sortByTime,
+  aggregateDepth,
   toCumulative,
+  typicalIntervalMinutes,
   type PrecipitationUnit,
 } from './precipitation'
 import type { ChartProps, ChartSeries, ChartYAnnotation, ChartYAxis } from '@/charts/types/chart'
@@ -23,21 +23,38 @@ const RATE_AXIS = 'rate'
 const OBSERVED_COLUMN_OPACITY = 0.85
 const FORECAST_COLUMN_OPACITY = 0.5
 
-/**
- * Columnas de un hietograma: cada valor ocupa el intervalo que termina en
- * su instante (un área escalonada con `step: 'start'`), así que cada serie
- * lleva su propio ancho (10 min, 1 h, 3 h...) aunque se mezclen. Con barras
- * de verdad, el ancho lo marcaría la serie de intervalo más corto y las
- * demás quedarían como hilos. Se añade un punto a 0 al principio del primer
- * intervalo para que también tenga su columna.
- */
-function columns(points: HydroPoint[], intervalMinutes: number | undefined): HydroPoint[] {
-  if (points.length === 0) return points
-  const [first] = sortByTime(points)
-  const hours = intervalHours(sortByTime(points), { intervalMinutes })[0]!
-  return [[new Date(first![0].getTime() - hours * 3_600_000), 0], ...points]
-}
 const CUMULATIVE_AXIS = 'cumulative'
+
+/**
+ * Puntos a dibujar de una serie, en la unidad del eje (`rate`). Con un
+ * intervalo común (`interval`), se agrupan a él los mm de las series de
+ * intervalo igual o más fino; las más gruesas (p. ej. una previsión cada
+ * 3 h con un intervalo de 1 h) se quedan como están: repartir su lluvia
+ * sería inventar cómo cayó.
+ */
+function displayPoints(
+  entry: PrecipitationSeries,
+  rate: PrecipitationUnit,
+  interval: number | undefined,
+): { points: HydroPoint[]; intervalMinutes?: number } {
+  const input = entry.input ?? 'depth'
+  const native = { intervalMinutes: entry.intervalMinutes }
+  const own = entry.intervalMinutes ?? typicalIntervalMinutes(entry.values)
+  if (interval && interval > 0 && own > 0 && own <= interval + 1e-9) {
+    const depths = aggregateDepth(
+      convertPrecipitation(entry.values, input, 'depth', native),
+      interval,
+    )
+    return {
+      points: convertPrecipitation(depths, 'depth', rate, { intervalMinutes: interval }),
+      intervalMinutes: interval,
+    }
+  }
+  return {
+    points: convertPrecipitation(entry.values, input, rate, native),
+    intervalMinutes: entry.intervalMinutes,
+  }
+}
 
 /** Color por defecto de la serie número `index`: la paleta categórica en orden (sin ciclar más de 8). */
 const paletteColor = (index: number) => `var(--as-data-cat-${(index % 8) + 1})`
@@ -107,16 +124,21 @@ export function buildPrecipitation(props: PrecipitationProps, t: LocaleContext['
     const forecast = entry.kind === 'forecast'
     const color = entry.style?.color ?? paletteColor(index)
     const display = entry.display ?? 'bar'
-    const converted = convertPrecipitation(entry.values, entry.input ?? 'depth', rate, {
-      intervalMinutes: entry.intervalMinutes,
-    })
+    const { points, intervalMinutes } = displayPoints(entry, rate, props.interval)
     const isColumn = display === 'bar'
     series.push({
       id: `precipitation-${entry.id}`,
       name: entry.name,
+      // Columnas de hietograma: cada valor ocupa el intervalo que termina en su
+      // instante, con su propio ancho aunque se mezclen series de 10 min y de 3 h
+      // (con barras de verdad, el ancho lo marcaría la de intervalo más corto).
       type: isColumn ? 'area' : display,
-      data: isColumn ? columns(converted, entry.intervalMinutes) : converted,
-      step: isColumn ? 'start' : undefined,
+      data: points,
+      columns: isColumn
+        ? intervalMinutes
+          ? { width: intervalMinutes * 60_000 }
+          : true
+        : undefined,
       yAxis: RATE_AXIS,
       color,
       lineWidth: entry.style?.width ?? (isColumn ? 1 : 2),

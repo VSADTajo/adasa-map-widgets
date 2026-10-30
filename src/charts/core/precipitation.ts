@@ -135,3 +135,36 @@ export function cumulativeAt(cumulative: readonly HydroPoint[], until: Date): nu
   }
   return total
 }
+
+/**
+ * Agrupa una serie en mm por intervalo a un intervalo común de `minutes`
+ * (el Δt de un hietograma clásico): suma los mm de cada intervalo, alineado
+ * a la medianoche local (con 60, de hora en hora; con 180, 00:00, 03:00...).
+ * Cada valor se asigna al intervalo que lo contiene (el instante marca el
+ * final de su lluvia) y el resultado lleva el instante final de cada uno.
+ * Los intervalos sin ningún dato no aparecen (hueco); con solo `null`, `null`.
+ */
+export function aggregateDepth(depths: readonly HydroPoint[], minutes: number): HydroPoint[] {
+  if (!(minutes > 0)) return sortByTime(depths)
+  const step = minutes * 60_000
+  const buckets = new Map<number, number | null>()
+  for (const [date, value] of sortByTime(depths)) {
+    const midnight = new Date(date)
+    midnight.setHours(0, 0, 0, 0)
+    const sinceMidnight = date.getTime() - midnight.getTime()
+    const end = midnight.getTime() + Math.ceil(sinceMidnight / step) * step
+    const v = valid(value)
+    const previous = buckets.get(end)
+    buckets.set(end, v === null ? (previous ?? null) : (previous ?? 0) + Math.max(0, v))
+  }
+  return [...buckets].map(([end, value]): HydroPoint => [
+    new Date(end),
+    value === null ? null : Math.round(value * 1000) / 1000,
+  ])
+}
+
+/** Intervalo típico de una serie en minutos (la mediana de las distancias entre puntos). */
+export function typicalIntervalMinutes(points: readonly HydroPoint[]): number {
+  const hours = intervalHours(sortByTime(points))
+  return hours.length > 1 ? hours[0]! * 60 : 0
+}

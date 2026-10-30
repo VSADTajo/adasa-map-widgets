@@ -169,6 +169,15 @@ export interface PrecipitationProps extends Pick<
    * @default 'intensity'
    */
   rate?: PrecipitationUnit
+  /**
+   * Intervalo común en minutos (el Δt de un hietograma clásico, p. ej. 60):
+   * cada serie de intervalo igual o más fino suma sus mm a ese intervalo,
+   * alineado a la medianoche local, y todas sus columnas tienen el mismo
+   * ancho. Así, en `rate: 'depth'`, las alturas se comparan entre series.
+   * Las series más gruesas se quedan como están. Sin él, cada serie
+   * conserva su intervalo. El acumulado no cambia.
+   */
+  interval?: number
   /** Muestra los acumulados (`v-model:show-cumulative`, el botón de la barra). @default true */
   showCumulative?: boolean
   /** Umbrales de intensidad o de acumulado. */

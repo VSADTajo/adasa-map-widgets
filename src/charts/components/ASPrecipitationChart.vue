@@ -40,6 +40,7 @@ import ASChart from './ASChart.vue'
 const props = withDefaults(defineProps<PrecipitationProps>(), {
   chartLibrary: 'echarts',
   rate: 'intensity',
+  interval: undefined,
   showCumulative: undefined,
   thresholds: undefined,
   now: true,

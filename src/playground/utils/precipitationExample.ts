@@ -245,6 +245,7 @@ export function precipitationSnippet(values: Values): string {
   const lines = ['<ASPrecipitationChart']
   const attributes: string[] = [`chart-library="${values.chartLibrary}"`]
   if (values.rate === 'depth') attributes.push('rate="depth"')
+  if (values.interval) attributes.push(`:interval="${values.interval}"`)
   attributes.push('v-model:show-cumulative="verAcumulados"')
   if (values.tooltip === 'true') attributes.push(':tooltip="true"')
   if (values.tooltip === 'false') attributes.push(':tooltip="false"')
