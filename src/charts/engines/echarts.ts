@@ -1,4 +1,8 @@
-import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
+import {
+  drawIndexToPoint,
+  type ResolvedChartSpec,
+  type ResolvedSeries,
+} from '@/charts/core/resolveSpec'
 import { extent as valueExtent } from '@/charts/core/extent'
 import { withAlpha } from '@/charts/core/color'
 import { patternTile } from '@/charts/core/patterns'
@@ -204,11 +208,13 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
       itemStyle: { color: s.color },
       showSymbol: s.showPoints,
       symbolSize: s.type === 'scatter' ? 8 : 6,
-      step: s.step || undefined,
+      // En columnas, los escalones ya están en `drawPoints`.
+      step: s.drawPoints ? undefined : s.step || undefined,
       connectNulls: false,
       // Con más puntos que píxeles, dibuja una muestra LTTB (conserva picos y forma):
       // con series de 100 000 puntos aligera cada redibujado (ver docs/rendimiento-graficas.md).
-      sampling: 'lttb',
+      // En columnas no: la muestra se comería los laterales de las columnas.
+      sampling: s.drawPoints ? undefined : 'lttb',
     }
     if (s.type === 'bar') {
       series.push({
@@ -233,7 +239,7 @@ export function toEChartsOption(spec: ResolvedChartSpec, height: number): Option
         ...line,
         type: 'line',
         stack: s.stack,
-        data: s.points,
+        data: s.drawPoints ?? s.points,
         areaStyle: s.type === 'area' ? fill(s) : undefined,
       })
     }
@@ -544,7 +550,12 @@ export const echartsEngine: ChartEngine = {
       if (!id || id.startsWith(ANNOTATION_PREFIX)) return
       const seriesId = originalSeriesId(id)
       const source = spec.series.find((s) => s.id === seriesId)
-      const value = params.value as [number | string, number | null]
+      // En columnas, el clic cae en la geometría de dibujo: se devuelve el punto real.
+      const value = (
+        source?.drawPoints
+          ? source.points[drawIndexToPoint(source, params.dataIndex)]
+          : params.value
+      ) as [number | string, number | null]
       const point = source?.type === 'range' ? source.ranges[params.dataIndex] : undefined
       handlers.onPointClick({
         seriesId,

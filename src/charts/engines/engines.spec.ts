@@ -408,3 +408,31 @@ describe('escalones en ApexCharts', () => {
     ])
   })
 })
+
+describe('columnas (columns) en los tres motores: dibujan drawPoints sin escalón', () => {
+  const columnsSpec = resolveSpec(
+    { series: [{ id: 'p', name: 'Lluvia', type: 'area', data: points(1, 2, 3), columns: true }] },
+    fakeTokens(),
+    fakeLocale,
+  )
+  const drawn = columnsSpec.series[0]!.drawPoints!
+
+  it('ECharts: los puntos de dibujo, sin escalón ni muestreo LTTB (se comería los laterales)', () => {
+    const series = (toEChartsOption(columnsSpec, 400) as Any).series[0]
+    expect(series.data).toEqual(drawn)
+    expect(series.step).toBeUndefined()
+    expect(series.sampling).toBeUndefined()
+  })
+
+  it('Chart.js: los puntos de dibujo y sin stepped', () => {
+    const dataset = (toChartJsConfigs(columnsSpec)[0] as Any).data.datasets[0]
+    expect(dataset.data).toHaveLength(drawn.length)
+    expect(dataset.stepped).toBe(false)
+  })
+
+  it("ApexCharts: los puntos de dibujo, en línea recta ('straight')", () => {
+    const options = toApexOptions(columnsSpec, [400], 'g')[0] as Any
+    expect(options.series[0].data).toHaveLength(drawn.length)
+    expect(options.stroke.curve).toEqual(['straight'])
+  })
+})

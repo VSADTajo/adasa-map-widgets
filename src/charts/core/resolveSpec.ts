@@ -122,6 +122,13 @@ export interface ResolvedSeries {
    * la base). Sin él, relleno liso; con `pattern`, no se usa.
    */
   gradient?: { from: number; to: number }
+  /**
+   * Geometría solo de dibujo de las series con `columns`: cuatro puntos por
+   * valor (su columna sube de la base y vuelve a ella). Los motores dibujan
+   * esto; el resto (tooltip, leyenda, tabla, CSV) usa `points`. Ver
+   * `drawIndexToPoint`.
+   */
+  drawPoints?: [number, number | null][]
   /** `[x, y]` (o `[x, low, high]` en `range`), con X normalizado: ms en ejes temporales. */
   points: [number | string, number | null][]
   ranges: [number | string, number | null, number | null][]
@@ -187,6 +194,54 @@ function normalizeX(x: ChartX, type: 'time' | 'category' | 'value'): number | st
   if (x instanceof Date) return x.getTime()
   if (typeof x === 'string' && type === 'time') return Date.parse(x)
   return x
+}
+
+/** Fracción del intervalo que queda libre entre dos columnas (`columns`). */
+const COLUMN_GAP = 0.15
+
+/** Puntos de dibujo por valor en `columnGeometry` (base, arriba, arriba, base). */
+const COLUMN_STRIDE = 4
+
+/**
+ * Columnas de un área con `columns`: cada valor, un bloque que ocupa el
+ * intervalo que termina en su punto (desde el anterior; el primero, con el
+ * intervalo típico, la mediana), estrechado por `gap`. Cada bloque sube de
+ * la base y vuelve a ella (cuatro puntos por valor, ver `drawIndexToPoint`):
+ * entre columnas el área queda a 0, así que se separan sin `null` (con
+ * `null`, ApexCharts deja de dibujar las series que no son la primera) y el
+ * trazo marca los laterales de cada una. Un hueco en los datos, a 0.
+ * Sin X numéricas (ejes de categorías), no hay columnas.
+ */
+export function columnGeometry(
+  points: readonly [number | string, number | null][],
+  { gap = COLUMN_GAP, width: fixed }: { gap?: number; width?: number } = {},
+): [number, number | null][] | undefined {
+  if (points.some(([x]) => typeof x !== 'number')) return undefined
+  const xs = points.map(([x]) => x as number)
+  const diffs = xs.slice(1).map((x, index) => x - xs[index]!)
+  const positive = diffs.filter((diff) => diff > 0).sort((a, b) => a - b)
+  const typical = positive.length ? positive[Math.floor((positive.length - 1) / 2)]! : 3_600_000
+  const free = Math.min(Math.max(gap, 0), 0.9)
+  return points.flatMap(([, value], index): [number, number | null][] => {
+    const x = xs[index]!
+    const width =
+      fixed && fixed > 0 ? fixed : index > 0 && diffs[index - 1]! > 0 ? diffs[index - 1]! : typical
+    const inset = (width * free) / 2
+    const start = x - width + inset
+    const end = x - inset
+    const y = value ?? 0
+    return [
+      [start, 0],
+      [start, y],
+      [end, y],
+      [end, 0],
+    ]
+  })
+}
+
+/** Índice en `points` del punto de `drawPoints` número `index` (para los clics). */
+export function drawIndexToPoint(series: { drawPoints?: unknown[] }, index: number): number {
+  return series.drawPoints ? Math.floor(index / COLUMN_STRIDE) : index
 }
 
 /** Opacidad del degradado de un área junto a la línea y en la base. */
@@ -320,7 +375,9 @@ export function resolveSpec(
       color,
       lineStyle: input.lineStyle ?? 'solid',
       lineWidth: input.lineWidth ?? 2,
-      step: input.step ?? false,
+      // En columnas, cada valor ocupa el tramo que termina en su punto: el
+      // tooltip busca el valor como en un escalón `'start'`.
+      step: input.step ?? (input.columns && input.type === 'area' ? 'start' : false),
       showPoints: input.showPoints ?? input.type === 'scatter',
       opacity,
       pattern,
@@ -355,6 +412,13 @@ export function resolveSpec(
           ])
         : [],
     }
+  })
+
+  // ── Columnas (hietograma): geometría solo de dibujo ──
+  series.forEach((resolved, index) => {
+    const columns = props.series[index]!.columns
+    if (!columns || resolved.type !== 'area') return
+    resolved.drawPoints = columnGeometry(resolved.points, columns === true ? {} : columns)
   })
 
   // ── Anotaciones ──

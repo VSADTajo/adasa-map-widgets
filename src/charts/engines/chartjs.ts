@@ -1,4 +1,8 @@
-import type { ResolvedChartSpec, ResolvedSeries } from '@/charts/core/resolveSpec'
+import {
+  drawIndexToPoint,
+  type ResolvedChartSpec,
+  type ResolvedSeries,
+} from '@/charts/core/resolveSpec'
 import { withAlpha } from '@/charts/core/resolveSpec'
 import { patternTile } from '@/charts/core/patterns'
 import { tooltipHtml } from '@/charts/core/tooltip'
@@ -115,14 +119,15 @@ function datasetsFor(series: ResolvedSeries): Dataset[] {
     {
       ...common,
       type: series.type === 'scatter' ? 'scatter' : 'line',
-      data: toXY(series.points),
+      data: toXY(series.drawPoints ?? series.points),
       borderColor: series.color,
       backgroundColor: series.type === 'area' ? fill(series) : series.color,
       borderWidth: series.type === 'scatter' ? 0 : series.lineWidth,
       borderDash: [...DASH[series.lineStyle]],
       pointRadius: series.showPoints ? (series.type === 'scatter' ? 4 : 3) : 0,
       pointHoverRadius: series.showPoints ? 5 : 3,
-      stepped: series.step ? STEP[series.step] : false,
+      // En columnas, los escalones ya están en `drawPoints`.
+      stepped: series.step && !series.drawPoints ? STEP[series.step] : false,
       fill: series.type === 'area' ? (series.stack ? 'stack' : 'origin') : false,
       stack: series.stack,
       spanGaps: false,
@@ -491,9 +496,14 @@ export const chartjsEngine: ChartEngine = {
           if (hit) {
             const dataset = chart.data.datasets[hit.datasetIndex] as unknown as Dataset
             const seriesId = dataset.asId.replace(BAND_LOW, '')
-            const point = (dataset.data as unknown as { x: number | string; y: number | null }[])[
-              hit.index
-            ]!
+            const source = spec.series.find((s) => s.id === seriesId)
+            // En columnas, el clic cae en la geometría de dibujo: se devuelve el punto real.
+            const real = source?.drawPoints
+              ? source.points[drawIndexToPoint(source, hit.index)]
+              : undefined
+            const point = real
+              ? { x: real[0], y: real[1] }
+              : (dataset.data as unknown as { x: number | string; y: number | null }[])[hit.index]!
             handlers.onPointClick({ seriesId, x: toChartX(point.x), y: point.y })
           }
           if (event.x === null) return

@@ -1,4 +1,4 @@
-import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
+import { drawIndexToPoint, type ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
 import { extent as valueExtent } from '@/charts/core/extent'
 import { tooltipHtml } from '@/charts/core/tooltip'
@@ -89,7 +89,7 @@ export function toApexOptions(
                   : s.type === 'area'
                     ? 'area'
                     : 'line',
-            data: s.points.map(([x, y]) => ({ x, y })),
+            data: (s.drawPoints ?? s.points).map(([x, y]) => ({ x, y })),
           },
     )
 
@@ -238,7 +238,13 @@ export function toApexOptions(
         // 'linestep' sube en el punto anterior y sigue en horizontal (el valor ocupa el tramo que
         // termina en su punto, como `step: 'start'`); 'stepline', al revés.
         curve: panelSeries.map((s) =>
-          s.step === 'start' ? 'linestep' : s.step ? 'stepline' : 'straight',
+          s.drawPoints
+            ? 'straight'
+            : s.step === 'start'
+              ? 'linestep'
+              : s.step
+                ? 'stepline'
+                : 'straight',
         ),
       },
       // Con `patterns`, los rellenos son la tesela del patrón (con la opacidad ya en ella).
@@ -457,7 +463,7 @@ export const apexchartsEngine: ChartEngine = {
             const point =
               series.type === 'range'
                 ? series.ranges[config.dataPointIndex]
-                : series.points[config.dataPointIndex]
+                : series.points[drawIndexToPoint(series, config.dataPointIndex)]
             if (!point) return
             handlers.onPointClick({
               seriesId: series.id,

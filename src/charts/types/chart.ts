@@ -111,6 +111,18 @@ export interface ChartSeries {
    * @default false
    */
   gradient?: boolean | ChartGradient
+  /**
+   * Dibuja un `area` en columnas separadas, como un hietograma: cada valor
+   * ocupa el intervalo que termina en su instante (desde el punto anterior;
+   * el primero, con el intervalo típico de la serie), con un hueco entre
+   * columnas. Solo cambia el dibujo: el tooltip, la leyenda, la tabla y el
+   * CSV siguen con los puntos reales. `gap` es la fracción del intervalo que
+   * queda libre (0–0,9; por defecto 0,15); `width`, un ancho fijo en unidades
+   * del eje X (ms en un eje de tiempo) en vez de la distancia entre puntos.
+   * En ejes de categorías no se aplica.
+   * @default false
+   */
+  columns?: boolean | { gap?: number; width?: number }
   /** Apilar las barras/áreas con el mismo `stack`. */
   stack?: string
   /** Mostrar en la leyenda. @default true */
