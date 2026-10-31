@@ -10,7 +10,7 @@ Cada dominio se importa desde su propio subpath, así que un proyecto solo carga
 | ------------------------------ | ----------------------------------------------------------------------------------------------- |
 | `@vsadtajo/adasa-ui`           | `core`: tema y tokens (`provideTheme`, `readTokens`...), idioma (`provideLocale`, `useLocale`), formateadores (`formatNumber`, `formatDate`, `formatDuration`, `formatUnit`) y `ASIcon` |
 | `@vsadtajo/adasa-ui/map`       | `ASMap`, widgets `ASMap*`, capas (`useLayerManager`, `geoServerLayer`...), leyendas y sus tipos |
-| `@vsadtajo/adasa-ui/charts`    | `ASChart` y `ASHydrographChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
+| `@vsadtajo/adasa-ui/charts`    | `ASChart`, `ASHydrographChart` y `ASPrecipitationChart`, con ECharts, Chart.js o ApexCharts (a elegir) |
 | `@vsadtajo/adasa-ui/layout`    | `ASAppShell` y sus piezas `ASApp*` (barra, marca, buscador, menú de usuario, barra de iconos, paneles): la estructura de las aplicaciones de mapa |
 | `@vsadtajo/adasa-ui/forms`     | Primitivas de formulario: `ASButton`, `ASIconButton`, `ASInput`, `ASSelect`, `ASCheckbox`, `ASSwitch`, `ASRadioGroup`, `ASDatePicker`, `ASDateRangePicker`, `ASSearchInput`, `ASSlider`, `ASFormField`, y para paneles `ASCollapsible` y `ASTreeList` |
 | `@vsadtajo/adasa-ui/detail`    | Ficha de una estación: `ASDetailHeader`, `ASCard`, `ASStatusBadge` y tarjetas hidrológicas (`ASAlertStatus`, `ASObservedSummary`, `ASThresholdSummary`, `ASValueMatrix`, `ASThresholdLegend`) |
@@ -32,6 +32,7 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASMapButtonToggle`](src/map/components/ASMapButtonToggle.vue)         | `/map`    | Grupo de botones de selección única                                          | —                                   |
 | [`ASChart`](src/charts/components/ASChart.vue)                          | `/charts` | Gráfica cartesiana: líneas, barras, áreas, bandas y dispersión; 1–4 ejes Y, paneles | `echarts`, `chart.js` o `apexcharts` (a elegir) |
 | [`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)      | `/charts` | Hidrograma: precipitación, caudal (y entrada/salida), volumen y nivel, observado y previsto, umbrales | el motor de `ASChart`               |
+| [`ASPrecipitationChart`](src/charts/components/ASPrecipitationChart.vue) | `/charts` | Precipitación observada y prevista en mm/h o mm, con el acumulado de cada serie | el motor de `ASChart`               |
 | [`ASAppShell`](src/layout/components/ASAppShell.vue)                    | `/layout` | Layout de aplicación de mapa: barra, iconos, panel de sección y de detalle; escritorio y móvil | —                  |
 | [`ASAppTopBar`](src/layout/components/ASAppTopBar.vue)                  | `/layout` | Barra superior corporativa (marca, buscador, acciones)                       | —                                   |
 | [`ASAppRail`](src/layout/components/ASAppRail.vue)                      | `/layout` | Barra vertical de iconos de sección                                          | —                                   |
@@ -88,7 +89,7 @@ Ningún widget de control importa una librería de mapas: solo `ASMap` y el sist
 ## Gráficas (`@vsadtajo/adasa-ui/charts`)
 
 - **[`ASChart`](src/charts/components/ASChart.vue)**: gráfica cartesiana genérica (líneas, barras, áreas, bandas y dispersión sobre un eje temporal, numérico o de categorías).
-- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo del observado con `observedName`/`style` de cada variable, y de cada previsión con `name`/`style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
+- **[`ASHydrographChart`](src/charts/components/ASHydrographChart.vue)**: hidrograma, con la precipitación arriba (barras, eje invertido) y el caudal o nivel abajo. La precipitación puede ir alineada en su propio panel (`precipitation-layout="panel"`, por defecto) o superpuesta al caudal con su eje a la derecha (`"overlay"`), colgando desde arriba o no (`precipitation-inverted`). Nombre y estilo de cada serie (observada o prevista) con su `name` y su `style` (ver abajo). Cualquier serie generada (eje, estilo, leyenda…) se retoca con `seriesOverrides` por su id, y los ejes con `yAxisOverrides`. Distingue observado y previsto, admite varias fuentes de previsión con bandas de percentiles p10–p90 y p25–p75, y marca los umbrales de aviso y la línea "ahora".
 
 **Tres motores con los mismos props**, igual que `ASMap` con Leaflet y MapLibre. Se elige con `chart-library` y se instala solo el que se use:
 
@@ -229,6 +230,58 @@ Todas son `HydroVariable` (observado y previsiones con percentiles, como `discha
 
 Con precipitación, caudal, volumen y nivel se llega a los 4 ejes Y que admite `ASChart`. Los ids de las series siguen el patrón `<variable>-observed-<id>`, `<variable>-<fuente>` y `<variable>-<fuente>-p10-p90` (para `seriesOverrides`), y los ejes son `'precipitation'`, `'discharge'`, `'volume'` y `'level'` (para `yAxisOverrides`).
 
+### Precipitación: `ASPrecipitationChart`
+
+Precipitación observada (telemetría, precipitación areal...) y prevista (WRF, ECMWF...) en el eje izquierdo, y el **acumulado** de cada serie que lo pida en el derecho (mm). Por defecto, el tooltip solo da la fecha y los valores van en la leyenda, con los acumulados en su propia línea.
+
+```vue
+<ASPrecipitationChart
+  v-model:show-cumulative="verAcumulados"
+  toolbar
+  :series="[
+    { id: 'tr', name: 'P. TR', values: telemetria, input: 'intensity', intervalMinutes: 10, cumulative: true },
+    { id: 'areal', name: 'P. Areal', values: areal },
+    { id: 'wrf', name: 'WRF', kind: 'forecast', values: wrf, cumulative: { name: 'Acumulat', style: { color: '#14b554' } } },
+  ]"
+/>
+```
+
+**mm o mm/h: `input` y `rate`.** Cada serie dice cómo llegan sus valores y la gráfica qué muestra; la librería convierte en los dos sentidos:
+
+| `input` de la serie | `rate` de la gráfica       | Qué se hace                                              |
+| ------------------- | -------------------------- | -------------------------------------------------------- |
+| `'depth'` (defecto) | `'intensity'` (defecto)    | mm del intervalo ÷ horas del intervalo → mm/h            |
+| `'intensity'`       | `'depth'`                  | mm/h × horas del intervalo → mm                          |
+| igual               | igual                      | se ordena y los negativos pasan a 0                      |
+
+- `'depth'` son los mm caídos en el intervalo que **termina** en cada instante (lo habitual en SAIH y en las salidas de los modelos).
+- La duración del intervalo es la distancia al punto anterior; el primer punto usa el intervalo típico de la serie (la mediana), así que no hay una caída falsa a 0 al principio. Con huecos, fija la duración con `intervalMinutes`.
+- El acumulado se calcula siempre en mm, aunque la serie llegue en mm/h.
+- Las conversiones se exportan como funciones puras: `toIntensity`, `toDepth`, `convertPrecipitation`, `toCumulative`, `cumulativeAt`, `intervalHours` y `sortByTime`.
+
+**Acumulados** (`cumulative: true` o `PrecipitationCumulative`): uno por serie, del color de su serie (o el de su `style`), en el eje derecho.
+
+- **La previsión continúa el observado**: arranca donde acaba el acumulado del primer observado que lo tenga, enlazada con su último punto (el total del episodio en una sola curva). `continueFrom: '<id>'` elige otra serie y `continueFrom: false` empieza en 0.
+- `from` empieza a sumar en un instante; `name` y `style` los personalizan.
+- Con `toolbar`, un botón muestra u oculta todos (`v-model:show-cumulative`); cada uno también se oculta desde la leyenda.
+
+**Dibujo por defecto: un hietograma.** Columnas separadas, cada una del intervalo que termina en su instante y con su contorno, así que series con intervalos distintos (telemetría cada 10 min, previsión horaria o cada 3 h) mantienen cada una su ancho en vez de quedar como hilos. La separación es solo de dibujo: el tooltip, la tabla y el CSV llevan los datos reales.
+
+**Intervalo común** (`interval`, en minutos; p. ej. `60`): el Δt de un hietograma clásico. Cada serie de intervalo igual o más fino suma sus mm a ese intervalo (alineado a la medianoche local) y todas sus columnas miden igual, así que en `rate="depth"` las alturas se comparan entre series. Las series más gruesas (una previsión cada 3 h con `interval: 60`) se quedan como están: repartir su lluvia sería inventar cómo cayó. El acumulado no cambia. También se exporta como función pura, `aggregateDepth`.
+
+ Las observadas, casi opacas (0,85) y las previstas, semitransparentes (0,5), para que se vean las que se solapan; se cambia con `opacity`. Puede haber **varias observadas y varias previstas a la vez** (p. ej. pluviómetro y precipitación areal; WRF y ECMWF), y cada previsión continúa el acumulado observado. `display: 'line' | 'area'` las pasa a línea o área (la prevista en área, con **degradado**: `gradient`), con su `style`. Umbrales de intensidad o de acumulado con `thresholds` (`axis: 'rate' | 'cumulative'`).
+
+**Selector de modelo** (como en los visores con WRF y ECMWF): un `select` propio de la barra; la gráfica no pide datos, el proyecto cambia la serie al recibir `toolbar-change`:
+
+```vue
+<ASPrecipitationChart
+  :series="series"
+  :toolbar="{ items: [{ type: 'select', id: 'modelo', label: 'Modelo', value: modelo, showCount: true,
+    options: [{ value: 'WRF', label: 'WRF (3 días)' }, { value: 'ECMWF', label: 'ECMWF (7 días)' }] }] }"
+  @toolbar-change="({ value }) => (modelo = value)"
+/>
+```
+
 ### Props, eventos y métodos
 
 Las dos gráficas comparten nombres, tipos y valores por defecto: `ASHydrographChart` es una configuración de `ASChart`, y todo lo que no es propio del hidrograma se le pasa tal cual.
@@ -341,6 +394,8 @@ Sin configurar nada:
   - Cada paso se anuncia al lector de pantalla ("18/10/2026, 06:00: Caudal 69,2 m³/s, Lluvia 0,8 mm") y mueve también el cursor de las gráficas de su `sync-group`.
 - **Tabla de datos alternativa**: oculta a la vista, pero accesible a los lectores de pantalla. Con más de 500 filas se recorta (el CSV las lleva todas). Se desactiva con `:data-table="false"`.
 - **Grupos en la leyenda** (`legendGroup` en cada serie): las series de un grupo van en su propia línea, con el nombre del grupo como título; las que no tienen grupo, primero. `legendLabel` es el texto en la leyenda si debe ser más corto que `name` (el nombre completo se sigue anunciando y sale en el tooltip y el CSV).
+- **Áreas en columnas** (`columns` en una serie `area`): un hietograma; cada valor, una columna separada del intervalo que termina en su punto (`gap`: hueco entre columnas; `width`: ancho fijo). Solo cambia el dibujo: el tooltip, la leyenda, la tabla y el CSV siguen con los puntos reales.
+- **Áreas con degradado** (`gradient` en una serie `area`): de la opacidad `from` junto a la línea a `to` en la base (por defecto 0,5 → 0,05), igual en los tres motores; con `patterns`, manda la trama.
 - **Tooltip con solo la fecha** (`tooltip="time"`): útil con `legend-values`, que ya muestra los valores en la leyenda.
 - **Tramas para daltonismo** (`patterns`, opcional): cada relleno (barras, áreas y bandas) lleva una trama distinta además del color, y la misma trama aparece en la leyenda y en las imágenes exportadas. Las líneas se distinguen por la leyenda y por `lineStyle` (`'solid'`, `'dashed'`, `'dotted'` o `'dashdot'`). Con barras muy estrechas (p. ej. lluvia horaria de varios días) la trama apenas se ve: ahí ayuda más el zoom.
 

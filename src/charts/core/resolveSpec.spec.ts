@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { resolveColor, resolveSpec } from './resolveSpec'
+import { columnGeometry, drawIndexToPoint, resolveColor, resolveSpec } from './resolveSpec'
 import { at, CATEGORICAL, fakeLocale, fakeTokens, T0 } from './chart.fixtures'
 import type { ChartProps, ChartSeries } from '@/charts/types/chart'
 
@@ -206,5 +206,127 @@ describe('resolveSpec', () => {
     })
     expect(spec.series[0]!.ranges).toEqual([[at(0).getTime(), 1, 3]])
     expect(spec.series[0]!.points).toEqual([])
+  })
+})
+
+describe('resolveSpec · degradado de las áreas (gradient)', () => {
+  const area = (extra: Partial<ChartSeries> = {}) =>
+    resolve({ series: [line('a', { type: 'area', ...extra })] }).series[0]!
+
+  it('sin gradient, relleno liso; con true, de 0,5 junto a la línea a 0,05 en la base', () => {
+    expect(area().gradient).toBeUndefined()
+    expect(area({ gradient: true }).gradient).toEqual({ from: 0.5, to: 0.05 })
+  })
+
+  it('from sale de la opacidad de la serie si no se da; to y from propios', () => {
+    expect(area({ gradient: true, opacity: 0.4 }).gradient).toEqual({ from: 0.4, to: 0.05 })
+    expect(area({ gradient: { from: 0.7, to: 0 } }).gradient).toEqual({ from: 0.7, to: 0 })
+  })
+
+  it('solo en áreas, y con patterns manda la trama', () => {
+    expect(resolve({ series: [line('a', { gradient: true })] }).series[0]!.gradient).toBeUndefined()
+    const withPatterns = resolve({
+      series: [line('a', { type: 'area', gradient: true })],
+      patterns: true,
+    })
+    expect(withPatterns.series[0]!.pattern).toBeDefined()
+    expect(withPatterns.series[0]!.gradient).toBeUndefined()
+  })
+})
+
+describe('columnGeometry y columns (hietograma)', () => {
+  const H = 3_600_000
+  it('cada valor, una columna del intervalo que termina en su punto, que sube de la base y vuelve', () => {
+    const geometry = columnGeometry(
+      [
+        [H, 2],
+        [2 * H, 4],
+        [3 * H, null],
+      ],
+      { gap: 0.5 },
+    )!
+    expect(geometry).toEqual([
+      [0.25 * H, 0],
+      [0.25 * H, 2],
+      [0.75 * H, 2],
+      [0.75 * H, 0],
+      [1.25 * H, 0],
+      [1.25 * H, 4],
+      [1.75 * H, 4],
+      [1.75 * H, 0],
+      // Un hueco en los datos, a 0 (sin null: ApexCharts no dibuja bien las áreas con null).
+      [2.25 * H, 0],
+      [2.25 * H, 0],
+      [2.75 * H, 0],
+      [2.75 * H, 0],
+    ])
+  })
+
+  it('el primero usa el intervalo típico; con width, un ancho fijo; sin X numéricas, nada', () => {
+    const irregular = columnGeometry(
+      [
+        [10 * H, 1],
+        [11 * H, 1],
+        [12 * H, 1],
+        [15 * H, 1],
+      ],
+      { gap: 0 },
+    )!
+    expect(irregular[0]![0]).toBe(9 * H)
+    expect(irregular[12]![0]).toBe(12 * H)
+    const fixed = columnGeometry(
+      [
+        [10 * H, 1],
+        [15 * H, 1],
+      ],
+      { gap: 0, width: H },
+    )!
+    expect(fixed[4]![0]).toBe(14 * H)
+    expect(columnGeometry([['a', 1]])).toBeUndefined()
+  })
+
+  it('resolveSpec la calcula solo en áreas con columns, y les da step start para el tooltip', () => {
+    const spec = resolve({
+      series: [
+        line('a', {
+          type: 'area',
+          columns: true,
+          data: [
+            [0, 1],
+            [H, 2],
+          ],
+        }),
+        line('b', {
+          type: 'area',
+          data: [
+            [0, 1],
+            [H, 2],
+          ],
+        }),
+        line('c', {
+          columns: true,
+          data: [
+            [0, 1],
+            [H, 2],
+          ],
+        }),
+      ],
+      xAxis: { type: 'value' },
+    })
+    expect(spec.series[0]!.drawPoints).toHaveLength(8)
+    expect(spec.series[0]!.step).toBe('start')
+    expect(spec.series[0]!.points).toEqual([
+      [0, 1],
+      [H, 2],
+    ])
+    expect(spec.series[1]!.drawPoints).toBeUndefined()
+    expect(spec.series[2]!.drawPoints).toBeUndefined()
+  })
+
+  it('drawIndexToPoint: cuatro puntos de dibujo por valor', () => {
+    expect([0, 3, 4, 7, 8].map((i) => drawIndexToPoint({ drawPoints: [] }, i))).toEqual([
+      0, 0, 1, 1, 2,
+    ])
+    expect(drawIndexToPoint({}, 4)).toBe(4)
   })
 })

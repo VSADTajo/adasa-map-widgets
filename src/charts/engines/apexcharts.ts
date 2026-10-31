@@ -1,4 +1,4 @@
-import type { ResolvedChartSpec } from '@/charts/core/resolveSpec'
+import { drawIndexToPoint, type ResolvedChartSpec } from '@/charts/core/resolveSpec'
 import { PATTERN_SIZE, patternDataUrl } from '@/charts/core/patterns'
 import { extent as valueExtent } from '@/charts/core/extent'
 import { tooltipHtml } from '@/charts/core/tooltip'
@@ -89,7 +89,7 @@ export function toApexOptions(
                   : s.type === 'area'
                     ? 'area'
                     : 'line',
-            data: s.points.map(([x, y]) => ({ x, y })),
+            data: (s.drawPoints ?? s.points).map(([x, y]) => ({ x, y })),
           },
     )
 
@@ -235,12 +235,32 @@ export function toApexOptions(
       stroke: {
         width: panelSeries.map((s) => (s.type === 'range' || s.type === 'bar' ? 0 : s.lineWidth)),
         dashArray: panelSeries.map((s) => DASH[s.lineStyle]),
-        curve: panelSeries.map((s) => (s.step ? 'stepline' : 'straight')),
+        // 'linestep' sube en el punto anterior y sigue en horizontal (el valor ocupa el tramo que
+        // termina en su punto, como `step: 'start'`); 'stepline', al revés.
+        curve: panelSeries.map((s) =>
+          s.drawPoints
+            ? 'straight'
+            : s.step === 'start'
+              ? 'linestep'
+              : s.step
+                ? 'stepline'
+                : 'straight',
+        ),
       },
       // Con `patterns`, los rellenos son la tesela del patrón (con la opacidad ya en ella).
       fill: {
-        type: patterns.map((tile) => (tile ? 'image' : 'solid')),
+        type: patterns.map((tile, i) =>
+          tile ? 'image' : panelSeries[i]!.gradient ? 'gradient' : 'solid',
+        ),
         opacity: panelSeries.map((s, i) => (patterns[i] ? 1 : s.opacity)),
+        // Degradado vertical de cada área (de `from` junto a la línea a `to` en la base).
+        gradient: {
+          type: 'vertical',
+          shadeIntensity: 0,
+          opacityFrom: panelSeries.map((s) => s.gradient?.from ?? s.opacity),
+          opacityTo: panelSeries.map((s) => s.gradient?.to ?? s.opacity),
+          stops: [0, 100],
+        },
         image: {
           src: patterns.map((tile) => tile ?? ''),
           width: PATTERN_SIZE,
@@ -443,7 +463,7 @@ export const apexchartsEngine: ChartEngine = {
             const point =
               series.type === 'range'
                 ? series.ranges[config.dataPointIndex]
-                : series.points[config.dataPointIndex]
+                : series.points[drawIndexToPoint(series, config.dataPointIndex)]
             if (!point) return
             handlers.onPointClick({
               seriesId: series.id,

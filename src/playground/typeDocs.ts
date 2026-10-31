@@ -481,3 +481,159 @@ export const HYDRO_BAND_STYLE_DOC: TypeDoc = {
     { key: 'legend', type: 'boolean', default: 'true', description: 'Aparece en la leyenda.' },
   ],
 }
+
+export const PRECIPITATION_SERIES_DOC: TypeDoc = {
+  name: 'PrecipitationSeries',
+  description:
+    'Una serie de precipitación: observada (telemetría, P. areal...) o prevista (WRF, ECMWF...).',
+  fields: [
+    {
+      key: 'id',
+      type: 'string',
+      required: true,
+      description: "Id estable: sus series son 'precipitation-<id>' y 'cumulative-<id>'.",
+    },
+    {
+      key: 'name',
+      type: 'string',
+      required: true,
+      description: 'Nombre en la leyenda, el tooltip, la tabla y el CSV.',
+    },
+    {
+      key: 'values',
+      type: 'HydroPoint[]',
+      required: true,
+      description: 'Puntos [instante, valor]; null deja un hueco. Se ordenan por fecha.',
+    },
+    {
+      key: 'input',
+      type: "'depth' | 'intensity'",
+      default: "'depth'",
+      description:
+        "Cómo llegan: mm caídos en el intervalo que termina en cada instante ('depth') o mm/h ('intensity'). Se convierten a lo que muestra rate.",
+    },
+    {
+      key: 'intervalMinutes',
+      type: 'number',
+      description:
+        'Duración fija de cada intervalo (sin ella, la distancia al punto anterior; el primero, la mediana).',
+    },
+    {
+      key: 'kind',
+      type: "'observed' | 'forecast'",
+      default: "'observed'",
+      description: 'Cambia el dibujo por defecto y de qué serie continúa el acumulado.',
+    },
+    {
+      key: 'display',
+      type: "'line' | 'area' | 'bar'",
+      default: "'bar'",
+      description:
+        'En columnas que ocupan su intervalo (cada serie con su ancho), en línea o en área.',
+    },
+    {
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: "{ width: 2, type: 'solid' / 'dashed' }",
+      description: 'Color, grosor y trazo.',
+    },
+    {
+      key: 'opacity',
+      type: 'number',
+      default: '0.85 / 0.5',
+      description: 'Opacidad del relleno: observadas casi opacas y previstas semitransparentes.',
+    },
+    {
+      key: 'gradient',
+      type: 'boolean | ChartGradient',
+      default: 'true en previsto',
+      description: 'Relleno en degradado (solo en área).',
+    },
+    {
+      key: 'cumulative',
+      type: 'boolean | PrecipitationCumulative',
+      description: 'Su acumulado en el eje derecho (mm). Sin él, no tiene.',
+    },
+  ],
+}
+
+export const PRECIPITATION_CUMULATIVE_DOC: TypeDoc = {
+  name: 'PrecipitationCumulative',
+  description:
+    'Acumulado de una serie: una línea en el eje derecho (mm), en la línea "Acumulado" de la leyenda.',
+  fields: [
+    {
+      key: 'name',
+      type: 'string',
+      default: "'<serie> (acumulado)'",
+      description: 'Nombre en el tooltip, la tabla y el CSV.',
+    },
+    {
+      key: 'style',
+      type: 'HydroLineStyle',
+      default: 'color de su serie, 3 px',
+      description: 'Continuo en observado y discontinuo en previsto, por defecto.',
+    },
+    {
+      key: 'from',
+      type: 'Date',
+      default: 'el primer punto',
+      description: 'Empieza a sumar en este instante.',
+    },
+    {
+      key: 'continueFrom',
+      type: 'string | false',
+      default: 'en previsto, el primer observado con acumulado',
+      description:
+        'Id de la serie cuyo total continúa (el total del episodio en una sola curva); false, desde 0.',
+    },
+  ],
+}
+
+export const PRECIPITATION_THRESHOLD_DOC: TypeDoc = {
+  name: 'PrecipitationThreshold',
+  description: 'Umbral de intensidad (eje izquierdo) o de acumulado (derecho).',
+  fields: [
+    { key: 'value', type: 'number', required: true, description: 'Valor, en la unidad de su eje.' },
+    {
+      key: 'level',
+      type: "'normal' | 'amarillo' | 'naranja' | 'rojo' | string",
+      required: true,
+      description: 'Nivel de aviso: da el color.',
+    },
+    { key: 'label', type: 'string', default: "'Umbral <nivel>'", description: 'Etiqueta.' },
+    {
+      key: 'axis',
+      type: "'rate' | 'cumulative'",
+      default: "'rate'",
+      description: 'Eje del umbral (el de acumulado, solo si hay acumulados).',
+    },
+  ],
+}
+
+export const CHART_GRADIENT_DOC: TypeDoc = {
+  name: 'ChartGradient',
+  description: 'Degradado vertical del relleno de un área (gradient), igual en los tres motores.',
+  fields: [
+    {
+      key: 'from',
+      type: 'number',
+      default: 'la opacidad de la serie o 0,5',
+      description: 'Opacidad junto a la línea.',
+    },
+    { key: 'to', type: 'number', default: '0.05', description: 'Opacidad en la base del área.' },
+  ],
+}
+
+export const PRECIPITATION_TOOLBAR_DOC: TypeDoc = {
+  name: 'PrecipitationToolbarConfig',
+  description: 'La barra de ASChart (png, svg, csv, items...) más el botón de los acumulados.',
+  fields: [
+    {
+      key: 'cumulativeToggle',
+      type: 'boolean',
+      default: 'true',
+      description: 'Muestra u oculta todos los acumulados (solo si alguna serie lo tiene).',
+    },
+  ],
+}

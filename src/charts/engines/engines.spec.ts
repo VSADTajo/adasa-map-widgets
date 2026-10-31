@@ -335,3 +335,104 @@ describe('legendGroups', () => {
     ])
   })
 })
+
+describe('degradado de un área en los tres motores', () => {
+  const gradientSpec = resolveSpec(
+    {
+      series: [
+        {
+          id: 'p',
+          name: 'Previsión',
+          type: 'area',
+          data: points(1, 3),
+          color: '#ff0000',
+          gradient: { from: 0.6, to: 0.1 },
+        },
+      ],
+    },
+    fakeTokens(),
+    fakeLocale,
+  )
+
+  it('ECharts: LinearGradient vertical de la opacidad from a to', () => {
+    const area = (toEChartsOption(gradientSpec, 400) as Any).series[0].areaStyle
+    expect(area.color).toMatchObject({ type: 'linear', x: 0, y: 0, x2: 0, y2: 1 })
+    expect(area.color.colorStops).toEqual([
+      { offset: 0, color: 'rgba(255, 0, 0, 0.6)' },
+      { offset: 1, color: 'rgba(255, 0, 0, 0.1)' },
+    ])
+  })
+
+  it('Chart.js: degradado de canvas sobre el área del gráfico (color liso antes de conocerla)', () => {
+    const background = (toChartJsConfigs(gradientSpec)[0] as Any).data.datasets[0].backgroundColor
+    expect(typeof background).toBe('function')
+    expect(background({ chart: { ctx: {} } })).toBe('rgba(255, 0, 0, 0.6)')
+    const stops: [number, string][] = []
+    const ctx = {
+      createLinearGradient: () => ({
+        addColorStop: (offset: number, color: string) => stops.push([offset, color]),
+      }),
+    }
+    background({ chart: { ctx, chartArea: { top: 10, bottom: 200 } } })
+    expect(stops).toEqual([
+      [0, 'rgba(255, 0, 0, 0.6)'],
+      [1, 'rgba(255, 0, 0, 0.1)'],
+    ])
+  })
+
+  it("ApexCharts: fill.type 'gradient' con sus opacidades por serie", () => {
+    const fill = (toApexOptions(gradientSpec, [400], 'g')[0] as Any).fill
+    expect(fill.type).toEqual(['gradient'])
+    expect(fill.gradient).toMatchObject({ type: 'vertical', opacityFrom: [0.6], opacityTo: [0.1] })
+  })
+})
+
+describe('escalones en ApexCharts', () => {
+  it("step 'start' es 'linestep' (sube en el punto anterior) y el resto, 'stepline'", () => {
+    const stepped = resolveSpec(
+      {
+        series: (['start', 'end'] as const).map((step) => ({
+          id: step,
+          name: step,
+          type: 'line' as const,
+          data: points(1, 2),
+          step,
+        })),
+      },
+      fakeTokens(),
+      fakeLocale,
+    )
+    expect((toApexOptions(stepped, [400], 'g')[0] as Any).stroke.curve).toEqual([
+      'linestep',
+      'stepline',
+    ])
+  })
+})
+
+describe('columnas (columns) en los tres motores: dibujan drawPoints sin escalón', () => {
+  const columnsSpec = resolveSpec(
+    { series: [{ id: 'p', name: 'Lluvia', type: 'area', data: points(1, 2, 3), columns: true }] },
+    fakeTokens(),
+    fakeLocale,
+  )
+  const drawn = columnsSpec.series[0]!.drawPoints!
+
+  it('ECharts: los puntos de dibujo, sin escalón ni muestreo LTTB (se comería los laterales)', () => {
+    const series = (toEChartsOption(columnsSpec, 400) as Any).series[0]
+    expect(series.data).toEqual(drawn)
+    expect(series.step).toBeUndefined()
+    expect(series.sampling).toBeUndefined()
+  })
+
+  it('Chart.js: los puntos de dibujo y sin stepped', () => {
+    const dataset = (toChartJsConfigs(columnsSpec)[0] as Any).data.datasets[0]
+    expect(dataset.data).toHaveLength(drawn.length)
+    expect(dataset.stepped).toBe(false)
+  })
+
+  it("ApexCharts: los puntos de dibujo, en línea recta ('straight')", () => {
+    const options = toApexOptions(columnsSpec, [400], 'g')[0] as Any
+    expect(options.series[0].data).toHaveLength(drawn.length)
+    expect(options.stroke.curve).toEqual(['straight'])
+  })
+})

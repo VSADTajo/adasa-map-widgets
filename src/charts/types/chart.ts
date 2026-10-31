@@ -30,6 +30,14 @@ export type ChartRangePoint = [x: ChartX, low: number | null, high: number | nul
  * Trazo de una línea: continua, discontinua (rayas), de puntos o de punto y
  * raya (`'dashdot'`, p. ej. para una tercera previsión).
  */
+/** Degradado del relleno de un área (`gradient` de una serie). */
+export interface ChartGradient {
+  /** Opacidad junto a la línea. @default la de la serie (`opacity`) o 0,5 */
+  from?: number
+  /** Opacidad en la base del área. @default 0.05 */
+  to?: number
+}
+
 export type ChartLineStyle = 'solid' | 'dashed' | 'dotted' | 'dashdot'
 
 /** Eje Y. Una gráfica admite de 1 a 4. */
@@ -95,6 +103,26 @@ export interface ChartSeries {
   showPoints?: boolean
   /** Opacidad del relleno de `area`, `range` y `bar`. */
   opacity?: number
+  /**
+   * Relleno de un `area` en degradado vertical: de la opacidad `from` junto
+   * a la línea a la opacidad `to` en la base (p. ej. una previsión de
+   * lluvia que se desvanece). `true` usa los valores por defecto. Con
+   * `patterns`, manda la trama.
+   * @default false
+   */
+  gradient?: boolean | ChartGradient
+  /**
+   * Dibuja un `area` en columnas separadas, como un hietograma: cada valor
+   * ocupa el intervalo que termina en su instante (desde el punto anterior;
+   * el primero, con el intervalo típico de la serie), con un hueco entre
+   * columnas. Solo cambia el dibujo: el tooltip, la leyenda, la tabla y el
+   * CSV siguen con los puntos reales. `gap` es la fracción del intervalo que
+   * queda libre (0–0,9; por defecto 0,15); `width`, un ancho fijo en unidades
+   * del eje X (ms en un eje de tiempo) en vez de la distancia entre puntos.
+   * En ejes de categorías no se aplica.
+   * @default false
+   */
+  columns?: boolean | { gap?: number; width?: number }
   /** Apilar las barras/áreas con el mismo `stack`. */
   stack?: string
   /** Mostrar en la leyenda. @default true */
