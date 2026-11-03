@@ -464,6 +464,9 @@ Para verlo funcionando, abre el compositor del playground (`#composer`). Activa 
 
 - **Panel de sección** (escritorio): junto a la barra de iconos, de 320 px, y **empuja** el mapa (no lo tapa; `ASMap` se reajusta solo). Con `drawer-mode="overlay"` entra **encima** del mapa, que no se mueve ni cambia de tamaño (útil si el reajuste molesta, p. ej. con capas pesadas o animaciones en curso); el panel lleva sombra y los controles del mapa que queden debajo se tapan mientras está abierto. Pulsar la sección abierta lo cierra; pulsar otra lo cierra y lo **vuelve a abrir con la nueva a los 280 ms** (`switch-delay`).
 - **Detalle**: entra por la derecha y tapa el mapa **desde el borde de los menús**; si el panel de sección se abre o se cierra, se ajusta sin cerrarse. Siempre tiene botón de cerrar (`detail-close-button`), y por ahora su contenido es un slot vacío.
+  - **Ancho**: por defecto lo tapa todo. Con `v-model:detail-width` (px) se pega a la derecha y el mapa se ve a su izquierda.
+  - **Redimensionable** (`detail-resizable`): un asa en su borde izquierdo cambia el ancho arrastrando o con las flechas (Mayús, en pasos mayores); Fin lo lleva al mínimo (`detail-min-width`, 320 px) y doble clic o Inicio lo vuelve a ocupar todo. Funciona sin `v-model:detail-width`; enlázalo si quieres guardar el ancho del usuario.
+  - En móvil siempre ocupa toda la pantalla.
 - **Móvil** (por debajo de `breakpoint`, 960 px, medido sobre el propio layout y no sobre la ventana):
   - la barra va abajo, al alcance del pulgar, respetando la zona segura del iPhone;
   - su botón ☰ despliega las secciones encima de ella;

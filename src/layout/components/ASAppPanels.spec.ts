@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import type { AppSection } from '@/layout/types/AppShellProps'
 import ASAppBottomSheet from './ASAppBottomSheet.vue'
@@ -40,7 +40,7 @@ describe('ASAppDetailPanel', () => {
       props: { open: true, offset: 376 },
       slots: { default: '<p>Ficha</p>' },
     })
-    expect(wrapper.attributes('style')).toContain('left: 376px')
+    expect(wrapper.attributes('style')).toContain('--as-app-detail-offset: 376px')
     expect(wrapper.attributes('aria-label')).toBe('Detalle')
     const close = wrapper.find('button')
     expect(close.attributes('aria-label')).toBe('Cerrar detalle')
@@ -55,6 +55,74 @@ describe('ASAppDetailPanel', () => {
     expect(wrapper.find('button').exists()).toBe(false)
     expect(wrapper.attributes('aria-label')).toBe('Ficha de la estación')
     expect(wrapper.attributes('inert')).toBeDefined()
+  })
+
+  describe('ancho', () => {
+    /** Contenedor de 1000 px (jsdom no mide): el panel queda dentro, desde `offset`. */
+    function mountSized(props: Record<string, unknown> = {}) {
+      const wrapper = mount(ASAppDetailPanel, {
+        props: { open: true, offset: 100, ...props },
+        attachTo: document.body,
+      })
+      const container = wrapper.element.parentElement!
+      Object.defineProperty(container, 'clientWidth', { value: 1000 })
+      container.getBoundingClientRect = () => ({ left: 0, right: 1000 }) as DOMRect
+      return wrapper
+    }
+    afterEach(() => {
+      document.body.innerHTML = ''
+    })
+
+    it('sin width ocupa todo desde offset; con width, se pega a la derecha', async () => {
+      const wrapper = mountSized()
+      expect(wrapper.classes()).not.toContain('as-app-detail-panel--sized')
+      expect(wrapper.find('[role="separator"]').exists()).toBe(false)
+      await wrapper.setProps({ width: 480 })
+      expect(wrapper.classes()).toContain('as-app-detail-panel--sized')
+      expect(wrapper.attributes('style')).toContain('--as-app-detail-width: 480px')
+    })
+
+    it('arrastrar el asa cambia el ancho, entre minWidth y lo disponible', async () => {
+      const wrapper = mountSized({ resizable: true })
+      const resizer = wrapper.find('[role="separator"]')
+      expect(resizer.attributes()).toMatchObject({
+        'aria-orientation': 'vertical',
+        'aria-label': 'Cambiar el ancho del detalle',
+        tabindex: '0',
+      })
+      await resizer.trigger('pointerdown', { button: 0 })
+      expect(wrapper.classes()).toContain('as-app-detail-panel--resizing')
+      await resizer.trigger('pointermove', { clientX: 400 })
+      await resizer.trigger('pointermove', { clientX: 900 })
+      await resizer.trigger('pointermove', { clientX: 0 })
+      await resizer.trigger('pointerup')
+      // 1000 − 400; el mínimo (320); lo disponible desde offset (900).
+      expect(wrapper.emitted('update:width')).toEqual([[600], [320], [900]])
+      expect(wrapper.classes()).not.toContain('as-app-detail-panel--resizing')
+      // Sin v-model también funciona: el ancho se queda en el panel.
+      expect(wrapper.attributes('style')).toContain('--as-app-detail-width: 900px')
+      await resizer.trigger('pointermove', { clientX: 500 })
+      expect(wrapper.emitted('update:width')).toHaveLength(3)
+    })
+
+    it('flechas (con Mayús, más), Fin al mínimo; Inicio y doble clic lo ocupan todo', async () => {
+      const wrapper = mountSized({ resizable: true, width: 500 })
+      const resizer = wrapper.find('[role="separator"]')
+      await resizer.trigger('keydown', { key: 'ArrowLeft' })
+      await resizer.trigger('keydown', { key: 'ArrowRight', shiftKey: true })
+      await resizer.trigger('keydown', { key: 'End' })
+      await resizer.trigger('keydown', { key: 'Home' })
+      await wrapper.setProps({ width: 600 })
+      await resizer.trigger('dblclick')
+      expect(wrapper.emitted('update:width')).toEqual([
+        [516],
+        [452],
+        [320],
+        [undefined],
+        [undefined],
+      ])
+      expect(wrapper.classes()).not.toContain('as-app-detail-panel--sized')
+    })
   })
 })
 

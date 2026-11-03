@@ -129,7 +129,23 @@ describe('ASAppShell · escritorio', () => {
       expect.arrayContaining(['as-app-drawer--overlay', 'as-app-drawer--open']),
     )
     // El detalle sigue empezando tras el panel, para no quedar debajo de él.
-    expect(overlay.find('.as-app-detail-panel').attributes('style')).toContain('left: 376px')
+    expect(overlay.find('.as-app-detail-panel').attributes('style')).toContain(
+      '--as-app-detail-offset: 376px',
+    )
+  })
+
+  it('el detalle ocupa todo por defecto; detailWidth lo fija y el asa emite update:detailWidth', async () => {
+    const plain = mount(ASAppShell, { props: { sections, detailOpen: true } })
+    expect(plain.find('.as-app-detail-panel').classes()).not.toContain('as-app-detail-panel--sized')
+    expect(plain.find('[role="separator"]').exists()).toBe(false)
+    const sized = mount(ASAppShell, {
+      props: { sections, detailOpen: true, detailWidth: 480, detailResizable: true },
+    })
+    expect(sized.find('.as-app-detail-panel').attributes('style')).toContain(
+      '--as-app-detail-width: 480px',
+    )
+    await sized.find('[role="separator"]').trigger('keydown', { key: 'Home' })
+    expect(sized.emitted('update:detailWidth')).toEqual([[undefined]])
   })
 
   it('el panel se cierra con el `close` del slot', async () => {
@@ -142,9 +158,9 @@ describe('ASAppShell · escritorio', () => {
     const { wrapper } = mountShell({ detailOpen: true })
     const detail = () => wrapper.find('.as-app-detail-panel')
     expect(detail().classes()).toContain('as-app-detail-panel--open')
-    expect(detail().attributes('style')).toContain('left: 56px')
+    expect(detail().attributes('style')).toContain('--as-app-detail-offset: 56px')
     await wrapper.findAll('.as-app-rail__item')[0]!.trigger('click')
-    expect(detail().attributes('style')).toContain('left: 376px')
+    expect(detail().attributes('style')).toContain('--as-app-detail-offset: 376px')
     // Abrir el panel no cierra el detalle.
     expect(detail().classes()).toContain('as-app-detail-panel--open')
   })
@@ -230,8 +246,21 @@ describe('ASAppShell · móvil', () => {
   it('el detalle ocupa toda la pantalla, siempre con su botón de cerrar', async () => {
     const { wrapper } = mountShell({ detailOpen: true })
     await nextTick()
-    expect(wrapper.find('.as-app-detail-panel').attributes('style')).toContain('left: 0px')
+    expect(wrapper.find('.as-app-detail-panel').attributes('style')).toContain(
+      '--as-app-detail-offset: 0px',
+    )
     expect(wrapper.find('.as-app-detail-panel__close').exists()).toBe(true)
+  })
+
+  it('en móvil, el detalle ignora detailWidth y no tiene asa', async () => {
+    const wrapper = mount(ASAppShell, {
+      props: { sections, detailOpen: true, detailWidth: 480, detailResizable: true },
+    })
+    await nextTick()
+    expect(wrapper.find('.as-app-detail-panel').classes()).not.toContain(
+      'as-app-detail-panel--sized',
+    )
+    expect(wrapper.find('[role="separator"]').exists()).toBe(false)
   })
 })
 

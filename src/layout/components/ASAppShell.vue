@@ -36,6 +36,8 @@ import { provideAppShellContext } from '@/layout/composables/useAppShellContext'
  *   otra lo cierra y lo vuelve a abrir con la nueva (`switchDelay`).
  * - **Detalle**: entra por la derecha y tapa el contenido desde el borde de
  *   los menús; si el panel lateral se abre o se cierra, se ajusta sin cerrarse.
+ *   Con `detailWidth` mide eso y el mapa se ve a su izquierda; con
+ *   `detailResizable`, su borde izquierdo se arrastra para cambiar el ancho.
  * - **Móvil** (por debajo de `breakpoint`, medido sobre el propio layout):
  *   la barra va abajo; su botón de menú despliega las secciones encima de
  *   ella, y cada sección sube desde abajo (con un asa para ampliarla). El
@@ -71,6 +73,9 @@ const props = withDefaults(defineProps<AppShellProps>(), {
   switchDelay: 280,
   detailCloseButton: true,
   detailLabel: undefined,
+  detailWidth: undefined,
+  detailResizable: false,
+  detailMinWidth: 320,
   height: '100%',
   theme: undefined,
 })
@@ -296,6 +301,10 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
         :offset="detailLeft"
         :label="props.detailLabel"
         :close-button="props.detailCloseButton"
+        :width="mobile ? undefined : props.detailWidth"
+        :resizable="props.detailResizable && !mobile"
+        :min-width="props.detailMinWidth"
+        @update:width="emit('update:detailWidth', $event)"
         @close="closeDetail"
       >
         <slot name="detail" />

@@ -62,12 +62,34 @@ export interface AppDetailPanelProps {
   closeButton?: boolean
   /** Nombre accesible del botón de cerrar. Por defecto, "Cerrar detalle". */
   closeLabel?: string
+  /**
+   * Ancho en px (`v-model:width`), pegado a la derecha. Sin él, ocupa todo
+   * desde `offset` hasta el borde derecho. Nunca pasa de `offset` por la izquierda.
+   */
+  width?: number
+  /**
+   * Asa en el borde izquierdo para cambiar el ancho arrastrando, con las
+   * flechas del teclado, o volver a ocuparlo todo con doble clic (o Inicio).
+   * Funciona sin `v-model:width`; con él, el proyecto puede guardar el ancho.
+   * @default false
+   */
+  resizable?: boolean
+  /**
+   * Ancho mínimo al arrastrar, en px.
+   * @default 320
+   */
+  minWidth?: number
 }
 
 /** Eventos de `ASAppDetailPanel`. */
 export interface AppDetailPanelEmits {
   /** Se pulsó el botón de cerrar. */
   close: []
+  /**
+   * Para `v-model:width`: el ancho al arrastrar el asa o moverla con el
+   * teclado, o `undefined` al volver a ocuparlo todo.
+   */
+  'update:width': [width: number | undefined]
 }
 
 /**
