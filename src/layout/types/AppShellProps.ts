@@ -1,4 +1,5 @@
 import type { IconValue } from '@/core/types/icon'
+import type { AppDrawerMode } from './AppPanelsProps'
 
 /**
  * Una sección de la aplicación: un icono en la barra lateral (y una línea
@@ -71,6 +72,13 @@ export interface AppShellProps {
   railWidth?: number
   /** Ancho (px) del panel lateral. @default 320 */
   drawerWidth?: number
+  /**
+   * Cómo se abre el panel lateral en escritorio: `'push'` empuja el mapa (se
+   * estrecha y se reajusta), `'overlay'` entra encima y el mapa no se mueve.
+   * En móvil no influye: el panel siempre sube desde abajo.
+   * @default 'push'
+   */
+  drawerMode?: AppDrawerMode
   /**
    * Al cambiar de sección, el panel lateral se cierra y se vuelve a abrir
    * con la nueva pasados estos milisegundos. @default 280

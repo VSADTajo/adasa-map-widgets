@@ -22,6 +22,16 @@ describe('ASAppDrawer', () => {
     expect(panel.attributes('inert')).toBeDefined()
     expect(wrapper.find('.contenido').exists()).toBe(true)
   })
+
+  it("empuja por defecto; con mode 'overlay', tapa el contenido", async () => {
+    const wrapper = mount(ASAppDrawer, { props: { open: true } })
+    expect(wrapper.classes()).toContain('as-app-drawer--push')
+    await wrapper.setProps({ mode: 'overlay' })
+    expect(wrapper.classes()).toContain('as-app-drawer--overlay')
+    expect(wrapper.classes()).not.toContain('as-app-drawer--push')
+    await wrapper.setProps({ open: false })
+    expect(wrapper.find('aside').attributes('inert')).toBeDefined()
+  })
 })
 
 describe('ASAppDetailPanel', () => {

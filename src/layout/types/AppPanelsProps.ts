@@ -1,22 +1,35 @@
 import type { AppSection } from './AppShellProps'
 
 /**
+ * Cómo se abre el panel de sección:
+ * - `'push'`: ocupa su sitio y **empuja** el contenido (el mapa se estrecha).
+ * - `'overlay'`: entra **encima** del contenido, que no se mueve ni cambia de tamaño.
+ */
+export type AppDrawerMode = 'push' | 'overlay'
+
+/**
  * Props de `ASAppDrawer`: panel de sección de escritorio, que empuja el
- * contenido al abrirse (va en una fila flex, junto a la barra de iconos).
+ * contenido al abrirse o lo tapa (va en una fila flex, junto a la barra de iconos).
  *
  * @example
  * ```vue
  * <ASAppDrawer :open="seccion !== null" label="Capas"><PanelCapas /></ASAppDrawer>
+ * <ASAppDrawer :open="seccion !== null" mode="overlay" label="Capas"><PanelCapas /></ASAppDrawer>
  * ```
  */
 export interface AppDrawerProps {
-  /** Abierto: ocupa `width` y empuja el contenido; cerrado, ancho 0 e inerte. */
+  /** Abierto: se ve con `width`; cerrado, oculto e inerte. */
   open: boolean
   /**
    * Ancho abierto, en px.
    * @default 320
    */
   width?: number
+  /**
+   * `'push'` empuja el contenido; `'overlay'` lo tapa sin moverlo (ver `AppDrawerMode`).
+   * @default 'push'
+   */
+  mode?: AppDrawerMode
   /** Nombre accesible del panel (p. ej. el de la sección abierta). */
   label?: string
   /** Id del panel, para el `aria-controls` de quien lo abre. */

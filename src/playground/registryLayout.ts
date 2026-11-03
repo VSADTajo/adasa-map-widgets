@@ -136,6 +136,15 @@ const USER_MENU_SCHEMA: PropField[] = [
 const DRAWER_SCHEMA: PropField[] = [
   { key: 'open', label: 'Abierto', type: 'boolean', default: true },
   { key: 'width', label: 'Ancho (px)', type: 'number', default: 320, min: 200, max: 480, step: 20 },
+  {
+    key: 'mode',
+    label: 'Modo',
+    type: 'select',
+    options: ['push', 'overlay'],
+    docType: "'push' | 'overlay'",
+    default: 'push',
+    description: 'push: empuja el contenido. overlay: lo tapa sin moverlo.',
+  },
   { key: 'label', label: 'Nombre accesible', type: 'string', default: 'Capas' },
 ]
 

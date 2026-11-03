@@ -1967,6 +1967,16 @@ export const registry: RegistryEntry[] = [
         step: 20,
       },
       {
+        key: 'drawerMode',
+        label: 'Panel lateral',
+        type: 'select',
+        options: ['push', 'overlay'],
+        docType: "'push' | 'overlay'",
+        default: 'push',
+        description:
+          'push: empuja el mapa (se estrecha). overlay: entra encima y el mapa no se mueve.',
+      },
+      {
         key: 'switchDelay',
         label: 'Reapertura al cambiar de sección (ms)',
         type: 'number',

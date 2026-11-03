@@ -61,6 +61,7 @@ export function appShellToSnippet(values: Values): string {
   if (values.breakpoint !== 960) attributes.push(`:breakpoint="${values.breakpoint}"`)
   if (values.railWidth !== 56) attributes.push(`:rail-width="${values.railWidth}"`)
   if (values.drawerWidth !== 320) attributes.push(`:drawer-width="${values.drawerWidth}"`)
+  if (values.drawerMode === 'overlay') attributes.push('drawer-mode="overlay"')
   if (values.switchDelay !== 280) attributes.push(`:switch-delay="${values.switchDelay}"`)
   if (values.detailCloseButton === false) attributes.push(':detail-close-button="false"')
   if (values.theme) attributes.push(`theme="${values.theme}"`)

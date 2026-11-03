@@ -119,6 +119,19 @@ describe('ASAppShell · escritorio', () => {
     expect(wrapper.find('.panel').text()).toBe('Avisos')
   })
 
+  it("el panel empuja el contenido por defecto; con drawerMode 'overlay' lo tapa", async () => {
+    const pushed = mount(ASAppShell, { props: { sections } })
+    expect(pushed.find('.as-app-drawer').classes()).toContain('as-app-drawer--push')
+    const overlay = mount(ASAppShell, {
+      props: { sections, drawerMode: 'overlay', activeSection: 'capas', detailOpen: true },
+    })
+    expect(overlay.find('.as-app-drawer').classes()).toEqual(
+      expect.arrayContaining(['as-app-drawer--overlay', 'as-app-drawer--open']),
+    )
+    // El detalle sigue empezando tras el panel, para no quedar debajo de él.
+    expect(overlay.find('.as-app-detail-panel').attributes('style')).toContain('left: 376px')
+  })
+
   it('el panel se cierra con el `close` del slot', async () => {
     const { wrapper, activeSection } = mountShell({ activeSection: 'capas' })
     await wrapper.find('.cerrar').trigger('click')
