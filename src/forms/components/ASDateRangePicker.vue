@@ -113,7 +113,11 @@ function openPanel(): void {
   if (isOpen.value) return close()
   draftStart.value = props.modelValue?.start ?? null
   draftEnd.value = props.modelValue?.end ?? null
-  focused.value = startOfDay(props.modelValue?.end ?? props.max ?? new Date())
+  // Sin periodo, el mes de `now` (no el de hoy), sin pasar de `max`.
+  const reference = props.now ?? new Date()
+  focused.value = startOfDay(
+    props.modelValue?.end ?? (props.max && props.max < reference ? props.max : reference),
+  )
   open()
   void nextTick(() => calendar.value?.focusActive())
 }

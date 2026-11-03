@@ -126,6 +126,16 @@ describe('ASDateRangePicker', () => {
       expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
     })
 
+    it('sin periodo, abre en el mes de `now` (no en el de hoy), sin pasar de max', async () => {
+      const past = mountPicker({ now: d(2025, 3, 15) })
+      await open(past)
+      expect(day(past, 'sábado, 15 de marzo de 2025')).toBeDefined()
+      const capped = mountPicker({ now: d(2025, 3, 15), max: d(2025, 2, 10) })
+      await open(capped)
+      expect(day(capped, 'lunes, 10 de febrero de 2025')).toBeDefined()
+      expect(day(capped, 'sábado, 15 de marzo de 2025')).toBeUndefined()
+    })
+
     it('si el segundo día es anterior, se intercambian', async () => {
       const wrapper = mountPicker()
       await open(wrapper)
