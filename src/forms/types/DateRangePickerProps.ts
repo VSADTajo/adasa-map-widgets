@@ -61,9 +61,10 @@ export interface DateRangePickerProps extends FieldProps {
   /** Botón para vaciar el periodo. */
   clearable?: boolean
   /**
-   * Instante con el que se calculan los periodos predefinidos. Sin él, el
-   * momento de pulsarlos. Útil para trabajar en un instante de referencia
-   * (una simulación, un informe pasado).
+   * Instante con el que se calculan los periodos predefinidos, y mes en el
+   * que se abre el calendario si no hay periodo. Sin él, el momento de
+   * pulsarlos. Útil para trabajar en un instante de referencia (una
+   * simulación, un informe pasado).
    */
   now?: Date
 }

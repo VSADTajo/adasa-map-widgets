@@ -47,9 +47,16 @@ export function sectionOptions(values: Record<string, unknown>): string[] {
 
 type Values = Record<string, unknown>
 
-/** El formulario usa `''` para "ninguna sección": el shell espera `null`. */
+/**
+ * El formulario usa `''` para "ninguna sección" (el shell espera `null`) y
+ * `0` para "sin ancho de detalle" (`undefined`: ocupa todo).
+ */
 export function appShellToProps(values: Values): Values {
-  return { ...values, activeSection: values.activeSection || null }
+  return {
+    ...values,
+    activeSection: values.activeSection || null,
+    detailWidth: values.detailWidth || undefined,
+  }
 }
 
 export function appShellToSnippet(values: Values): string {
@@ -61,8 +68,13 @@ export function appShellToSnippet(values: Values): string {
   if (values.breakpoint !== 960) attributes.push(`:breakpoint="${values.breakpoint}"`)
   if (values.railWidth !== 56) attributes.push(`:rail-width="${values.railWidth}"`)
   if (values.drawerWidth !== 320) attributes.push(`:drawer-width="${values.drawerWidth}"`)
+  if (values.drawerMode === 'overlay') attributes.push('drawer-mode="overlay"')
   if (values.switchDelay !== 280) attributes.push(`:switch-delay="${values.switchDelay}"`)
   if (values.detailCloseButton === false) attributes.push(':detail-close-button="false"')
+  if (values.detailResizable || values.detailWidth)
+    attributes.push('v-model:detail-width="anchoDetalle"')
+  if (values.detailResizable) attributes.push('detail-resizable')
+  if (values.detailMinWidth !== 320) attributes.push(`:detail-min-width="${values.detailMinWidth}"`)
   if (values.theme) attributes.push(`theme="${values.theme}"`)
   return [
     '<ASAppShell',

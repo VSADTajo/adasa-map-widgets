@@ -71,7 +71,13 @@ const PANEL_TEXT = 'Contenido del panel: capas, avisos, mapas base...'
     <ASAppDrawer v-bind="attrs"
       ><p class="demo-piece__text">{{ PANEL_TEXT }}</p></ASAppDrawer
     >
-    <p class="demo-piece__main">El contenido principal se desplaza (no queda tapado).</p>
+    <p class="demo-piece__main">
+      {{
+        attrs.mode === 'overlay'
+          ? 'El contenido principal queda debajo y no se mueve.'
+          : 'El contenido principal se desplaza (no queda tapado).'
+      }}
+    </p>
   </div>
   <div v-else-if="piece === 'detail'" class="demo-piece">
     <p class="demo-piece__main">Contenido principal</p>

@@ -1,4 +1,5 @@
 import type { IconValue } from '@/core/types/icon'
+import type { AppDrawerMode } from './AppPanelsProps'
 
 /**
  * Una sección de la aplicación: un icono en la barra lateral (y una línea
@@ -72,6 +73,13 @@ export interface AppShellProps {
   /** Ancho (px) del panel lateral. @default 320 */
   drawerWidth?: number
   /**
+   * Cómo se abre el panel lateral en escritorio: `'push'` empuja el mapa (se
+   * estrecha y se reajusta), `'overlay'` entra encima y el mapa no se mueve.
+   * En móvil no influye: el panel siempre sube desde abajo.
+   * @default 'push'
+   */
+  drawerMode?: AppDrawerMode
+  /**
    * Al cambiar de sección, el panel lateral se cierra y se vuelve a abrir
    * con la nueva pasados estos milisegundos. @default 280
    */
@@ -80,6 +88,21 @@ export interface AppShellProps {
   detailCloseButton?: boolean
   /** Nombre accesible del panel de detalle. Por defecto, "Detalle" (traducido). */
   detailLabel?: string
+  /**
+   * Ancho del detalle en escritorio, en px (`v-model:detail-width`), pegado a
+   * la derecha: el mapa se ve a su izquierda. Sin él, tapa todo el contenido
+   * desde el borde de los menús. En móvil, el detalle siempre ocupa toda la pantalla.
+   */
+  detailWidth?: number
+  /**
+   * Asa en el borde izquierdo del detalle para cambiar su ancho arrastrando o
+   * con las flechas; doble clic (o Inicio) lo vuelve a ocupar todo. Funciona
+   * sin `v-model:detail-width`; con él, el proyecto puede guardar el ancho.
+   * @default false
+   */
+  detailResizable?: boolean
+  /** Ancho mínimo (px) del detalle al arrastrar. @default 320 */
+  detailMinWidth?: number
   /** Alto del layout (CSS). @default '100%' */
   height?: string
   /**
@@ -96,6 +119,11 @@ export interface AppShellEmits {
   'update:activeSection': [section: string | null]
   /** Para `v-model:detail-open`: `false` al cerrar el detalle (botón o Escape). */
   'update:detailOpen': [open: boolean]
+  /**
+   * Para `v-model:detail-width`: el ancho al arrastrar el asa del detalle, o
+   * `undefined` al volver a ocuparlo todo.
+   */
+  'update:detailWidth': [width: number | undefined]
 }
 
 /** Lo que recibe el slot `section` de `ASAppShell`. */

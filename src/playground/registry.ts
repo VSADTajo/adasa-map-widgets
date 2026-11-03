@@ -1967,6 +1967,16 @@ export const registry: RegistryEntry[] = [
         step: 20,
       },
       {
+        key: 'drawerMode',
+        label: 'Panel lateral',
+        type: 'select',
+        options: ['push', 'overlay'],
+        docType: "'push' | 'overlay'",
+        default: 'push',
+        description:
+          'push: empuja el mapa (se estrecha). overlay: entra encima y el mapa no se mueve.',
+      },
+      {
         key: 'switchDelay',
         label: 'Reapertura al cambiar de sección (ms)',
         type: 'number',
@@ -1981,6 +1991,35 @@ export const registry: RegistryEntry[] = [
         type: 'boolean',
         default: true,
       },
+      {
+        key: 'detailWidth',
+        label: 'Ancho del detalle (v-model)',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 1200,
+        step: 20,
+        docType: 'number | undefined',
+        description:
+          '0 = sin prop: ocupa todo desde los menús. Con ancho, el mapa se ve a su izquierda.',
+      },
+      {
+        key: 'detailResizable',
+        label: 'Detalle redimensionable',
+        type: 'boolean',
+        default: false,
+        description:
+          'Asa en su borde izquierdo: arrastrar o flechas; doble clic o Inicio lo ocupa todo.',
+      },
+      {
+        key: 'detailMinWidth',
+        label: 'Ancho mínimo del detalle',
+        type: 'number',
+        default: 320,
+        min: 200,
+        max: 600,
+        step: 20,
+      },
       { key: 'height', label: 'Alto (CSS)', type: 'string', default: '640px' },
       THEME_FIELD,
     ],
@@ -1994,6 +2033,12 @@ export const registry: RegistryEntry[] = [
         name: 'update:detailOpen',
         payload: 'boolean',
         description: 'Se cerró el detalle (botón o Escape): para v-model:detail-open.',
+      },
+      {
+        name: 'update:detailWidth',
+        payload: 'number | undefined',
+        description:
+          'Se arrastró el asa del detalle (o undefined al ocuparlo todo): para v-model:detail-width.',
       },
     ],
     types: [APP_SECTION_DOC, ICON_VALUE_DOC],
@@ -2011,6 +2056,10 @@ export const registry: RegistryEntry[] = [
       'onUpdate:detailOpen': (open) => {
         values.detailOpen = open
         log('update:detailOpen', open)
+      },
+      'onUpdate:detailWidth': (width) => {
+        values.detailWidth = width ?? 0
+        log('update:detailWidth', width)
       },
     }),
   },

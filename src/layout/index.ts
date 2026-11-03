@@ -32,6 +32,7 @@ export type {
   AppBottomSheetProps,
   AppDetailPanelEmits,
   AppDetailPanelProps,
+  AppDrawerMode,
   AppDrawerProps,
   AppMobileMenuEmits,
   AppMobileMenuProps,

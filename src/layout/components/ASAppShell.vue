@@ -31,10 +31,13 @@ import { provideAppShellContext } from '@/layout/composables/useAppShellContext'
  *
  * Cómo se abren y cierran (igual que en los visores SAIH):
  * - **Panel lateral** (escritorio): junto a la barra de iconos, empuja el
- *   contenido (no lo tapa). Pulsar la sección abierta lo cierra; pulsar
+ *   contenido (no lo tapa), o con `drawerMode="overlay"` entra encima y el
+ *   contenido no se mueve. Pulsar la sección abierta lo cierra; pulsar
  *   otra lo cierra y lo vuelve a abrir con la nueva (`switchDelay`).
  * - **Detalle**: entra por la derecha y tapa el contenido desde el borde de
  *   los menús; si el panel lateral se abre o se cierra, se ajusta sin cerrarse.
+ *   Con `detailWidth` mide eso y el mapa se ve a su izquierda; con
+ *   `detailResizable`, su borde izquierdo se arrastra para cambiar el ancho.
  * - **Móvil** (por debajo de `breakpoint`, medido sobre el propio layout):
  *   la barra va abajo; su botón de menú despliega las secciones encima de
  *   ella, y cada sección sube desde abajo (con un asa para ampliarla). El
@@ -66,9 +69,13 @@ const props = withDefaults(defineProps<AppShellProps>(), {
   breakpoint: 960,
   railWidth: 56,
   drawerWidth: 320,
+  drawerMode: 'push',
   switchDelay: 280,
   detailCloseButton: true,
   detailLabel: undefined,
+  detailWidth: undefined,
+  detailResizable: false,
+  detailMinWidth: 320,
   height: '100%',
   theme: undefined,
 })
@@ -238,7 +245,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
     </ASAppTopBar>
 
     <div class="as-app-shell__body">
-      <!-- Escritorio: barra de iconos y panel de la sección, que empuja el contenido -->
+      <!-- Escritorio: barra de iconos y panel de la sección, que empuja el contenido o lo tapa -->
       <template v-if="!mobile">
         <ASAppRail
           :sections="props.sections"
@@ -251,6 +258,7 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
           :id="`${id}-panel`"
           :open="panelOpen"
           :width="props.drawerWidth"
+          :mode="props.drawerMode"
           :label="currentSection?.label"
         >
           <slot v-if="sectionSlotProps" name="section" v-bind="sectionSlotProps" />
@@ -293,6 +301,10 @@ const sectionSlotProps = computed<AppShellSectionSlotProps | null>(() =>
         :offset="detailLeft"
         :label="props.detailLabel"
         :close-button="props.detailCloseButton"
+        :width="mobile ? undefined : props.detailWidth"
+        :resizable="props.detailResizable && !mobile"
+        :min-width="props.detailMinWidth"
+        @update:width="emit('update:detailWidth', $event)"
         @close="closeDetail"
       >
         <slot name="detail" />

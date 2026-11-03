@@ -39,6 +39,7 @@ const DEMO_ITEMS: Record<string, string[]> = {
     v-bind="props"
     @update:active-section="emit('update:activeSection', $event)"
     @update:detail-open="emit('update:detailOpen', $event)"
+    @update:detail-width="emit('update:detailWidth', $event)"
   >
     <template #brand>
       <ASAppBrand :logos="DEMO_LOGOS" title="Visor" />

@@ -4,8 +4,9 @@ import type { AppDrawerProps } from '@/layout/types/AppPanelsProps'
 /**
  * Panel de sección de escritorio (el `SecondaryDrawer` de los visores
  * SAIH): junto a la barra de iconos, se abre ensanchándose y **empuja** el
- * contenido en vez de taparlo. Cerrado, mide 0 y es inerte, pero mantiene
- * su contenido para que no desaparezca de golpe mientras sale.
+ * contenido en vez de taparlo. Con `mode="overlay"` entra igual pero
+ * **encima** del contenido, que no se mueve. Cerrado, es inerte, pero
+ * mantiene su contenido para que no desaparezca de golpe mientras sale.
  *
  * Es una pieza de `ASAppShell`, que la abre y la cierra; se puede usar
  * sola en un layout propio (dentro de una fila flex).
@@ -21,6 +22,7 @@ import type { AppDrawerProps } from '@/layout/types/AppPanelsProps'
  */
 const props = withDefaults(defineProps<AppDrawerProps>(), {
   width: 320,
+  mode: 'push',
   label: undefined,
   id: undefined,
 })
@@ -29,7 +31,7 @@ const props = withDefaults(defineProps<AppDrawerProps>(), {
 <template>
   <div
     class="as-app-drawer"
-    :class="{ 'as-app-drawer--open': props.open }"
+    :class="[`as-app-drawer--${props.mode}`, { 'as-app-drawer--open': props.open }]"
     :style="{ '--as-app-drawer-width': `${props.width}px` }"
   >
     <aside
@@ -68,8 +70,41 @@ const props = withDefaults(defineProps<AppDrawerProps>(), {
   color: var(--as-app-panel-text, light-dark(#0f172a, #f1f5f9));
 }
 
+/*
+ * Encima del contenido: el marco no ocupa sitio (ancho 0) y el panel sale de
+ * él hacia la derecha. Se desliza igual que al empujar: se desplaza y a la vez
+ * se recorta por el borde del marco, así no asoma por debajo de la barra de
+ * iconos. El recorte deja ver la sombra a la derecha.
+ */
+.as-app-drawer--overlay {
+  z-index: 1;
+  overflow: visible;
+  transition: none;
+}
+
+.as-app-drawer--overlay.as-app-drawer--open {
+  width: 0;
+}
+
+.as-app-drawer--overlay .as-app-drawer__panel {
+  right: auto;
+  left: 0;
+  box-shadow: var(--as-shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.2));
+  transform: translateX(-100%);
+  clip-path: inset(0 0 0 100%);
+  transition:
+    transform var(--as-app-transition, 0.2s cubic-bezier(0.4, 0, 0.2, 1)),
+    clip-path var(--as-app-transition, 0.2s cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.as-app-drawer--overlay.as-app-drawer--open .as-app-drawer__panel {
+  transform: none;
+  clip-path: inset(0 -40px 0 0);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .as-app-drawer {
+  .as-app-drawer,
+  .as-app-drawer--overlay .as-app-drawer__panel {
     transition: none;
   }
 }

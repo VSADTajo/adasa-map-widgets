@@ -136,6 +136,15 @@ const USER_MENU_SCHEMA: PropField[] = [
 const DRAWER_SCHEMA: PropField[] = [
   { key: 'open', label: 'Abierto', type: 'boolean', default: true },
   { key: 'width', label: 'Ancho (px)', type: 'number', default: 320, min: 200, max: 480, step: 20 },
+  {
+    key: 'mode',
+    label: 'Modo',
+    type: 'select',
+    options: ['push', 'overlay'],
+    docType: "'push' | 'overlay'",
+    default: 'push',
+    description: 'push: empuja el contenido. overlay: lo tapa sin moverlo.',
+  },
   { key: 'label', label: 'Nombre accesible', type: 'string', default: 'Capas' },
 ]
 
@@ -154,6 +163,34 @@ const DETAIL_SCHEMA: PropField[] = [
   { key: 'closeButton', label: 'Botón de cerrar', type: 'boolean', default: true },
   { key: 'label', label: 'Nombre accesible', type: 'string', default: '' },
   { key: 'closeLabel', label: 'Nombre del botón de cerrar', type: 'string', default: '' },
+  {
+    key: 'width',
+    label: 'Ancho (v-model)',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 900,
+    step: 20,
+    docType: 'number | undefined',
+    description: '0 = sin prop: ocupa todo desde offset.',
+  },
+  {
+    key: 'resizable',
+    label: 'Redimensionable',
+    type: 'boolean',
+    default: false,
+    description:
+      'Asa en el borde izquierdo: arrastrar o flechas; doble clic o Inicio lo ocupa todo.',
+  },
+  {
+    key: 'minWidth',
+    label: 'Ancho mínimo',
+    type: 'number',
+    default: 320,
+    min: 200,
+    max: 600,
+    step: 20,
+  },
 ]
 
 const SHEET_SCHEMA: PropField[] = [
@@ -358,7 +395,15 @@ export const layoutEntries: RegistryEntry[] = [
     description:
       'Panel de detalle (el RightNavigation de TAJO): entra por la derecha y tapa el contenido desde offset.',
     propsSchema: DETAIL_SCHEMA,
-    events: [{ name: 'close', description: 'Botón de cerrar.' }],
+    events: [
+      { name: 'close', description: 'Botón de cerrar.' },
+      {
+        name: 'update:width',
+        payload: 'number | undefined',
+        description: 'Se arrastró el asa (o undefined al ocuparlo todo): para v-model:width.',
+      },
+    ],
+    map: (values) => ({ ...values, width: values.width || undefined }),
     toSnippet: formsToSnippet('ASAppDetailPanel', DETAIL_SCHEMA, {
       extra: ['@close="detalle = false"'],
       slot: () => '<FichaEstacion />',
@@ -367,6 +412,10 @@ export const layoutEntries: RegistryEntry[] = [
       onClose: () => {
         values.open = false
         log('close')
+      },
+      'onUpdate:width': (width) => {
+        values.width = width ?? 0
+        log('update:width', width)
       },
     }),
   }),
@@ -413,7 +462,15 @@ export const layoutEntries: RegistryEntry[] = [
     piece: 'panel-header',
     description: 'Cabecera de un panel de sección: título y botón de cerrar con flecha.',
     propsSchema: PANEL_HEADER_SCHEMA,
-    events: [{ name: 'close', description: 'Botón de cerrar.' }],
+    events: [
+      { name: 'close', description: 'Botón de cerrar.' },
+      {
+        name: 'update:width',
+        payload: 'number | undefined',
+        description: 'Se arrastró el asa (o undefined al ocuparlo todo): para v-model:width.',
+      },
+    ],
+    map: (values) => ({ ...values, width: values.width || undefined }),
     toSnippet: formsToSnippet('ASAppPanelHeader', PANEL_HEADER_SCHEMA, {
       extra: ['@close="cerrarPanel"'],
     }),

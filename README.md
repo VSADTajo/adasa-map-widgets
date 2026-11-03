@@ -40,7 +40,7 @@ Importar solo la raíz no carga nada de mapas: ni código ni tipos de Leaflet o 
 | [`ASAppBrand`](src/layout/components/ASAppBrand.vue)                    | `/layout` | Logos, nombre y subtítulo de la aplicación en la barra                       | —                                   |
 | [`ASAppSearch`](src/layout/components/ASAppSearch.vue)                  | `/layout` | Buscador de la barra (sobre `ASSearchInput`)                                 | —                                   |
 | [`ASAppUserMenu`](src/layout/components/ASAppUserMenu.vue)              | `/layout` | Avatar con el menú del usuario: tema, idioma y cerrar sesión                 | —                                   |
-| [`ASAppDrawer`](src/layout/components/ASAppDrawer.vue)                  | `/layout` | Panel de sección de escritorio que empuja el contenido                       | —                                   |
+| [`ASAppDrawer`](src/layout/components/ASAppDrawer.vue)                  | `/layout` | Panel de sección de escritorio que empuja el contenido o lo tapa             | —                                   |
 | [`ASAppDetailPanel`](src/layout/components/ASAppDetailPanel.vue)        | `/layout` | Panel de detalle que entra por la derecha                                    | —                                   |
 | [`ASAppBottomSheet`](src/layout/components/ASAppBottomSheet.vue)        | `/layout` | Panel móvil que sube desde abajo, con asa para ampliarlo                     | —                                   |
 | [`ASAppMobileMenu`](src/layout/components/ASAppMobileMenu.vue)          | `/layout` | Menú de secciones del móvil, encima de la barra                              | —                                   |
@@ -462,8 +462,11 @@ Para verlo funcionando, abre el compositor del playground (`#composer`). Activa 
 
 **`ASAppShell`** da la estructura de los visores de mapa: el contenido principal (el mapa) ocupa todo, con una **barra corporativa** arriba, una **barra de iconos** a la izquierda que abre el **panel de cada sección**, y un **panel de detalle** que entra por la derecha. Abre y cierra igual que los visores SAIH:
 
-- **Panel de sección** (escritorio): junto a la barra de iconos, de 320 px, y **empuja** el mapa (no lo tapa; `ASMap` se reajusta solo). Pulsar la sección abierta lo cierra; pulsar otra lo cierra y lo **vuelve a abrir con la nueva a los 280 ms** (`switch-delay`).
+- **Panel de sección** (escritorio): junto a la barra de iconos, de 320 px, y **empuja** el mapa (no lo tapa; `ASMap` se reajusta solo). Con `drawer-mode="overlay"` entra **encima** del mapa, que no se mueve ni cambia de tamaño (útil si el reajuste molesta, p. ej. con capas pesadas o animaciones en curso); el panel lleva sombra y los controles del mapa que queden debajo se tapan mientras está abierto. Pulsar la sección abierta lo cierra; pulsar otra lo cierra y lo **vuelve a abrir con la nueva a los 280 ms** (`switch-delay`).
 - **Detalle**: entra por la derecha y tapa el mapa **desde el borde de los menús**; si el panel de sección se abre o se cierra, se ajusta sin cerrarse. Siempre tiene botón de cerrar (`detail-close-button`), y por ahora su contenido es un slot vacío.
+  - **Ancho**: por defecto lo tapa todo. Con `v-model:detail-width` (px) se pega a la derecha y el mapa se ve a su izquierda.
+  - **Redimensionable** (`detail-resizable`): un asa en su borde izquierdo cambia el ancho arrastrando o con las flechas (Mayús, en pasos mayores); Fin lo lleva al mínimo (`detail-min-width`, 320 px) y doble clic o Inicio lo vuelve a ocupar todo. Funciona sin `v-model:detail-width`; enlázalo si quieres guardar el ancho del usuario.
+  - En móvil siempre ocupa toda la pantalla.
 - **Móvil** (por debajo de `breakpoint`, 960 px, medido sobre el propio layout y no sobre la ventana):
   - la barra va abajo, al alcance del pulgar, respetando la zona segura del iPhone;
   - su botón ☰ despliega las secciones encima de ella;
