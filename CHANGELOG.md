@@ -1,5 +1,98 @@
 # @vsadtajo/adasa-ui
 
+## 0.6.0
+
+### Minor Changes
+
+- 0dc1946: El panel de detalle de `ASAppShell` puede tener un ancho (`v-model:detail-width`) y cambiarse arrastrando su borde izquierdo o con el teclado (`detail-resizable`, `detail-min-width`). Por defecto sigue ocupándolo todo. `ASAppDetailPanel` gana lo mismo como `v-model:width`, `resizable` y `min-width`.
+- 87b9a73: `ASAppShell` gana `drawerMode` (`'push' | 'overlay'`, por defecto `'push'`): con `'overlay'`, el panel de sección entra encima del mapa y el mapa no se mueve ni cambia de tamaño. `ASAppDrawer` gana la misma opción como `mode`, y se exporta el tipo `AppDrawerMode`.
+- 7ce2509: `ASAppShell` dividido en piezas públicas y documentadas, al estilo del `MainLayout` de los visores SAIH. La API de `ASAppShell` no cambia.
+
+  - **Piezas extraídas**: `ASAppDrawer` (panel de sección que empuja el contenido), `ASAppDetailPanel` (detalle por la derecha), `ASAppBottomSheet` (panel móvil con asa) y `ASAppMobileMenu` (secciones encima de la barra móvil). Se pueden usar sueltas para montar un layout propio.
+  - **Piezas nuevas de la barra**:
+    - `ASAppBrand`: logos, nombre y subtítulo; se reduce sola en móvil.
+    - `ASAppSearch`: el buscador de la barra, sobre `ASSearchInput`.
+    - `ASAppUserMenu`: avatar, nombre y correo, tema oscuro e idioma (con `provideTheme`/`provideLocale` o `v-model`) y "Cerrar sesión" (evento `logout`).
+  - **`useAppShellContext()`**: las piezas de los slots saben si el shell está en móvil.
+  - **`ASSearchInput`**:
+    - por sugerencia: `tags` (con el color de texto que contrasta), `actions` (evento `suggestion-action`; Mayús + Intro ejecuta la primera) y `unavailable` con `unavailableReason`;
+    - slot `#suggestion` y `hide-label` (también en `ASFormField`).
+  - **`ASMenu`**: slots `#trigger` (contenido del botón) y `#header` (cabecera fija del menú).
+
+- 79c73e8: Barra de herramientas de las gráficas, a partir de la que un visor de embalses montaba a mano sobre ApexCharts:
+
+  - **Cambia el aspecto** de la barra de `ASChart` y `ASHydrographChart`: "Restablecer zoom" y pantalla completa son iconos (con su nombre accesible y tooltip), y las descargas PNG, SVG y CSV van en un menú "Descargar". `toolbar: { downloadMenu: false }` vuelve a un botón por formato.
+  - **Elementos propios** (`toolbar.items`): `button`, `select` (casillas con "Todas" y contador, o radios), `menu`, `chip` e `info`. Son controlados, con los eventos `toolbar-action` y `toolbar-change`. Slots `#toolbar-start` y `#toolbar-end`.
+  - **Acciones propias de `ASHydrographChart`**, activas con `toolbar`:
+    - enfocar umbral (`threshold-focus`);
+    - selector de previsiones (`v-model:visible-forecasts`; ocultar una no cambia el color de las demás);
+    - mostrar u ocultar percentiles (`v-model:bands`).
+  - **`ASMenu`** en `/forms`: botón que despliega un menú de acciones, casillas y radios (patrón "menu button" de WAI-ARIA).
+  - `charts` puede usar las primitivas de `forms` (ADR 0000).
+
+- a6c93af: Nuevo dominio de detalle, `@vsadtajo/adasa-ui/detail`: las piezas de la ficha de una estación, a partir del panel de estación de TAJO. Reciben los datos ya preparados (`MeasureSeries`, `AlertThresholds`), así que cada proyecto solo escribe un adaptador de su API.
+
+  - **`ASDetailHeader`**: cabecera de la ficha (título, subtítulo, etiquetas, cerrar), fija arriba y con el color corporativo.
+  - **`ASCard`**: tarjeta con título, acciones, esqueleto de carga y texto sin datos.
+  - **`ASStatusBadge`**: píldora de un nivel de aviso, siempre con texto.
+  - **`ASAlertStatus`**: nivel de aviso actual (último valor observado) o previsto (máximo de las previsiones).
+  - **`ASObservedSummary`**: último valor y máximo con su fecha y su nivel; selector entre series (entrada, salida, volumen).
+  - **`ASThresholdSummary`**: superaciones de umbral por serie y nivel, con el último tramo.
+  - **`ASValueMatrix`**: tabla de valores por intervalo (mínimo, media o máximo), con las celdas teñidas por nivel y la columna de series fija.
+  - **`ASThresholdLegend`**: umbrales con su valor, con `v-model:selected` para resaltar uno (p. ej. en el hidrograma).
+  - **Funciones puras**: `alertLevelOf`, `worstLevel`, `summarizeSeries`, `exceedanceSegments`, `aggregateByInterval` e `intervalStart`.
+
+- 3d25d5f: `ASHydrographChart` admite caudal de entrada y de salida, volumen y nivel en la misma gráfica.
+
+  - Props nuevas `inflow` y `outflow` (en el eje del caudal, m³/s), `volume` (eje propio, hm³) y `level` (eje propio, m; `unit: 'msnm'` para cotas). Volumen y nivel van al lado con menos ejes y no fuerzan el 0. Cada variable tiene un color fijo y sus previsiones se llaman "Variable · Fuente"; el selector de previsiones y el botón de percentiles las incluyen.
+  - `discharge` pasa a ser opcional (una gráfica de embalse puede tener solo entrada, salida, volumen y nivel).
+  - `HydroThreshold.variable` (`'discharge' | 'volume' | 'level'`, por defecto `'discharge'`): el eje de cada umbral.
+  - `seriesOverrides` y `yAxisOverrides` aceptan los ids de las nuevas series (`'level-observed'`, `'volume-eps'`...) y ejes (`'volume'`, `'level'`).
+  - Corrige el rango de los ejes con umbrales en ECharts y ApexCharts: el redondeo sale del rango de los datos y no de su magnitud (una cota de 651,3–651,6 msnm ya no se amplía a 650–700). En ECharts, el intervalo de las marcas divide el rango justo, así que el máximo cae en una marca.
+  - **Cambio incompatible:** `observed` pasa a ser una lista de series (`HydroObserved`: `id`, `name`, `values` y `style`), como `forecasts`; una variable puede tener varios observados (p. ej. SAIH y aforos manuales). Se quitan `observedName` y `observedColor`. Su serie es `'<variable>-observed-<id>'`.
+  - Estilo de cada serie con `style` (`HydroLineStyle`: `color`, `width` y `type`), en cada observado y en cada previsión. **Cambio incompatible:** se quita el `color` suelto de las previsiones (ahora `style.color`).
+  - La precipitación va en su propia línea de la leyenda, con su título; sus series se llaman "Precipitación · <nombre>" en el tooltip, la tabla y el CSV.
+  - `ASChart`: `legendGroup` y `legendLabel` en cada serie (grupos en su propia línea de la leyenda, y en las imágenes exportadas), y `tooltip: 'time'` (o `{ content: 'time' }`) para un tooltip con solo la fecha.
+  - Las bandas de percentiles salen en la leyenda (cada una con su opacidad) y se configuran con `bandStyle` en cada previsión (`HydroBandStyle`: `color`, `opacity`, `name` y `legend`).
+  - La precipitación admite `unit: 'mm/h'` (intensidad); `formatUnit` conoce `'mm/h'`.
+  - En un panel bajo donde no cabe el título del eje, los tres motores muestran al menos la unidad (antes no mostraban nada).
+  - `ASChart`: nuevo trazo `'dashdot'` (punto y raya) en `lineStyle`, en los tres motores, la leyenda y las imágenes exportadas.
+
+- 0800ffd: Iconos de cualquier librería y secciones más completas en el layout.
+
+  - Toda prop de icono acepta un `IconValue`: un trazado SVG (`@mdi/js`), un componente de cualquier librería (Lucide, Font Awesome...) o `{ component, props }`, o un nombre (`'mdi:layers'`, `'mdi-layers'`) que traduce el resolvedor registrado con `provideIcons` (nuevo en la raíz, junto a `useIconResolver` e `isSvgPath`). Compatible: un trazado sigue funcionando igual.
+  - `ASIcon` gana la prop `icon` (cualquier `IconValue`); `path` queda obsoleta, pero sigue funcionando.
+  - `AppSection` gana `badge` (contador sobre el icono, incluido en el nombre accesible), `disabled` y `disabledReason` (visible y enfocable, con `aria-disabled`, pero no se abre) y `tooltip`. Las pintan `ASAppRail` y `ASAppMobileMenu`.
+  - `ASAppMobileMenu` ordena las secciones de abajo (`position: 'bottom'`) al final, como la barra de iconos.
+  - `ASAppRail` se desplaza si las secciones no caben en vertical.
+
+- 7ceeb7c: Añadir `ASPrecipitationChart` y el relleno en degradado de las áreas de `ASChart`.
+
+  - `ASPrecipitationChart`: precipitación observada y prevista en intensidad (mm/h) o mm por intervalo (`rate`). Cada serie dice cómo llegan sus valores (`input: 'depth' | 'intensity'`, con `intervalMinutes` opcional) y la gráfica los convierte en los dos sentidos.
+  - Acumulado opcional por serie (`cumulative`), en el eje derecho (mm) y en su propia línea de la leyenda; la previsión continúa por defecto el acumulado observado (`continueFrom`). Botón de la barra y `v-model:show-cumulative` para mostrarlos u ocultarlos.
+  - Por defecto, un hietograma: columnas separadas, cada una del intervalo que termina en su instante, así que cada serie mantiene su ancho aunque se mezclen intervalos (10 min, 1 h, 3 h); observadas casi opacas y previstas semitransparentes (`opacity`).
+  - Intervalo común opcional (`interval`, en minutos): las series más finas suman sus mm a él (alineado a la medianoche local) y sus columnas miden igual; función pura `aggregateDepth`. Varias observadas y varias previstas a la vez. `display: 'line' | 'area'` (con degradado en el área prevista).
+  - Por defecto, tooltip con solo la fecha y valores en la leyenda. Umbrales de intensidad o de acumulado.
+  - `ASChart`: en una serie escalonada, el tooltip y los valores de la leyenda dan el valor del escalón bajo el cursor; en ApexCharts, `step: 'start'` usa `linestep` (antes siempre `stepline`).
+  - Funciones puras exportadas: `toIntensity`, `toDepth`, `convertPrecipitation`, `toCumulative`, `cumulativeAt`, `intervalHours` y `sortByTime`.
+  - `ASChart`: `gradient` en las series `area` (`ChartGradient`: `from`, `to`), en ECharts, Chart.js y ApexCharts.
+  - `ASChart`: `columns` en las series `area` (columnas separadas de su intervalo, como un hietograma; `gap` y `width`), solo de dibujo: tooltip, leyenda, tabla y CSV usan los puntos reales.
+
+- df07c53: Añadir `ASTreeList`, `ASCollapsible` y `ASSlider` en `/forms` (piezas para paneles de capas, como el `ItemsLayersGroup` de TAJO).
+
+  - `ASTreeList`: árbol con selección `'multiple'` (casillas con estado intermedio en los grupos), `'single'` o `'none'`. `v-model` son los ids de las hojas seleccionadas; `v-model:expanded` y `v-model:opacities` son opcionales. Cada `TreeNode` puede llevar descripción, icono, muestra de color, contador, estado deshabilitado con su motivo, carga, slider de opacidad y acciones (`node-action`). Teclado según el patrón _tree_ de WAI-ARIA. Exporta también las funciones puras `leafIds`, `checkState`, `toggleNode`, `findNode` e `isGroup`.
+  - `ASCollapsible`: sección plegable (patrón _disclosure_) con título, contador, slot `#actions` y `v-model:open` opcional.
+  - `ASSlider`: `<input type="range">` nativo con estilo propio, `format` para el valor (también en `aria-valuetext`) y los eventos `update:modelValue` y `change`.
+  - Corrige la opacidad de las capas GeoJSON, TopoJSON, KML y WFS en Leaflet: ahora multiplica la del estilo (como en MapLibre) en vez de sustituirla, así que un relleno translúcido ya no se vuelve opaco.
+
+### Patch Changes
+
+- ae1c68c: `ASMap`: un `center` o `zoom` cambiado desde el proyecto (`v-model`) ya no se vuelve a emitir. Leaflet ajusta el centro a la rejilla de píxeles, y el `update:center` que salía pisaba el valor recién puesto con otro ligeramente distinto. Ahora ese movimiento se aplica sin animación y solo se emiten los movimientos del usuario.
+
+  `/map` exporta además el tipo `BasemapOption` (el de la prop `basemaps` de `ASMap` y de `ASMapBasemapsSelector`), que antes no se podía importar.
+
+- ec07028: `ASDateRangePicker` sin periodo abre el calendario en el mes de `now` (sin pasar de `max`), no en el de hoy.
+
 ## 0.5.0
 
 ### Minor Changes
