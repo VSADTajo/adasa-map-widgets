@@ -1,0 +1,93 @@
+/*
+ * Lista desplegable de opciones (ASSelect, ASSearchInput): posición bajo o
+ * sobre el campo, grupos con título, opción activa del teclado y texto vacío.
+ * Cada componente la incluye con `<style scoped src>`.
+ */
+.as-listbox {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: var(--as-z-dropdown, 1100);
+  box-sizing: border-box;
+  max-height: 256px;
+  margin: 0;
+  padding: var(--as-space-1, 4px);
+  overflow-y: auto;
+  border: 1px solid var(--as-color-border, light-dark(#cbd5e1, #475569));
+  border-radius: var(--as-radius, 8px);
+  background-color: var(--as-color-surface, light-dark(#ffffff, #1e293b));
+  color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
+  box-shadow: var(--as-shadow-lg, 0 8px 24px rgba(15, 23, 42, 0.16));
+  font-size: var(--as-font-size-sm, 0.875rem);
+  list-style: none;
+}
+
+.as-listbox--bottom {
+  top: calc(100% + 4px);
+}
+
+.as-listbox--top {
+  bottom: calc(100% + 4px);
+}
+
+.as-listbox__group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.as-listbox__group-label {
+  padding: var(--as-space-2, 8px) var(--as-space-2, 8px) var(--as-space-1, 4px);
+  font-size: var(--as-font-size-xs, 0.75rem);
+  font-weight: var(--as-font-weight-semibold, 600);
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.as-listbox__option {
+  display: flex;
+  gap: var(--as-space-2, 8px);
+  align-items: center;
+  padding: var(--as-space-2, 8px);
+  border-radius: var(--as-radius-sm, 4px);
+  cursor: pointer;
+}
+
+.as-listbox__option--active {
+  background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
+  /* Marca también sin color (alto contraste): un borde a la izquierda. */
+  box-shadow: inset 3px 0 0 var(--as-color-primary, light-dark(#2563eb, #60a5fa));
+}
+
+.as-listbox__option--selected {
+  font-weight: var(--as-font-weight-medium, 500);
+}
+
+.as-listbox__option--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.as-listbox__option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.as-listbox__description {
+  font-size: var(--as-font-size-xs, 0.75rem);
+  font-weight: var(--as-font-weight-regular, 400);
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+}
+
+.as-listbox__option-icon {
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+}
+
+.as-listbox__empty {
+  padding: var(--as-space-3, 12px) var(--as-space-2, 8px);
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+  text-align: center;
+}

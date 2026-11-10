@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { PropField } from '../propTypes'
+import JsonField from './JsonField.vue'
 
 /**
  * Formulario genérico que renderiza un control por cada prop declarada en
@@ -17,8 +19,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update-field': [key: string, value: string | number | boolean]
+  'update-field': [key: string, value: unknown]
 }>()
+
+/** Campos editables (los `docOnly` solo se documentan). */
+const editable = computed(() => props.schema.filter((field) => !field.docOnly))
+
+/** Opciones de un select: las calculadas con los valores actuales, si las hay. */
+function optionsOf(field: PropField): string[] {
+  return field.optionsFrom?.(props.values) ?? field.options ?? []
+}
 
 function handleInput(field: PropField, event: Event): void {
   const target = event.target as HTMLInputElement | HTMLSelectElement
@@ -36,10 +46,10 @@ function handleInput(field: PropField, event: Event): void {
 
 <template>
   <form class="pg-props-editor" @submit.prevent>
-    <p v-if="props.schema.length === 0" class="pg-props-editor__empty">
+    <p v-if="editable.length === 0" class="pg-props-editor__empty">
       Este componente no tiene props editables en el playground.
     </p>
-    <div v-for="field in props.schema" :key="field.key" class="pg-props-editor__field">
+    <div v-for="field in editable" :key="field.key" class="pg-props-editor__field">
       <label class="pg-props-editor__label" :for="`field-${field.key}`">{{ field.label }}</label>
 
       <select
@@ -49,8 +59,8 @@ function handleInput(field: PropField, event: Event): void {
         :value="props.values[field.key]"
         @change="handleInput(field, $event)"
       >
-        <option v-for="option in field.options ?? []" :key="option" :value="option">
-          {{ option }}
+        <option v-for="option in optionsOf(field)" :key="option" :value="option">
+          {{ option === '' ? '(sin valor)' : option }}
         </option>
       </select>
 
@@ -63,6 +73,13 @@ function handleInput(field: PropField, event: Event): void {
         />
         <span>{{ props.values[field.key] ? 'true' : 'false' }}</span>
       </label>
+
+      <JsonField
+        v-else-if="field.type === 'json'"
+        :id="`field-${field.key}`"
+        :value="props.values[field.key]"
+        @change="emit('update-field', field.key, $event)"
+      />
 
       <input
         v-else-if="field.type === 'number'"

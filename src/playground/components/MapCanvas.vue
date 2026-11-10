@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/components/mapping/ASMap.vue'
+import ASMap, { type LayerCapabilityName, type BasemapOption } from '@/map/components/ASMap.vue'
 import { getWidgetEntry } from '../utils/widgetRegistry'
-import type { MapLibraryOption, WidgetPlacement } from '@/types/playground'
-import type { LayerConfig, LayerLoadedEvent } from '@/types/layers'
+import type { MapLibraryOption, WidgetPlacement } from '@/playground/types'
+import type { FeatureSelectedEvent, LayerConfig, LayerLoadedEvent } from '@/map/types/layers'
 
 /**
  * Envuelve `ASMap` y renderiza sobre él los widgets colocados por el usuario
@@ -41,6 +41,8 @@ const emit = defineEmits<{
   'capability-detected': [event: { layerId: string; capability: LayerCapabilityName }]
   /** El basemap activo cambió (desde un `ASMapBasemapsSelector` colocado). */
   'update:basemap': [id: string]
+  /** El usuario pulsó una feature de una capa vectorial. */
+  'feature-selected': [event: FeatureSelectedEvent]
 }>()
 
 /** Centro/zoom reales de este `ASMap` (a diferencia de antes, ya no son fijos: se leen y escriben con `v-model` en el template). */
@@ -111,6 +113,7 @@ function resolvePlacementProps(placement: WidgetPlacement): Record<string, unkno
     @layer-unloaded="(event) => emit('layer-unloaded', event)"
     @capability-detected="(event) => emit('capability-detected', event)"
     @update:basemap="(id) => emit('update:basemap', id)"
+    @feature-selected="(event) => emit('feature-selected', event)"
   >
     <div
       v-for="placement in props.placements"

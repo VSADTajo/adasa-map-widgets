@@ -1,25 +1,79 @@
 import type { Component } from 'vue'
-import ASMap from '@/components/mapping/ASMap.vue'
-import ASMapTimeControls from '@/components/controls/ASMapTimeControls.vue'
-import ASMapTimeRangeControls from '@/components/controls/ASMapTimeRangeControls.vue'
-import ASMapDayIntervalControls from '@/components/controls/ASMapDayIntervalControls.vue'
-import ASMapBasemapsSelector from '@/components/controls/ASMapBasemapsSelector.vue'
-import ASMapScale from '@/components/controls/ASMapScale.vue'
-import ASMapLegend from '@/components/controls/ASMapLegend.vue'
-import ASMapButtonToggle from '@/components/controls/ASMapButtonToggle.vue'
-import type { ComponentDoc, EventDoc, LayerOptionField } from './propTypes'
-import type { DayIntervalAlert } from '@/types/DayIntervalProps'
+import ASMap from '@/map/components/ASMap.vue'
+import ASMapTimeControls from '@/map/components/ASMapTimeControls.vue'
+import ASMapTimeRangeControls from '@/map/components/ASMapTimeRangeControls.vue'
+import ASMapDayIntervalControls from '@/map/components/ASMapDayIntervalControls.vue'
+import ASMapBasemapsSelector from '@/map/components/ASMapBasemapsSelector.vue'
+import ASMapScale from '@/map/components/ASMapScale.vue'
+import ASMapLegend from '@/map/components/ASMapLegend.vue'
+import ASMapButtonToggle from '@/map/components/ASMapButtonToggle.vue'
+import { buildSnippet } from './propTypes'
+import type { ComponentDoc, EventDoc, LayerOptionField, PropField } from './propTypes'
+import type { DayIntervalAlert } from '@/map/types/DayIntervalProps'
 import type {
   FeatureSelectedEvent,
   LayerCapabilities,
   LayerConfig,
   LayerKind,
   LayerLoadedEvent,
-} from '@/types/layers'
-import type { LayerCapabilityName } from '@/components/mapping/ASMap.vue'
-import { detectCapabilities, LAYER_KIND } from '@/layers'
+} from '@/map/types/layers'
+import type { LayerCapabilityName } from '@/map/components/ASMap.vue'
+import { detectCapabilities, LAYER_KIND } from '@/map/layers'
 import { getLayerExample, layerExamples } from './utils/layerExamples'
 import { basemapExamples } from './utils/basemapExamples'
+import ASChart from '@/charts/components/ASChart.vue'
+import ASHydrographChart from '@/charts/components/ASHydrographChart.vue'
+import ASPrecipitationChart from '@/charts/components/ASPrecipitationChart.vue'
+import { EXAMPLE_NOW } from './utils/chartExamples'
+import AppShellDemo from './components/AppShellDemo.vue'
+import HydrographToolbarDemo from './components/HydrographToolbarDemo.vue'
+import { hydrographToolbarExample } from './utils/chartToolbarExample'
+import {
+  appShellToProps,
+  appShellToSnippet,
+  sectionOptions,
+  SECTIONS_FIELD,
+} from './utils/appShellExample'
+import {
+  APP_SECTION_DOC,
+  CHART_GRADIENT_DOC,
+  HYDRO_BAND_STYLE_DOC,
+  PRECIPITATION_CUMULATIVE_DOC,
+  PRECIPITATION_SERIES_DOC,
+  PRECIPITATION_THRESHOLD_DOC,
+  PRECIPITATION_TOOLBAR_DOC,
+  HYDRO_FORECAST_DOC,
+  HYDRO_LINE_STYLE_DOC,
+  HYDRO_OBSERVED_DOC,
+  HYDRO_THRESHOLD_DOC,
+  HYDRO_VARIABLE_DOC,
+  HYDROGRAPH_TOOLBAR_DOC,
+  ICON_VALUE_DOC,
+} from './typeDocs'
+import { formsEntries } from './registryForms'
+import { mapCodeExamples } from './utils/mapCodeExamples'
+import { detailEntries } from './registryDetail'
+import { layoutEntries } from './registryLayout'
+import { manualLayoutExample, sectionsExample } from './utils/layoutExample'
+import {
+  CHART_SERIES_FIELDS,
+  HYDROGRAPH_DOC_FIELDS,
+  HYDROGRAPH_SERIES_FIELDS,
+  HYDROGRAPH_VARIABLE_FIELDS,
+  chartToProps,
+  chartToSnippet,
+  hydrographToProps,
+  hydrographToSnippet,
+} from './utils/chartPlayground'
+import {
+  DEMO_PRECIPITATION_THRESHOLDS,
+  applyForecastSelection,
+  PRECIPITATION_FIELDS,
+  precipitationExamples,
+  precipitationSeries,
+  precipitationSnippet,
+  providerToolbar,
+} from './utils/precipitationExample'
 
 /** Handlers de eventos que sincronizan el estado del preview y registran el evento en el log. */
 export type LiveBindings = Record<string, (...args: unknown[]) => void>
@@ -40,12 +94,62 @@ export interface RegistryEntry extends ComponentDoc {
    * no las props de `ASMap` (que solo lo recibe tal cual en su prop `layers`).
    */
   codeOverride?: string
-  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/types/layers.ts`). */
+  /** Documentación de `options` para entradas de categoría `'layers'` (ver `src/map/types/layers.ts`). */
   layerOptionsSchema?: LayerOptionField[]
   /** Capacidades detectadas para el ejemplo de esta capa (ver `detectCapabilities`), solo categoría `'layers'`. */
   layerCapabilities?: LayerCapabilities
   /** Si el cliente ve datos vectoriales o solo una imagen ya renderizada (ver `LAYER_KIND`), solo categoría `'layers'`. */
   layerKind?: LayerKind
+  /**
+   * Convierte los valores del formulario en los props reales del
+   * componente, cuando estos no son primitivos (p. ej. un control "número
+   * de ejes" que genera el array `yAxes`). Sin él, los valores se pasan tal cual.
+   */
+  toProps?: (values: Record<string, unknown>) => Record<string, unknown>
+  /**
+   * Ejemplos de uso completos, bajo el snippet de las props (que no enseña
+   * cómo pasar datos complejos ni cómo combinar el componente con otros).
+   */
+  examples?: CodeExample[]
+  /** Código de ejemplo para los valores actuales, cuando `toProps` hace que el snippet automático no valga. */
+  toSnippet?: (values: Record<string, unknown>) => string
+  /**
+   * Si se define, el widget también se puede colocar en el compositor sobre
+   * mapa (`utils/widgetRegistry.ts` deriva su lista de aquí).
+   */
+  composer?: ComposerConfig
+}
+
+/** Ejemplo de uso de un componente, con su explicación. */
+export interface CodeExample {
+  title: string
+  /** Qué enseña y lo que hay que saber para adaptarlo. */
+  description?: string
+  code: string
+}
+
+/** Cómo aparece una entrada de la galería en el compositor sobre mapa. */
+export interface ComposerConfig {
+  /** Texto del selector de widgets del compositor. */
+  label: string
+  /**
+   * Claves de `propsSchema` que no se editan en el compositor, porque ya las
+   * decide él (la esquina la fija la colocación del widget).
+   * @default ['position', 'offset']
+   */
+  omitProps?: string[]
+  /** Datos de ejemplo de cada instancia colocada. Si se omite, se copia `staticProps`. */
+  staticProps?: () => Record<string, unknown>
+}
+
+/** Campo `theme` común: vacío = sin prop, el widget hereda el tema global del playground. */
+const THEME_FIELD: PropField = {
+  key: 'theme',
+  label: 'Tema',
+  type: 'select',
+  options: ['', 'dark', 'light'],
+  default: '',
+  description: 'Vacío: hereda el tema global (provideTheme). Si no hay ninguno, "dark".',
 }
 
 /**
@@ -140,6 +244,404 @@ function buildLegendDemoLayers(): LayerConfig[] {
     .filter((config): config is LayerConfig => Boolean(config))
 }
 
+/** Campos comunes a las gráficas: motor, tema y opciones de interacción. */
+const CHART_LIBRARY_FIELD: PropField = {
+  key: 'chartLibrary',
+  label: 'Motor de gráficas',
+  type: 'select',
+  options: ['echarts', 'chartjs', 'apexcharts'],
+  default: 'echarts',
+  description:
+    'Mismos props con cualquier motor. ApexCharts requiere licencia comercial para organizaciones de más de 2 M$.',
+}
+const CHART_THEME_FIELD: PropField = {
+  ...THEME_FIELD,
+  description: 'Vacío: hereda el tema global (provideTheme) o el de la página.',
+}
+const CHART_INTERACTION_FIELDS: PropField[] = [
+  {
+    key: 'tooltip',
+    label: 'Tooltip',
+    type: 'select',
+    options: ['true', 'time', 'false'],
+    default: 'true',
+    docType: "boolean | 'time' | ChartTooltipConfig",
+    description:
+      "true: fecha y valores; 'time': solo la fecha (p. ej. con los valores en la leyenda); false: sin tooltip.",
+  },
+  {
+    key: 'legend',
+    label: 'Posición de la leyenda',
+    type: 'select',
+    options: ['top', 'bottom', 'left', 'right'],
+    default: 'top',
+    description: 'Para ocultarla, :legend="false".',
+  },
+  {
+    key: 'legendValues',
+    label: 'Valores en la leyenda',
+    type: 'boolean',
+    default: false,
+    description:
+      'Muestra en la leyenda el valor de cada serie bajo el cursor. Desactiva el tooltip para verlos solo ahí.',
+  },
+  {
+    key: 'zoom',
+    label: 'Zoom',
+    type: 'boolean',
+    default: false,
+    description: 'Rueda/pellizco para acercar; barra de zoom en ECharts.',
+  },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: true,
+    description:
+      'Iconos para restablecer zoom (con zoom) y pantalla completa, y un menú "Descargar" con PNG, SVG y CSV. Admite elementos propios (toolbar.items): ver "ASHydrographChart: barra a medida". Sin ella, solo aparece "Restablecer zoom" si hay zoom. También desde fuera: exportImage(), exportData() y toggleFullscreen().',
+  },
+  {
+    key: 'fileName',
+    label: 'Nombre de los archivos',
+    type: 'string',
+    default: '',
+    description: 'Sin extensión. Vacío: "grafica".',
+  },
+  {
+    key: 'patterns',
+    label: 'Tramas (daltonismo)',
+    type: 'boolean',
+    default: false,
+    description:
+      'Una trama distinta en cada relleno (barras, áreas, bandas), además del color, también en la leyenda y en las imágenes exportadas.',
+  },
+  {
+    key: 'dataTable',
+    label: 'Tabla para lectores de pantalla',
+    type: 'boolean',
+    default: true,
+    description:
+      'Tabla oculta con todos los datos. Con el foco en la gráfica, las flechas recorren los valores (prueba con Tab y →).',
+  },
+  {
+    key: 'ariaLabel',
+    label: 'Nombre accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera ("Gráfica de líneas y barras: Caudal, Nivel, Lluvia").',
+  },
+  {
+    key: 'description',
+    label: 'Descripción accesible',
+    type: 'string',
+    default: '',
+    description: 'Vacío: se genera con el rango del eje X, mínimos y máximos y umbrales.',
+  },
+  { key: 'animation', label: 'Animación', type: 'boolean', default: true },
+]
+const CHART_EVENTS: EventDoc[] = [
+  {
+    name: 'point-click',
+    payload: '{ seriesId, x, y }',
+    description: 'Click sobre un punto, barra o banda.',
+  },
+  {
+    name: 'x-click',
+    payload: '{ x }',
+    description:
+      'Click sobre el área de la gráfica: el instante bajo el cursor (p. ej. para enlazar con ASMapTimeControls).',
+  },
+  {
+    name: 'time-select',
+    payload: '{ time }',
+    description:
+      'Click en un eje temporal: el instante elegido. También emite update:currentTime (v-model:current-time); aquí mueve la línea del instante actual.',
+  },
+  {
+    name: 'range-change',
+    payload: '{ start, end }',
+    description: 'El rango visible cambió por zoom.',
+  },
+  { name: 'ready', payload: '{ library, instance }', description: 'El motor terminó de dibujar.' },
+]
+/** Los de ASChart más los propios del hidrograma (sus acciones de la barra y sus v-model). */
+const HYDROGRAPH_EVENTS: EventDoc[] = [
+  ...CHART_EVENTS,
+  {
+    name: 'update:currentTime',
+    payload: 'Date',
+    description: 'Instante elegido en el eje de tiempo (v-model:current-time).',
+  },
+  {
+    name: 'update:visibleForecasts',
+    payload: 'string[]',
+    description: 'El selector de previsiones cambió las visibles (v-model:visible-forecasts).',
+  },
+  {
+    name: 'update:bands',
+    payload: 'HydroBand[]',
+    description: 'El botón de percentiles los mostró u ocultó (v-model:bands).',
+  },
+  {
+    name: 'threshold-focus',
+    payload: 'HydroThreshold | null',
+    description: '"Enfocar umbral": el umbral enfocado, o null al volver a todos.',
+  },
+  {
+    name: 'toolbar-action / toolbar-change',
+    payload: '{ id, value? }',
+    description: 'Elementos propios del proyecto en la barra (toolbar.items), como en ASChart.',
+  },
+]
+/** Props de ASPrecipitationChart que no se editan en el formulario: solo se documentan. */
+const PRECIPITATION_DOC_FIELDS: PropField[] = (
+  [
+    [
+      'series',
+      'PrecipitationSeries[]',
+      '',
+      'Series observadas y previstas, cada una con su input, estilo y acumulado.',
+    ],
+    ['thresholds', 'PrecipitationThreshold[]', '', 'Umbrales de intensidad o de acumulado.'],
+    ['now', 'Date | boolean', 'true', 'Línea "ahora" entre lo observado y lo previsto.'],
+    ['xAxis', "Omit<ChartXAxisConfig, 'type'>", '', 'Eje de tiempo: título, formato y límites.'],
+    [
+      'annotations',
+      'ChartAnnotations',
+      '',
+      'Anotaciones extra (las de Y, en el eje de intensidad).',
+    ],
+    [
+      'seriesOverrides',
+      'Record<string, Partial<ChartSeries>>',
+      '',
+      "Retoques por id: 'precipitation-<id>' y 'cumulative-<id>'.",
+    ],
+    [
+      'yAxisOverrides',
+      'Record<string, Partial<ChartYAxis>>',
+      '',
+      "Retoques de los ejes 'rate' y 'cumulative'.",
+    ],
+    ['currentTime', 'Date | null', '', 'Instante seleccionado (v-model:current-time).'],
+    [
+      'syncGroup',
+      'string',
+      '',
+      'Sincroniza cursor y zoom con otras gráficas (p. ej. el hidrograma).',
+    ],
+    ['fileName', 'string', '', 'Nombre de las descargas.'],
+    ['patterns', 'boolean', 'false', 'Tramas en los rellenos (con ellas, sin degradado).'],
+    ['dataTable', 'boolean', 'true', 'Tabla de datos accesible.'],
+    ['ariaLabel / description', 'string', '', 'Nombre y descripción accesibles.'],
+    ['animation', 'boolean', 'true', 'Animación al dibujar.'],
+    ['loading', 'boolean', 'false', 'Estado de carga.'],
+    ['emptyText / error', 'string', '', 'Texto sin datos y mensaje de error.'],
+    [
+      'nativeOptions',
+      '(options, library) => unknown',
+      '',
+      'Vía de escape: opciones nativas del motor.',
+    ],
+  ] as const
+).map(([key, docType, defaultText, description]) => ({
+  key,
+  label: key,
+  type: 'string' as const,
+  default: defaultText,
+  docType,
+  description,
+  docOnly: true,
+}))
+
+const PRECIPITATION_SCHEMA: PropField[] = [
+  CHART_LIBRARY_FIELD,
+  {
+    key: 'rate',
+    label: 'Eje izquierdo (rate)',
+    type: 'select',
+    options: ['intensity', 'depth'],
+    default: 'intensity',
+    description: 'Intensidad en mm/h o mm por intervalo: cada serie se convierte desde su input.',
+  },
+  {
+    key: 'interval',
+    label: 'Intervalo común (interval, min)',
+    type: 'select',
+    options: ['', '10', '60', '180', '1440'],
+    default: '',
+    docType: 'number',
+    description:
+      'Δt del hietograma: las series más finas suman sus mm a él y todas sus columnas miden igual. Vacío: cada serie con su intervalo.',
+  },
+  {
+    key: 'showCumulative',
+    label: 'Acumulados (v-model:show-cumulative)',
+    type: 'boolean',
+    default: true,
+    description: 'También desde el botón de la barra.',
+  },
+  {
+    key: 'tooltip',
+    label: 'Tooltip',
+    type: 'select',
+    options: ['time', 'true', 'false'],
+    default: 'time',
+    docType: "boolean | 'time' | ChartTooltipConfig",
+    description: 'Por defecto solo la fecha: los valores van en la leyenda.',
+  },
+  {
+    key: 'legend',
+    label: 'Leyenda',
+    type: 'select',
+    options: ['bottom', 'top', 'left', 'right'],
+    default: 'bottom',
+    docType: 'boolean | ChartLegendPosition | ChartLegendConfig',
+  },
+  { key: 'legendValues', label: 'Valores en la leyenda', type: 'boolean', default: true },
+  { key: 'zoom', label: 'Zoom', type: 'boolean', default: false },
+  {
+    key: 'toolbar',
+    label: 'Barra de herramientas',
+    type: 'boolean',
+    default: true,
+    docType: 'boolean | PrecipitationToolbarConfig',
+    description:
+      'Descargas, pantalla completa, botón de acumulados y, en el ejemplo, el selector de modelo.',
+  },
+  { key: 'height', label: 'Alto (px)', type: 'number', default: 440, min: 260, max: 800, step: 20 },
+  CHART_THEME_FIELD,
+  ...PRECIPITATION_FIELDS,
+  ...PRECIPITATION_DOC_FIELDS,
+]
+
+const chartBindings = (
+  values: Record<string, unknown>,
+  log: (name: string, payload?: unknown) => void,
+) =>
+  ({
+    onPointClick: (event: unknown) => log('point-click', event),
+    onXClick: (event: unknown) => log('x-click', event),
+    onTimeSelect: (event: unknown) => log('time-select', event),
+    // v-model:current-time: el clic mueve la línea del instante actual.
+    'onUpdate:currentTime': (time: unknown) => {
+      values.currentTime = time
+      log('update:currentTime', time)
+    },
+    onRangeChange: (event: unknown) => log('range-change', event),
+    // La instancia nativa del motor es enorme y circular: solo se registra el motor.
+    onReady: (event: unknown) => log('ready', { library: (event as { library: string }).library }),
+  }) as LiveBindings
+
+/** Props editables de ASMap en el playground. */
+const MAP_SCHEMA: PropField[] = [
+  {
+    key: 'mapLibrary',
+    label: 'Motor de mapas',
+    type: 'select',
+    options: ['leaflet', 'maplibre'],
+    default: 'leaflet',
+    description: 'Leaflet y MapLibre GL JS son peerDependencies opcionales.',
+  },
+  {
+    key: 'center',
+    label: 'Centro (lat, lng)',
+    type: 'string',
+    default: '40.4168, -3.7038',
+    docType: '[number, number]',
+    description:
+      'Obligatoria. Centro inicial en [latitud, longitud] (WGS84). Con v-model:center se actualiza al hacer pan. Aquí se escribe "lat, lng".',
+  },
+  {
+    key: 'zoom',
+    label: 'Zoom',
+    type: 'number',
+    default: 6,
+    min: 0,
+    max: 18,
+    step: 1,
+    description: 'Obligatoria. Nivel de zoom inicial; con v-model:zoom se actualiza.',
+  },
+  {
+    key: 'minZoom',
+    label: 'Zoom mínimo',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 18,
+    step: 1,
+  },
+  {
+    key: 'maxZoom',
+    label: 'Zoom máximo',
+    type: 'number',
+    default: 19,
+    min: 1,
+    max: 22,
+    step: 1,
+  },
+  {
+    key: 'interactive',
+    label: 'Interactivo',
+    type: 'boolean',
+    default: true,
+    description:
+      'Si se desactiva, el usuario no puede hacer pan/zoom/click (mapa de solo lectura).',
+  },
+  { key: 'zoomControl', label: 'Control de zoom', type: 'boolean', default: true },
+  { key: 'attributionControl', label: 'Control de atribución', type: 'boolean', default: true },
+  {
+    key: 'pitch',
+    label: 'Inclinación 3D (pitch)',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 60,
+    step: 5,
+    description: 'Solo con motor MapLibre; Leaflet es 2D y la ignora.',
+  },
+  {
+    key: 'bearing',
+    label: 'Rotación (bearing)',
+    type: 'number',
+    default: 0,
+    min: 0,
+    max: 360,
+    step: 15,
+    description: 'Solo con motor MapLibre.',
+  },
+  {
+    key: 'basemap',
+    label: 'Basemap activo (v-model)',
+    type: 'select',
+    options: basemapExamples.map((basemap) => basemap.id),
+    default: 'osm',
+    description:
+      'Id de uno de los `basemaps` (los de este ejemplo). Sin él, el primero. Para un selector visual, ASMapBasemapsSelector en el "Compositor sobre mapa".',
+  },
+]
+
+const MAP_SCHEMA_FOR_SNIPPET = MAP_SCHEMA.filter((field) => field.key !== 'center')
+
+/** Centro por defecto de los ejemplos de ASMap: Madrid. */
+const DEFAULT_CENTER: [number, number] = [40.4168, -3.7038]
+
+/** "lat, lng" del editor → `[lat, lng]`. Un texto mal escrito vuelve al centro por defecto. */
+function parseCenter(value: unknown): [number, number] {
+  if (Array.isArray(value)) return value as [number, number]
+  const [lat, lng] = String(value)
+    .split(',')
+    .map((part) => Number(part.trim()))
+  const valid = (n: number | undefined, limit: number) =>
+    n !== undefined && Number.isFinite(n) && Math.abs(n) <= limit
+  return valid(lat, 90) && valid(lng, 180) ? [lat!, lng!] : DEFAULT_CENTER
+}
+
+/** `[lat, lng]` → "lat, lng" con 4 decimales (~10 m), para el editor y el snippet. */
+function formatCenter([lat, lng]: [number, number]): string {
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+}
+
 export const registry: RegistryEntry[] = [
   {
     id: 'as-map',
@@ -147,73 +649,7 @@ export const registry: RegistryEntry[] = [
     category: 'mapping',
     description:
       'Contenedor de mapa agnóstico del motor subyacente (Leaflet o MapLibre GL JS), con un basemap de OpenStreetMap por defecto (prop `basemaps`). Su slot por defecto aloja los widgets posicionados sobre el mapa; su prop `layers` carga capas dinámicas (GeoJSON, TopoJSON, KML, WMS, WFS, Tiles, WMTS, COG, MVT — ver la categoría "Layers" para el detalle de cada una, incluido el helper `geoServerLayer()` para servidores GeoServer).',
-    propsSchema: [
-      {
-        key: 'mapLibrary',
-        label: 'Motor de mapas',
-        type: 'select',
-        options: ['leaflet', 'maplibre'],
-        default: 'leaflet',
-        description: 'Leaflet y MapLibre GL JS son peerDependencies opcionales.',
-      },
-      { key: 'zoom', label: 'Zoom', type: 'number', default: 6, min: 0, max: 18, step: 1 },
-      {
-        key: 'minZoom',
-        label: 'Zoom mínimo',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 18,
-        step: 1,
-      },
-      {
-        key: 'maxZoom',
-        label: 'Zoom máximo',
-        type: 'number',
-        default: 19,
-        min: 1,
-        max: 22,
-        step: 1,
-      },
-      {
-        key: 'interactive',
-        label: 'Interactivo',
-        type: 'boolean',
-        default: true,
-        description:
-          'Si se desactiva, el usuario no puede hacer pan/zoom/click (mapa de solo lectura).',
-      },
-      { key: 'zoomControl', label: 'Control de zoom', type: 'boolean', default: true },
-      { key: 'attributionControl', label: 'Control de atribución', type: 'boolean', default: true },
-      {
-        key: 'pitch',
-        label: 'Inclinación 3D (pitch)',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 60,
-        step: 5,
-        description: 'Solo con motor MapLibre; Leaflet es 2D y la ignora.',
-      },
-      {
-        key: 'bearing',
-        label: 'Rotación (bearing)',
-        type: 'number',
-        default: 0,
-        min: 0,
-        max: 360,
-        step: 15,
-        description: 'Solo con motor MapLibre.',
-      },
-      {
-        key: 'basemap',
-        label: 'Basemap activo (id)',
-        type: 'string',
-        default: 'osm',
-        description:
-          'Id de `basemaps`: "osm", "topo", "positron", "dark-matter" o "satellite". Campo de texto simple; para un selector visual real usa `ASMapBasemapsSelector` en el "Compositor sobre mapa".',
-      },
-    ],
+    propsSchema: MAP_SCHEMA,
     events: [
       {
         name: 'map-ready',
@@ -275,17 +711,23 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: {
-      center: [40.4168, -3.7038],
       layers: [layerExamples[0]!.config],
       basemaps: basemapExamples,
     },
+    examples: mapCodeExamples,
+    toProps: (values) => ({ ...values, center: parseCenter(values.center) }),
+    toSnippet: (values) =>
+      buildSnippet('ASMap', MAP_SCHEMA_FOR_SNIPPET, { ...values, center: undefined }).replace(
+        '<ASMap',
+        `<ASMap\n  :center="[${formatCenter(parseCenter(values.center))}]"`,
+      ),
     notes:
-      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/Tiles usa el modo "Compositor sobre mapa", o mira la categoría "Layers" para la documentación completa de cada tipo. `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); prueba a escribir su id ("osm", "topo", "positron", "dark-matter" o "satellite") en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
+      'Si la librería de mapas elegida no está instalada en el proyecto, ASMap muestra un mensaje de error en su lugar en vez de fallar en silencio. Aquí se precarga el ejemplo de capa GeoJSON (sin red); para probar WMS/WFS/Tiles usa el modo "Compositor sobre mapa", o mira la categoría "Layers" para la documentación completa de cada tipo. `basemaps` (lista de `{id, name, tileLayer?, style?, attribution?}`) se fija aquí como prop estática con los 5 basemaps reales de `basemapExamples` (no editable por no ser un tipo primitivo); elige uno en "Basemap activo" para alternar entre ellos, o usa el widget `ASMapBasemapsSelector` para un selector visual real (ver el modo "Compositor sobre mapa"). `maxBounds`/`bounds` (bboxes `[[latSur,lngOeste],[latNorte,lngEste]]`) tampoco son editables aquí, pero se pueden probar aparte. Haz pan/zoom en la vista previa para ver `update:center`/`update:zoom`, o click en el mapa: sobre la capa GeoJSON precargada verás `feature-selected`, en cualquier otro punto verás `map-click`.',
     component: ASMap,
     bindings: (values, log) =>
       ({
         'onUpdate:center': (center) => {
-          values.center = center
+          values.center = formatCenter(center as [number, number])
           log('update:center', center)
         },
         'onUpdate:zoom': (zoom) => {
@@ -421,7 +863,7 @@ export const registry: RegistryEntry[] = [
         max: 10000,
         step: 250,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#22c55e' },
       { key: 'width', label: 'Ancho (CSS, ej. 720px / 90%)', type: 'string', default: '' },
     ],
@@ -443,6 +885,7 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: { timeline: buildDemoTimeline() },
+    composer: { label: 'Controles de tiempo (ASMapTimeControls)' },
     component: ASMapTimeControls,
     bindings: (values, log) => ({
       'onUpdate:currentTimeIndex': (value) => {
@@ -463,7 +906,7 @@ export const registry: RegistryEntry[] = [
     description:
       'Selección de un rango de tiempo dentro de una línea temporal: dos manejadores sobre un slider doble y botones de ajuste fino ±1 para cada extremo. Sin reproducción automática.',
     propsSchema: [
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#f97316' },
       { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
     ],
@@ -480,6 +923,7 @@ export const registry: RegistryEntry[] = [
       },
     ],
     staticProps: { timeline: buildDemoTimeline(), currentRange: [2, 9] },
+    composer: { label: 'Controles de rango de tiempo (ASMapTimeRangeControls)' },
     component: ASMapTimeRangeControls,
     bindings: (values, log) => ({
       'onUpdate:currentRange': (value) => {
@@ -499,7 +943,7 @@ export const registry: RegistryEntry[] = [
       { key: 'title', label: 'Título', type: 'string', default: 'Avisos AEMET' },
       { key: 'subtitle', label: 'Subtítulo', type: 'string', default: 'Viento y lluvia' },
       { key: 'days', label: 'Días', type: 'number', default: 3, min: 1, max: 5, step: 1 },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
       { key: 'accentColor', label: 'Color de acento', type: 'color', default: '#2563eb' },
       { key: 'width', label: 'Ancho (CSS, ej. 760px / 90%)', type: 'string', default: '' },
     ],
@@ -517,6 +961,7 @@ export const registry: RegistryEntry[] = [
     ],
     staticProps: { alerts: buildDemoAlerts(), selectedIntervalStart: null },
     notes: 'La prop "alerts" no es editable en este playground; se usa un set de ejemplo fijo.',
+    composer: { label: 'Intervalos por día (ASMapDayIntervalControls)' },
     component: ASMapDayIntervalControls,
     bindings: (values, log) => ({
       'onUpdate:selectedIntervalStart': (value) => {
@@ -556,7 +1001,7 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [
       {
@@ -568,6 +1013,11 @@ export const registry: RegistryEntry[] = [
     staticProps: { basemaps: basemapExamples },
     notes:
       'La prop "basemaps" no es editable en este playground (no es un tipo primitivo); se usan los 5 basemaps reales de `basemapExamples` (OpenStreetMap, OpenTopoMap, CARTO Positron/Dark Matter y Esri World Imagery), con su miniatura real. Haz click en el recuadro para ver el menú con los otros cuatro. Para ver que además cambia el mapa base de verdad, usa el modo "Compositor sobre mapa".',
+    composer: {
+      label: 'Selector de basemap (ASMapBasemapsSelector)',
+      // `position` sí se edita: en este widget es la esquina hacia la que abre el menú.
+      omitProps: ['offset'],
+    },
     component: ASMapBasemapsSelector,
     bindings: (values, log) => ({
       'onUpdate:basemap': (id) => {
@@ -623,12 +1073,20 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [],
     staticProps: { center: [40.4168, -3.7038] },
     notes:
       'No emite eventos: es un simple indicador de lectura. Sube/baja el zoom para ver cómo cambia la regla/razón — se recalcula automáticamente porque `bar`/`ratioLabel` son `computed()` sobre `zoom`/`center`. El ancho real de la regla puede ser algo menor que `width`, para que la distancia total mostrada sea un número redondo.',
+    composer: {
+      label: 'Escala (ASMapScale)',
+      omitProps: ['zoom', 'position', 'offset'],
+      // Solo el valor inicial: MapCanvas.vue sustituye center/zoom por los
+      // reales del ASMap del compositor (liveCenter/liveZoom), así que la
+      // regla/razón sí cambia de verdad al hacer scroll/zoom en el mapa.
+      staticProps: () => ({ center: [40.4168, -3.7038], zoom: 6 }),
+    },
     component: ASMapScale,
   },
   {
@@ -636,7 +1094,7 @@ export const registry: RegistryEntry[] = [
     name: 'ASMapLegend',
     category: 'controls',
     description:
-      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
+      'Leyenda de las capas dinámicas del mapa: genera la leyenda de cada capa de `layers` con su adapter correspondiente (`src/map/legend/`) y la muestra como símbolos, una imagen del servidor (WMS `GetLegendGraphic`) o un degradado continuo (p. ej. un COG con `colorScale`). Componente controlado y agnóstico del motor de mapas: no lee el mapa ni sus capas ya renderizadas.',
     propsSchema: [
       { key: 'title', label: 'Título', type: 'string', default: 'Leyenda' },
       { key: 'collapsible', label: 'Colapsable', type: 'boolean', default: true },
@@ -656,12 +1114,19 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [],
     staticProps: { layers: buildLegendDemoLayers() },
     notes:
       'Se precargan 4 capas de ejemplo para ver los tres tipos de leyenda a la vez: imagen (WMS, vía `GetLegendGraphic`), degradado (COG con `colorScale`) y símbolo genérico (GeoJSON) — más una capa Tiles que a propósito NO aparece en la leyenda (su `canGenerateLegend` es `false`: no hay nada fiable que mostrar, así que no se rellena con un símbolo inventado). No emite eventos: es un simple indicador de lectura.',
+    composer: {
+      label: 'Leyenda (ASMapLegend)',
+      // Solo el valor inicial: MapCanvas.vue sustituye `layers` por las capas
+      // reales activas en el compositor, así que la leyenda muestra de verdad
+      // lo que hay activado en "Capas de ejemplo".
+      staticProps: () => ({ layers: [] }),
+    },
     component: ASMapLegend,
   },
   {
@@ -695,7 +1160,7 @@ export const registry: RegistryEntry[] = [
         max: 80,
         step: 4,
       },
-      { key: 'theme', label: 'Tema', type: 'select', options: ['dark', 'light'], default: 'dark' },
+      THEME_FIELD,
     ],
     events: [
       {
@@ -713,11 +1178,184 @@ export const registry: RegistryEntry[] = [
     },
     notes:
       'La prop "options" no es editable aquí (no es un tipo primitivo): son fijas, tres fuentes de datos meteorológicos de ejemplo. Haz click en un botón para ver `update:modelValue` en el log, y cómo se refleja en "Valor activo".',
+    composer: { label: 'Grupo de botones (ASMapButtonToggle)' },
     component: ASMapButtonToggle,
     bindings: (values, log) => ({
       'onUpdate:modelValue': (value) => {
         values.modelValue = value
         log('update:modelValue', value)
+      },
+    }),
+  },
+  {
+    id: 'as-chart',
+    name: 'ASChart',
+    category: 'charts',
+    description:
+      'Gráfica cartesiana genérica con el mismo API para ECharts, Chart.js y ApexCharts: de 1 a 4 ejes Y, paneles apilados con el eje X compartido, umbrales e intervalos como anotaciones, línea "ahora", tooltip, leyenda y zoom. Colores, textos y formatos salen de los tokens y del idioma activo.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      { key: 'now', label: 'Línea "ahora"', type: 'boolean', default: true },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 360,
+        min: 200,
+        max: 700,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...CHART_SERIES_FIELDS,
+    ],
+    events: CHART_EVENTS,
+    toProps: chartToProps,
+    toSnippet: chartToSnippet,
+    notes:
+      'Cambia el número de ejes Y (1–4) y el nombre, el color y el eje de cada serie: el código de ejemplo se actualiza con los `series` e `yAxes` resultantes. El intervalo sombreado y el umbral son `annotations`.',
+    component: ASChart,
+    bindings: chartBindings,
+  },
+  {
+    id: 'as-hydrograph-chart',
+    name: 'ASHydrographChart',
+    category: 'charts',
+    description:
+      'Hidrograma: precipitación arriba (barras, eje invertido) y caudal abajo, con el eje temporal compartido. En el panel del caudal admite caudal de entrada y de salida (mismo eje), volumen (hm³) y nivel (m o msnm), cada uno con su eje. Observado sólido, previsto discontinuo con una línea "ahora", varias fuentes de previsión (Harmonie, EPS) con bandas de percentiles, y umbrales de aviso por variable.',
+    propsSchema: [
+      CHART_LIBRARY_FIELD,
+      {
+        key: 'magnitude',
+        label: 'Magnitud',
+        type: 'select',
+        options: ['flow', 'level'],
+        default: 'flow',
+        description: 'Unidad y título por defecto: caudal (m³/s) o nivel (m).',
+      },
+      {
+        key: 'precipitationLayout',
+        label: 'Precipitación',
+        type: 'select',
+        options: ['panel', 'overlay'],
+        default: 'panel',
+        description:
+          '"panel": en su propio panel encima del caudal (alineados); "overlay": superpuesta al caudal, con su eje a la derecha.',
+      },
+      {
+        key: 'precipitationInverted',
+        label: 'Lluvia colgando desde arriba',
+        type: 'boolean',
+        default: true,
+        description:
+          'Eje de precipitación invertido. Desactívalo para que las barras crezcan desde abajo.',
+      },
+      {
+        key: 'precipitationWeight',
+        label: 'Alto del panel de lluvia',
+        type: 'number',
+        default: 0.35,
+        min: 0.1,
+        max: 0.9,
+        step: 0.05,
+      },
+      ...CHART_INTERACTION_FIELDS,
+      {
+        key: 'height',
+        label: 'Alto (px)',
+        type: 'number',
+        default: 440,
+        min: 260,
+        max: 800,
+        step: 20,
+      },
+      CHART_THEME_FIELD,
+      ...HYDROGRAPH_VARIABLE_FIELDS,
+      ...HYDROGRAPH_SERIES_FIELDS,
+      ...HYDROGRAPH_DOC_FIELDS,
+    ],
+    events: HYDROGRAPH_EVENTS,
+    types: [
+      HYDRO_VARIABLE_DOC,
+      HYDRO_OBSERVED_DOC,
+      HYDRO_FORECAST_DOC,
+      HYDRO_LINE_STYLE_DOC,
+      HYDRO_BAND_STYLE_DOC,
+      HYDRO_THRESHOLD_DOC,
+      HYDROGRAPH_TOOLBAR_DOC,
+    ],
+    toProps: hydrographToProps,
+    toSnippet: hydrographToSnippet,
+    notes:
+      'Datos sintéticos de un episodio de crecida: 48 h observadas y 72 h de previsión (Harmonie determinista; EPS con mediana y percentiles). Desde el formulario se cambian el nombre y el estilo (color, grosor y trazo) de cada serie: `name`/`style` de cada observado y `name`/`style`/`bandStyle` de cada previsión. Cualquier otra serie o eje se retoca con `seriesOverrides` y `yAxisOverrides`.',
+    component: ASHydrographChart,
+    bindings: (values, log) => ({
+      ...chartBindings(values, log),
+      'onUpdate:visibleForecasts': (ids: unknown) => log('update:visibleForecasts', ids),
+      'onUpdate:bands': (bands: unknown) => log('update:bands', bands),
+      onThresholdFocus: (threshold: unknown) => log('threshold-focus', threshold),
+    }),
+  },
+  {
+    id: 'as-precipitation-chart',
+    name: 'ASPrecipitationChart',
+    category: 'charts',
+    description:
+      'Precipitación observada y prevista en intensidad (mm/h) o mm por intervalo, con el acumulado de cada serie que lo pida en el eje derecho. Cada serie dice cómo llegan sus valores (input) y la gráfica los convierte; el acumulado de la previsión continúa el observado. Tooltip con solo la fecha y valores en la leyenda, con los acumulados en su propia línea.',
+    propsSchema: PRECIPITATION_SCHEMA,
+    events: [
+      ...CHART_EVENTS,
+      {
+        name: 'update:showCumulative',
+        payload: 'boolean',
+        description:
+          'El botón de la barra mostró u ocultó los acumulados (v-model:show-cumulative).',
+      },
+      {
+        name: 'toolbar-change / toolbar-action',
+        payload: '{ id, value? }',
+        description: 'Elementos propios de la barra (aquí, el selector de modelo).',
+      },
+    ],
+    types: [
+      PRECIPITATION_SERIES_DOC,
+      PRECIPITATION_CUMULATIVE_DOC,
+      HYDRO_LINE_STYLE_DOC,
+      CHART_GRADIENT_DOC,
+      PRECIPITATION_THRESHOLD_DOC,
+      PRECIPITATION_TOOLBAR_DOC,
+    ],
+    examples: precipitationExamples,
+    toProps: (values) => ({
+      chartLibrary: values.chartLibrary,
+      rate: values.rate,
+      interval: values.interval ? Number(values.interval) : undefined,
+      showCumulative: values.showCumulative,
+      tooltip: values.tooltip === 'time' ? 'time' : values.tooltip !== 'false',
+      legend: values.legend,
+      legendValues: values.legendValues,
+      zoom: values.zoom,
+      height: values.height,
+      theme: values.theme || undefined,
+      series: precipitationSeries(values),
+      toolbar: providerToolbar(values),
+      thresholds: values.withThresholds ? DEMO_PRECIPITATION_THRESHOLDS : undefined,
+      now: EXAMPLE_NOW,
+    }),
+    toSnippet: precipitationSnippet,
+    notes:
+      'Datos sintéticos: dos observados (P. TR en mm/h cada 10 min y P. Areal en mm por hora) y dos previsiones a la vez (WRF horaria a 3 días y ECMWF cada 3 h a 7 días), en columnas. Elige las previsiones desde la barra, pasa el eje a mm por intervalo (rate) y activa o quita acumulados: cada previsión continúa el acumulado observado.',
+    component: ASPrecipitationChart,
+    bindings: (values, log) => ({
+      ...chartBindings(values, log),
+      'onUpdate:showCumulative': (show: unknown) => {
+        values.showCumulative = show
+        log('update:showCumulative', show)
+      },
+      onToolbarChange: (event: unknown) => {
+        const { id, value } = event as { id: string; value: unknown }
+        if (id === 'forecasts') applyForecastSelection(values, value as string[])
+        log('toolbar-change', event)
       },
     }),
   },
@@ -1095,7 +1733,7 @@ export const registry: RegistryEntry[] = [
         key: 'colorScale',
         type: 'string',
         description:
-          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/layers/cog.ts`).',
+          'Para GeoTIFFs de una sola banda: `{ min, max, colors? }`, rampa de color a aplicar en vez de la escala de grises por defecto (ver `interpolateColorScale` en `src/map/layers/cog.ts`).',
       },
     ],
     events: [
@@ -1219,6 +1857,215 @@ export const registry: RegistryEntry[] = [
     notes:
       'Servidor GeoServer público de demostración (ahocevar.com): polígonos reales de los estados de EE. UU. (`topp:states`), limitado a 50 features. Este ejemplo concreto no pasa `editable: true`, así que no emite `feature-selected` (pruébalo en el "Compositor sobre mapa" añadiendo `editable: true` a la config si quieres verlo). Depende de un servidor de terceros — si está caído, verás `layer-error`. Si el servidor es GeoServer (como en este ejemplo), en vez de construir `url`/`typeName` a mano puedes usar el helper `geoServerLayer({ url, workspace, layer, mode: \'wfs\' })` — es justo como se construyó el ejemplo "GeoServer: topp:states" de las capas de ejemplo del compositor.',
   }),
+  {
+    id: 'as-hydrograph-toolbar',
+    name: 'ASHydrographChart: barra a medida',
+    category: 'charts',
+    description:
+      'El hidrograma con la barra de un visor de embalses: simulación elegida, datos de la avenida, fuente de la lluvia, y sus acciones propias (previsiones, percentiles y enfocar umbral) más las descargas.',
+    propsSchema: [
+      {
+        key: 'chartLibrary',
+        label: 'Motor',
+        type: 'select',
+        options: ['echarts', 'chartjs', 'apexcharts'],
+        default: 'echarts',
+        description: 'La barra es la misma con los tres motores: es HTML de la librería.',
+      },
+      THEME_FIELD,
+    ],
+    events: [
+      {
+        name: 'toolbar-action',
+        payload: '{ id, itemId? }',
+        description: 'Botón propio pulsado u opción de un menú propio.',
+      },
+      {
+        name: 'toolbar-change',
+        payload: '{ id, value }',
+        description: 'Valor nuevo de un selector propio (aquí, la lluvia).',
+      },
+      {
+        name: 'update:visibleForecasts',
+        payload: 'string[]',
+        description: 'Selector de previsiones del hidrograma.',
+      },
+      { name: 'update:bands', payload: 'HydroBand[]', description: 'Botón de percentiles.' },
+      {
+        name: 'threshold-focus',
+        payload: 'HydroThreshold | null',
+        description: 'Enfocar umbral: el enfocado, o null al volver a todos.',
+      },
+    ],
+    toProps: (values) =>
+      Object.fromEntries(Object.entries(values).filter(([, value]) => value !== '')),
+    toSnippet: () => hydrographToolbarExample.code,
+    examples: [hydrographToolbarExample],
+    notes:
+      'Prueba: cambia de simulación (el chip), elige la lluvia (los datos de la avenida se recalculan), oculta una previsión (las demás no cambian de color), oculta los percentiles y pulsa "Enfocar umbral" varias veces. Todo se maneja con el teclado: Tab hasta un botón, ↓ abre los menús.',
+    component: HydrographToolbarDemo,
+    bindings: (_values, log) => ({
+      onToolbarAction: (event) => log('toolbar-action', event),
+      onToolbarChange: (event) => log('toolbar-change', event),
+      'onUpdate:visibleForecasts': (ids) => log('update:visibleForecasts', ids),
+      'onUpdate:bands': (bands) => log('update:bands', bands),
+      onThresholdFocus: (threshold) => log('threshold-focus', threshold),
+    }),
+  },
+  {
+    id: 'as-app-shell',
+    name: 'ASAppShell',
+    category: 'layout',
+    description:
+      'Layout de aplicación de mapa: barra corporativa, barra de iconos que abre el panel de cada sección (empuja el mapa) y panel de detalle que entra por la derecha. En móvil, la barra va abajo, las secciones salen de su menú y suben desde abajo. Usa los presets Móvil/Tableta/Escritorio para verlo.',
+    propsSchema: [
+      SECTIONS_FIELD,
+      {
+        key: 'activeSection',
+        label: 'Sección abierta (v-model)',
+        type: 'select',
+        options: [''],
+        optionsFrom: sectionOptions,
+        docType: 'string | null',
+        default: '',
+        description:
+          'Vacío: panel cerrado. Pulsar otra sección cierra el panel y lo reabre con ella.',
+      },
+      {
+        key: 'detailOpen',
+        label: 'Detalle abierto (v-model)',
+        type: 'boolean',
+        default: false,
+        description: 'También se abre al hacer clic en el mapa del ejemplo.',
+      },
+      {
+        key: 'breakpoint',
+        label: 'Ancho para móvil (px)',
+        type: 'number',
+        default: 960,
+        min: 320,
+        max: 1600,
+        step: 20,
+        description: 'Se mide sobre el propio layout, no sobre la ventana.',
+      },
+      {
+        key: 'railWidth',
+        label: 'Ancho de la barra de iconos',
+        type: 'number',
+        default: 56,
+        min: 40,
+        max: 120,
+        step: 4,
+      },
+      {
+        key: 'drawerWidth',
+        label: 'Ancho del panel lateral',
+        type: 'number',
+        default: 320,
+        min: 240,
+        max: 480,
+        step: 20,
+      },
+      {
+        key: 'drawerMode',
+        label: 'Panel lateral',
+        type: 'select',
+        options: ['push', 'overlay'],
+        docType: "'push' | 'overlay'",
+        default: 'push',
+        description:
+          'push: empuja el mapa (se estrecha). overlay: entra encima y el mapa no se mueve.',
+      },
+      {
+        key: 'switchDelay',
+        label: 'Reapertura al cambiar de sección (ms)',
+        type: 'number',
+        default: 280,
+        min: 0,
+        max: 1000,
+        step: 20,
+      },
+      {
+        key: 'detailCloseButton',
+        label: 'Botón de cerrar el detalle',
+        type: 'boolean',
+        default: true,
+      },
+      {
+        key: 'detailWidth',
+        label: 'Ancho del detalle (v-model)',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 1200,
+        step: 20,
+        docType: 'number | undefined',
+        description:
+          '0 = sin prop: ocupa todo desde los menús. Con ancho, el mapa se ve a su izquierda.',
+      },
+      {
+        key: 'detailResizable',
+        label: 'Detalle redimensionable',
+        type: 'boolean',
+        default: false,
+        description:
+          'Asa en su borde izquierdo: arrastrar o flechas; doble clic o Inicio lo ocupa todo.',
+      },
+      {
+        key: 'detailMinWidth',
+        label: 'Ancho mínimo del detalle',
+        type: 'number',
+        default: 320,
+        min: 200,
+        max: 600,
+        step: 20,
+      },
+      { key: 'height', label: 'Alto (CSS)', type: 'string', default: '640px' },
+      THEME_FIELD,
+    ],
+    events: [
+      {
+        name: 'update:activeSection',
+        payload: 'string | null',
+        description: 'Se pulsó una sección (o se cerró el panel): para v-model:active-section.',
+      },
+      {
+        name: 'update:detailOpen',
+        payload: 'boolean',
+        description: 'Se cerró el detalle (botón o Escape): para v-model:detail-open.',
+      },
+      {
+        name: 'update:detailWidth',
+        payload: 'number | undefined',
+        description:
+          'Se arrastró el asa del detalle (o undefined al ocuparlo todo): para v-model:detail-width.',
+      },
+    ],
+    types: [APP_SECTION_DOC, ICON_VALUE_DOC],
+    examples: [sectionsExample, manualLayoutExample],
+    toProps: appShellToProps,
+    toSnippet: appShellToSnippet,
+    notes:
+      'Las secciones, el buscador, el usuario y los paneles son contenidos de ejemplo (slots). Prueba: abrir una sección, pulsar otra (se cierra y se reabre), hacer clic en el mapa con el panel abierto, y cambiar al preset Móvil. Escape cierra lo que esté encima.',
+    component: AppShellDemo,
+    bindings: (values, log) => ({
+      'onUpdate:activeSection': (section) => {
+        values.activeSection = section ?? ''
+        log('update:activeSection', section)
+      },
+      'onUpdate:detailOpen': (open) => {
+        values.detailOpen = open
+        log('update:detailOpen', open)
+      },
+      'onUpdate:detailWidth': (width) => {
+        values.detailWidth = width ?? 0
+        log('update:detailWidth', width)
+      },
+    }),
+  },
+  ...layoutEntries,
+  ...formsEntries,
+  ...detailEntries,
 ]
 
 export function getEntry(id: string): RegistryEntry | undefined {

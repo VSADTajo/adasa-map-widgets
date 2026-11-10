@@ -1,20 +1,16 @@
 /**
- * @vsadtajo/adasa-map-widgets
+ * @vsadtajo/adasa-ui
  *
- * Librería ADASA de widgets Vue 3 + TypeScript para aplicaciones de web
- * mapping, agnóstica del motor de mapas subyacente (Leaflet, Mapbox GL,
- * OpenLayers...).
+ * Librería corporativa ADASA de componentes Vue 3 + TypeScript. El entry
+ * raíz solo expone `core` (tema, tokens y utilidades comunes); cada dominio
+ * tiene su propio subpath para que un proyecto solo cargue lo que usa
+ * (ver docs/adr/0000-estructura-paquete.md):
  *
- * Importa los estilos base (opcional) una vez en tu aplicación:
  * ```ts
- * import '@vsadtajo/adasa-map-widgets/style.css'
+ * import { provideTheme } from '@vsadtajo/adasa-ui'
+ * import { ASMap, ASMapLegend } from '@vsadtajo/adasa-ui/map'
+ * import '@vsadtajo/adasa-ui/style.css'
  * ```
  */
 
-import './styles/tokens.css'
-
-export * from './components'
-export * from './composables'
-export * from './layers'
-export * from './legend'
-export type * from './types'
+export * from './core'

@@ -1,7 +1,36 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { PropField } from '../propTypes'
 import type { RegistryEntry } from '../registry'
 
 const props = defineProps<{ entry: RegistryEntry }>()
+
+/** Props reales del componente (sin los controles que solo existen en el playground). */
+const componentProps = computed(() =>
+  props.entry.propsSchema.filter((field) => !field.playgroundOnly),
+)
+
+/**
+ * Tipo a documentar, en partes: el declarado (`docType`) o, en un select, sus
+ * opciones como unión de literales (`'a' | 'b'`), para ver todos los valores
+ * posibles y no solo el de por defecto. La opción vacía del editor ("sin
+ * valor") no es un valor. En partes para que una unión larga solo se parta
+ * entre opciones, nunca en mitad de una.
+ */
+function typeParts(field: PropField): string[] {
+  if (field.docType) return [field.docType]
+  if (field.type === 'select' && field.options?.length) {
+    return field.options
+      .filter((option) => option !== '')
+      .map((option) => (/^-?\d+(\.\d+)?$/.test(option) ? option : `'${option}'`))
+  }
+  return [field.type]
+}
+
+/** Los arrays y objetos (props JSON) son datos de ejemplo del editor, no un valor por defecto. */
+function defaultOf(field: PropField): string {
+  return field.default === '' || typeof field.default === 'object' ? '—' : String(field.default)
+}
 </script>
 
 <template>
@@ -15,27 +44,70 @@ const props = defineProps<{ entry: RegistryEntry }>()
     <p v-if="props.entry.notes" class="pg-docs__note">ℹ️ {{ props.entry.notes }}</p>
 
     <h3 class="pg-docs__heading">Props</h3>
-    <table v-if="props.entry.propsSchema.length" class="pg-docs__table">
+    <table v-if="componentProps.length" class="pg-docs__table">
       <thead>
         <tr>
           <th>Prop</th>
-          <th>Tipo</th>
+          <th>Tipo / valores</th>
           <th>Default</th>
+          <th>Descripción</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="field in props.entry.propsSchema" :key="field.key">
+        <tr v-for="field in componentProps" :key="field.key">
           <td>
             <code>{{ field.key }}</code>
           </td>
-          <td>{{ field.type }}</td>
           <td>
-            <code>{{ String(field.default) }}</code>
+            <code class="pg-docs__type">
+              <template v-for="(part, index) in typeParts(field)" :key="part">
+                <template v-if="index > 0"> | </template>
+                <span class="pg-docs__type-part">{{ part }}</span>
+              </template>
+            </code>
           </td>
+          <td>
+            <code>{{ defaultOf(field) }}</code>
+          </td>
+          <td>{{ field.description ?? '' }}</td>
         </tr>
       </tbody>
     </table>
     <p v-else class="pg-docs__empty">Sin props editables en este playground.</p>
+
+    <template v-if="props.entry.types?.length">
+      <h3 class="pg-docs__heading">Tipos</h3>
+      <section v-for="type in props.entry.types" :key="type.name" class="pg-docs__type-doc">
+        <h4 class="pg-docs__type-name">
+          <code>{{ type.name }}</code>
+        </h4>
+        <p class="pg-docs__type-description">{{ type.description }}</p>
+        <table class="pg-docs__table">
+          <thead>
+            <tr>
+              <th>{{ type.union ? 'Forma' : 'Campo' }}</th>
+              <th>Tipo</th>
+              <th v-if="!type.union">Default</th>
+              <th>Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="field in type.fields" :key="field.key">
+              <td>
+                <code>{{ field.key }}{{ type.union || field.required ? '' : '?' }}</code>
+              </td>
+              <td>
+                <code>{{ field.type }}</code>
+              </td>
+              <td v-if="!type.union">
+                <code>{{ field.default ?? '—' }}</code>
+              </td>
+              <td>{{ field.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </template>
 
     <template v-if="props.entry.layerOptionsSchema">
       <h3 class="pg-docs__heading">Opciones de la capa (<code>options</code>)</h3>
@@ -156,6 +228,33 @@ const props = defineProps<{ entry: RegistryEntry }>()
   padding: 4px 6px;
   border-bottom: 1px solid var(--pg-border);
   vertical-align: top;
+}
+
+/* Las uniones largas ('osm' | 'topo' | ...) parten línea en los separadores. */
+.pg-docs__type {
+  white-space: normal;
+}
+
+.pg-docs__type-part {
+  white-space: nowrap;
+}
+
+.pg-docs__type-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.pg-docs__type-name {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.pg-docs__type-description {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--pg-text-muted);
 }
 
 .pg-docs__empty {

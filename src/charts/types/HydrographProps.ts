@@ -1,0 +1,377 @@
+import type { AlertLevel } from '@/core/types/theme'
+import type {
+  ChartAnnotations,
+  ChartEmits,
+  ChartLineStyle,
+  ChartProps,
+  ChartSeries,
+  ChartToolbarConfig,
+  ChartXAxisConfig,
+  ChartYAxis,
+} from './chart'
+
+/** Punto de una serie hidrológica: `[instante, valor]`. `null` deja un hueco. */
+export type HydroPoint = [Date, number | null]
+
+/**
+ * Estilo de una serie del hidrograma (cada observada y cada previsión lleva
+ * el suyo): color, grosor y trazo.
+ *
+ * @example
+ * ```ts
+ * { color: '#2a78d6', width: 3, type: 'solid' }   // un observado
+ * { color: '#eb6834', width: 2, type: 'dashdot' } // una previsión
+ * ```
+ */
+export interface HydroLineStyle {
+  /** Color CSS, o `'var(--as-data-cat-N)'` para un color del tema que respete claro/oscuro. */
+  color?: string
+  /** Grosor de la línea en px. En la precipitación (barras) no se usa. @default 2 */
+  width?: number
+  /**
+   * Trazo: `'solid'` (continua), `'dashed'` (discontinua), `'dotted'`
+   * (puntos) o `'dashdot'` (punto y raya). En la precipitación no se usa.
+   * @default 'solid' en el observado, 'dashed' en las previsiones
+   */
+  type?: ChartLineStyle
+}
+
+/**
+ * Estilo de una banda de percentiles (`bandStyle` de una previsión).
+ *
+ * @example
+ * ```ts
+ * bandStyle: {
+ *   'p10-p90': { color: '#7c3aed', opacity: 0.12, name: 'EPS (80 % de los miembros)' },
+ *   'p25-p75': { opacity: 0.35, legend: false },
+ * }
+ * ```
+ */
+export interface HydroBandStyle {
+  /** Color del relleno. Por defecto, el de la línea de su previsión (`style.color`). */
+  color?: string
+  /**
+   * Opacidad del relleno (0–1).
+   * @default 0.15 en p10–p90 (la más ancha), 0.3 en p25–p75
+   */
+  opacity?: number
+  /** Nombre en la leyenda, el tooltip, la tabla y el CSV. Por defecto, "<previsión> p10–p90". */
+  name?: string
+  /** Aparece en la leyenda. @default true */
+  legend?: boolean
+}
+
+/**
+ * Una fuente de previsión (p. ej. Harmonie, EPS), con su mediana y sus percentiles.
+ *
+ * Los percentiles se dibujan como dos bandas de incertidumbre bajo la línea:
+ * - **p10–p90**, entre `percentiles.p10` y `percentiles.p90` (más ancha y tenue);
+ * - **p25–p75**, entre `percentiles.p25` y `percentiles.p75` (más estrecha y marcada).
+ *
+ * Cada banda necesita sus dos percentiles, en los mismos instantes. Cuáles
+ * se dibujan lo decide la prop `bands` del hidrograma (o su botón de la
+ * barra); el aspecto de cada una, `bandStyle`.
+ *
+ * @example
+ * ```ts
+ * {
+ *   id: 'eps',
+ *   name: 'EPS',
+ *   values: mediana,
+ *   percentiles: { p10, p25, p75, p90 },
+ *   style: { color: '#05a873', type: 'dashdot' },
+ *   bandStyle: { 'p10-p90': { opacity: 0.1 } },
+ * }
+ * ```
+ */
+export interface HydroForecast {
+  /** Id estable: la misma fuente en lluvia y en caudal comparte color. */
+  id: string
+  /** Nombre visible (p. ej. `'Harmonie'`). */
+  name: string
+  /**
+   * Estilo de su línea (y el color de sus bandas y de sus barras de lluvia).
+   * Por defecto: color de la paleta a partir del 2.º (el 1.º es el observado),
+   * 2 px y discontinua.
+   */
+  style?: HydroLineStyle
+  /** Serie determinista o mediana (p50): línea discontinua. */
+  values?: HydroPoint[]
+  /**
+   * Percentiles para las bandas de incertidumbre: `p10` y `p90` forman la
+   * banda p10–p90, y `p25` y `p75` la p25–p75. Cada par, en los mismos instantes.
+   */
+  percentiles?: { p10?: HydroPoint[]; p25?: HydroPoint[]; p75?: HydroPoint[]; p90?: HydroPoint[] }
+  /**
+   * Aspecto de cada banda de percentiles: color, opacidad, nombre y si sale
+   * en la leyenda (ver `HydroBandStyle`). Por defecto, el color de la
+   * previsión, opacidad 0,15 (p10–p90) y 0,3 (p25–p75), y en la leyenda.
+   */
+  bandStyle?: Partial<Record<HydroBand, HydroBandStyle>>
+}
+
+/**
+ * Una serie observada de una variable (p. ej. la estación SAIH y un aforo
+ * manual del mismo punto). Una variable puede tener varias.
+ *
+ * @example
+ * ```ts
+ * { id: 'saih', name: 'SAIH', values: caudal, style: { color: '#2a78d6', width: 2 } }
+ * ```
+ */
+export interface HydroObserved {
+  /**
+   * Id estable dentro de la variable. La serie generada es
+   * `'<variable>-observed-<id>'` (p. ej. `'discharge-observed-saih'`), para `seriesOverrides`.
+   */
+  id: string
+  /** Nombre en la leyenda, el tooltip, la tabla y el CSV. */
+  name: string
+  /** Puntos `[instante, valor]`; `null` deja un hueco. */
+  values: HydroPoint[]
+  /**
+   * Color, grosor y trazo (en la precipitación, barras, solo cuenta el
+   * color). Por defecto: 2 px y continua; el 1.º observado lleva el color de
+   * la variable (el 1.º de la paleta en caudal y lluvia; uno fijo en entrada,
+   * salida, volumen y nivel) y los siguientes, otros de la paleta: con
+   * varios, conviene darles `color`.
+   */
+  style?: HydroLineStyle
+}
+
+/**
+ * Una variable del hidrograma (caudal, caudal de entrada o de salida,
+ * volumen, nivel o precipitación): sus series observadas y sus previsiones,
+ * cada una con su nombre y su estilo.
+ *
+ * @example
+ * ```ts
+ * const caudal: HydroVariable = {
+ *   observed: [
+ *     { id: 'saih', name: 'SAIH', values: saih, style: { color: '#2a78d6' } },
+ *     { id: 'aforo', name: 'Aforo manual', values: aforos, style: { color: '#6250d6', type: 'dotted' } },
+ *   ],
+ *   forecasts: [{ id: 'eps', name: 'EPS', values: mediana, percentiles, style: { type: 'dashdot' } }],
+ * }
+ * ```
+ */
+export interface HydroVariable {
+  /**
+   * Series observadas (ver `HydroObserved`): líneas en caudal, entrada,
+   * salida, volumen y nivel, y barras en la precipitación.
+   */
+  observed?: HydroObserved[]
+  /**
+   * Previsiones. En caudal y precipitación, cada fuente lleva su color (el
+   * mismo en las dos). En entrada, salida, volumen y nivel, por defecto el
+   * color de la variable, en discontinua, y el nombre "Variable · Fuente".
+   */
+  forecasts?: HydroForecast[]
+  /**
+   * Unidad. Por defecto: `m³/s` (caudal, entrada y salida), `hm³` (volumen),
+   * `m` (nivel; p. ej. `'msnm'` para cotas sobre el nivel del mar) y `mm`
+   * (precipitación acumulada en cada intervalo; `'mm/h'` para intensidad).
+   * Sale en el título del eje (o sola, si el título no cabe), en el tooltip,
+   * la tabla y el CSV. La entrada y la salida comparten el eje de caudal, así
+   * que usan su unidad.
+   */
+  unit?: string
+  /**
+   * Título del eje (y nombre de la variable). Por defecto, el traducido
+   * ("Caudal", "Caudal de entrada", "Volumen", "Nivel", "Precipitación").
+   */
+  label?: string
+}
+
+/** Variable sobre cuyo eje se dibuja un umbral. */
+export type HydroThresholdVariable = 'discharge' | 'volume' | 'level'
+
+/** Umbral de aviso del punto de control. */
+export interface HydroThreshold {
+  value: number
+  /** Nivel de aviso: da el color (tokens `--as-alert-<nivel>`). */
+  level: AlertLevel | (string & {})
+  /** Etiqueta. Por defecto, "Umbral <nivel>". */
+  label?: string
+  /**
+   * Eje del umbral: caudal (también el de entrada y salida), volumen o
+   * nivel. Si esa variable no está en la gráfica, va al eje principal.
+   * @default 'discharge'
+   */
+  variable?: HydroThresholdVariable
+}
+
+export type HydroBand = 'p10-p90' | 'p25-p75'
+
+/**
+ * Barra de herramientas del hidrograma: la de `ASChart` más tres acciones
+ * propias, activas por defecto (cada una solo si tiene sentido con los datos).
+ */
+export interface HydrographToolbarConfig extends ChartToolbarConfig {
+  /**
+   * "Enfocar umbral": cada pulsación deja solo un umbral (de menor a mayor)
+   * y ajusta el eje a los datos y a ese umbral; tras el último vuelve a
+   * todos. Solo con `thresholds`.
+   * @default true
+   */
+  focusThreshold?: boolean
+  /**
+   * Selector de las previsiones que se ven (casillas con "Todas" y
+   * contador). Cambia `visibleForecasts`. Solo con previsiones.
+   * @default true
+   */
+  forecastSelector?: boolean
+  /**
+   * Botón que muestra u oculta los percentiles. Cambia `bands`. Solo si
+   * alguna previsión trae percentiles.
+   * @default true
+   */
+  bandsToggle?: boolean
+}
+
+/**
+ * Props de `ASHydrographChart`.
+ *
+ * @example
+ * ```vue
+ * <!-- Punto de control de un río -->
+ * <ASHydrographChart
+ *   :discharge="{ observed: [{ id: 'saih', name: 'Observado', values: caudal }], forecasts }"
+ *   :precipitation="{ observed: [{ id: 'saih', name: 'Lluvia', values: lluvia }] }"
+ *   :thresholds="[{ value: 120, level: 'naranja' }]" />
+ * <!-- Embalse: entrada y salida (m³/s), volumen (hm³) y nivel (msnm), cada uno con su eje -->
+ * <ASHydrographChart :inflow="{ observed: [{ id: 'saih', name: 'Entrada', values: entrada }] }"
+ *   :outflow="{ observed: [{ id: 'saih', name: 'Salida', values: salida }] }"
+ *   :volume="{ observed: [{ id: 'saih', name: 'Volumen', values: volumen }] }"
+ *   :level="{ observed: [{ id: 'saih', name: 'Cota', values: cota }], unit: 'msnm' }"
+ *   :thresholds="[{ value: 652.5, level: 'rojo', variable: 'level', label: 'Cota máxima' }]" />
+ * ```
+ */
+export interface HydrographProps extends Pick<
+  ChartProps,
+  | 'chartLibrary'
+  | 'currentTime'
+  | 'tooltip'
+  | 'legend'
+  | 'legendValues'
+  | 'zoom'
+  | 'fileName'
+  | 'patterns'
+  | 'description'
+  | 'dataTable'
+  | 'syncGroup'
+  | 'animation'
+  | 'loading'
+  | 'emptyText'
+  | 'error'
+  | 'theme'
+  | 'ariaLabel'
+  | 'nativeOptions'
+> {
+  /** Alto total (px, o CSS si es string). Mayor que en `ASChart` porque tiene dos paneles. @default 420 */
+  height?: number | string
+  /**
+   * Barra de herramientas: la de `ASChart` (`true` o su configuración) más
+   * las acciones propias del hidrograma (ver `HydrographToolbarConfig`).
+   * @default solo "Restablecer zoom", y solo si hay `zoom`
+   */
+  toolbar?: boolean | HydrographToolbarConfig
+  /**
+   * Ids de las previsiones que se dibujan (`v-model:visible-forecasts`), en
+   * los dos paneles. Sin él, todas. Los colores no cambian al ocultar una.
+   */
+  visibleForecasts?: string[]
+  /**
+   * Caudal (o nivel, con `magnitude: 'level'`): panel inferior, en línea, eje
+   * a la izquierda. Opcional: una gráfica de embalse puede tener solo
+   * `inflow`/`outflow`, `volume` y `level`.
+   */
+  discharge?: HydroVariable
+  /** Qué representa `discharge`: unidad y título por defecto. @default 'flow' */
+  magnitude?: 'flow' | 'level'
+  /** Caudal de entrada (p. ej. a un embalse), en el mismo eje que `discharge` (m³/s). */
+  inflow?: HydroVariable
+  /** Caudal de salida (desembalse), en el mismo eje que `discharge` (m³/s). */
+  outflow?: HydroVariable
+  /**
+   * Volumen (embalsado), en su propio eje (`hm³` por defecto), en el mismo
+   * panel que el caudal. Su eje va al lado con menos ejes (a igualdad, a la derecha).
+   */
+  volume?: HydroVariable
+  /**
+   * Nivel (cota), en su propio eje (`m` por defecto; `unit: 'msnm'` para
+   * cotas sobre el nivel del mar), en el mismo panel que el caudal.
+   */
+  level?: HydroVariable
+  /** Precipitación: panel superior, en barras con el eje invertido. Sin ella, un solo panel. */
+  precipitation?: HydroVariable
+  /**
+   * Dónde va la precipitación:
+   * - `'panel'`: en su propio panel, encima del caudal, con el eje de tiempo compartido (alineados).
+   * - `'overlay'`: en el mismo gráfico que el caudal, con su eje a la derecha
+   *   (el hietograma clásico colgando desde arriba).
+   * @default 'panel'
+   */
+  precipitationLayout?: 'panel' | 'overlay'
+  /** Barras de precipitación colgando desde arriba (eje invertido). `false`: creciendo desde abajo. @default true */
+  precipitationInverted?: boolean
+  /** Alto relativo del panel de precipitación (0–1), con `precipitationLayout: 'panel'`. @default 0.35 */
+  precipitationWeight?: number
+  /**
+   * Umbrales de aviso del punto de control. Cada uno va al eje de su
+   * `variable` (caudal por defecto, volumen o nivel).
+   */
+  thresholds?: HydroThreshold[]
+  /**
+   * Instante "ahora": línea vertical que separa observado de previsto. Los
+   * mismos valores que en `ASChart` (`true` = la hora actual, `false` la
+   * oculta), pero aquí se muestra por defecto: sin ella no se distingue el
+   * observado del previsto. @default true
+   */
+  now?: Date | boolean
+  /** Eje de tiempo: título, formato de las fechas y límites (siempre es temporal). */
+  xAxis?: Omit<ChartXAxisConfig, 'type'>
+  /**
+   * Anotaciones adicionales, como en `ASChart` (p. ej. un episodio en X). Las
+   * de Y van por defecto sobre el eje de caudal/nivel; los umbrales, mejor en `thresholds`.
+   */
+  annotations?: ChartAnnotations
+  /**
+   * Bandas de incertidumbre a dibujar (`v-model:bands` con el botón de
+   * percentiles de la barra). `[]` las oculta. @default ['p10-p90', 'p25-p75']
+   */
+  bands?: HydroBand[]
+  /** Series adicionales (por defecto sobre el eje de caudal/nivel), p. ej. otra magnitud en un eje extra. */
+  extraSeries?: ChartSeries[]
+  /**
+   * Ejes Y adicionales. Hasta 4 en total, contando los del hidrograma
+   * (precipitación, caudal, volumen y nivel, los que haya).
+   */
+  extraYAxes?: ChartYAxis[]
+  /**
+   * Cambios sobre las series que genera el hidrograma (nombre, color, eje,
+   * estilo, leyenda...), por id de serie, donde `<variable>` es `discharge`,
+   * `inflow`, `outflow`, `volume`, `level` o `precipitation`:
+   * - `'<variable>-observed'` (p. ej. `'level-observed'`);
+   * - `'<variable>-<fuente>'` (p. ej. `'discharge-eps'`);
+   * - `'<variable>-<fuente>-p10-p90'`, `'<variable>-<fuente>-p25-p75'` (bandas).
+   *
+   * @example { 'discharge-eps': { name: 'EPS (mediana)', color: '#7c3aed', yAxis: 'nivel' } }
+   */
+  seriesOverrides?: Record<string, Partial<Omit<ChartSeries, 'id' | 'data'>>>
+  /**
+   * Cambios sobre los ejes que genera el hidrograma, por id: `'precipitation'`,
+   * `'discharge'`, `'volume'` y `'level'` (p. ej. su título, lado, mínimo y máximo).
+   */
+  yAxisOverrides?: Record<string, Partial<Omit<ChartYAxis, 'id'>>>
+}
+
+/** Eventos de `ASHydrographChart`: los de `ASChart` y los de sus acciones propias. */
+export interface HydrographEmits extends ChartEmits {
+  /** El selector de previsiones cambió las visibles (para `v-model:visible-forecasts`). */
+  'update:visibleForecasts': [ids: string[]]
+  /** El botón de percentiles los mostró u ocultó (para `v-model:bands`). */
+  'update:bands': [bands: HydroBand[]]
+  /** "Enfocar umbral": el umbral enfocado, o `null` al volver a todos. */
+  'threshold-focus': [threshold: HydroThreshold | null]
+}

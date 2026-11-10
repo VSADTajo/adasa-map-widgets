@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rendimiento de las gráficas</title>
+    <style>
+      body {
+        margin: 16px;
+        font-family: system-ui, sans-serif;
+      }
+      #chart {
+        width: 1200px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Prueba de rendimiento: ver src/playground/perf/chartsPerf.ts y docs/rendimiento-graficas.md. -->
+    <div id="chart"></div>
+    <pre id="result"></pre>
+    <script type="module" src="/src/playground/perf/chartsPerf.ts"></script>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 /** Tipo de control de formulario a renderizar en el editor de props en vivo. */
-export type PropFieldType = 'string' | 'number' | 'boolean' | 'select' | 'color'
+export type PropFieldType = 'string' | 'number' | 'boolean' | 'select' | 'color' | 'json'
 
 /** Describe un campo editable en el editor de props del playground. */
 export interface PropField {
@@ -8,15 +8,67 @@ export interface PropField {
   /** Etiqueta legible mostrada en el formulario. */
   label: string
   type: PropFieldType
-  /** Valor inicial con el que se precarga el editor. */
-  default: string | number | boolean
+  /** Valor inicial con el que se precarga el editor (un array u objeto en `type: 'json'`). */
+  default: string | number | boolean | object
   /** Opciones disponibles, solo para `type: 'select'`. */
   options?: string[]
+  /**
+   * Opciones calculadas con los valores actuales (p. ej. la sección abierta,
+   * a partir de las secciones que haya en el editor JSON). Tiene prioridad sobre `options`.
+   */
+  optionsFrom?: (values: Record<string, unknown>) => string[]
+  /**
+   * En `type: 'json'`, nombre de la variable en el snippet de código
+   * (`:sections="secciones"`): el JSON entero no cabría en él. Por defecto, `key`.
+   */
+  snippetVar?: string
   min?: number
   max?: number
   step?: number
   /** Explicación corta de qué hace la prop (se muestra como ayuda inline). */
   description?: string
+  /**
+   * Tipo de la prop tal como lo declara el componente (`'[number, number]'`,
+   * `'Date | null'`...), para la tabla de documentación, cuando el control
+   * del editor no lo refleja (p. ej. un texto "lat, lng" para `center`). Sin
+   * él, un select muestra sus opciones (`'a' | 'b'`) y el resto, su `type`.
+   */
+  docType?: string
+  /**
+   * Control que solo existe en el playground (p. ej. "número de ejes"): lo
+   * convierte `toProps` en props reales, así que no se lista como prop del componente.
+   */
+  playgroundOnly?: boolean
+  /**
+   * Prop que solo se documenta: sale en la tabla de props, pero no en el
+   * editor ni se pasa al componente (datos que no caben en un formulario,
+   * como series con fechas o funciones). `default` es el texto de la columna
+   * "Default" (`''` = sin valor por defecto).
+   */
+  docOnly?: boolean
+}
+
+/** Un campo (o una forma, en una unión) de un tipo documentado. */
+export interface TypeFieldDoc {
+  key: string
+  type: string
+  required?: boolean
+  /** Valor por defecto, como código (`"'top'"`, `'false'`). */
+  default?: string
+  description: string
+}
+
+/**
+ * Tipo auxiliar de una prop compleja (`AppSection`, `IconValue`...), para la
+ * sección "Tipos" de la documentación: con él se ve qué forma tiene cada
+ * elemento de un array sin ir al código fuente.
+ */
+export interface TypeDoc {
+  name: string
+  description: string
+  /** Es una unión: `fields` son sus formas posibles, no campos de un objeto. */
+  union?: boolean
+  fields: TypeFieldDoc[]
 }
 
 /** Documentación de un evento emitido por el componente. */
@@ -28,7 +80,7 @@ export interface EventDoc {
 
 /**
  * Documenta un campo de `options` de un {@link LayerType} (ver
- * `src/types/layers.ts`). A diferencia de {@link PropField}, no es editable
+ * `src/map/types/layers.ts`). A diferencia de {@link PropField}, no es editable
  * desde un formulario genérico: `options` varía por tipo de capa y admite
  * formas complejas (objetos, funciones...) que no encajan en el editor de
  * props. Solo se usa para la tabla de documentación de la categoría 'layers'.
@@ -41,15 +93,49 @@ export interface LayerOptionField {
   description: string
 }
 
+/** Categoría del catálogo: una por dominio de la librería (los de mapa, divididos en tres). */
+export type ComponentCategory =
+  'mapping' | 'controls' | 'layers' | 'charts' | 'tables' | 'detail' | 'layout' | 'forms'
+
+export interface CategoryInfo {
+  key: ComponentCategory
+  /** Título en la barra lateral. */
+  label: string
+  /**
+   * Cómo se previsualizan sus componentes: `'map'`, en el escenario de los
+   * widgets de mapa (se anclan con position absolute); `'canvas'`, en un
+   * lienzo neutro redimensionable para probar el responsive.
+   */
+  preview: 'map' | 'canvas'
+}
+
+/** Categorías del catálogo, en el orden de la barra lateral. */
+export const COMPONENT_CATEGORIES: CategoryInfo[] = [
+  { key: 'mapping', label: 'Mapa', preview: 'map' },
+  { key: 'controls', label: 'Controles de mapa', preview: 'map' },
+  { key: 'layers', label: 'Capas', preview: 'map' },
+  { key: 'charts', label: 'Gráficas', preview: 'canvas' },
+  { key: 'tables', label: 'Tablas', preview: 'canvas' },
+  { key: 'detail', label: 'Detalle', preview: 'canvas' },
+  { key: 'layout', label: 'Layout', preview: 'canvas' },
+  { key: 'forms', label: 'Formularios', preview: 'canvas' },
+]
+
+export function getCategory(key: ComponentCategory): CategoryInfo {
+  return COMPONENT_CATEGORIES.find((category) => category.key === key)!
+}
+
 export interface ComponentDoc {
   id: string
   name: string
-  category: 'controls' | 'mapping' | 'layers'
+  category: ComponentCategory
   description: string
   propsSchema: PropField[]
   events: EventDoc[]
   /** Contenido de slot por defecto (texto), si el componente admite slot. */
   slotDefault?: string
+  /** Tipos auxiliares de sus props complejas (sección "Tipos" de la documentación). */
+  types?: TypeDoc[]
   notes?: string
 }
 
@@ -65,6 +151,7 @@ export function buildSnippet(
   slotContent?: string,
 ): string {
   const attrs = schema
+    .filter((field) => !field.docOnly)
     .map((field) => {
       const value = values[field.key]
       if (value === undefined || value === '') return null
@@ -74,6 +161,9 @@ export function buildSnippet(
       }
       if (field.type === 'number') {
         return `:${attrName}="${value}"`
+      }
+      if (field.type === 'json') {
+        return `:${attrName}="${field.snippetVar ?? field.key}"`
       }
       return `${attrName}="${value}"`
     })

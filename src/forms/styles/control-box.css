@@ -1,0 +1,112 @@
+/*
+ * Marco común de los campos de texto (ASInput, ASSelect): borde, fondo,
+ * alto por tamaño y estados (foco, error, deshabilitado, solo lectura). Cada
+ * componente lo incluye con `<style scoped src>`, así que queda aislado igual
+ * que el resto de sus estilos.
+ */
+.as-control-box {
+  --as-control-height: var(--as-control-height-md, 36px);
+  --as-control-icon: 18px;
+  display: flex;
+  gap: var(--as-space-2, 8px);
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--as-control-height);
+  padding: 0 var(--as-space-3, 12px);
+  border: 1px solid var(--as-color-border, light-dark(#cbd5e1, #475569));
+  border-radius: var(--as-radius, 8px);
+  background-color: var(--as-color-surface, light-dark(#ffffff, #1e293b));
+  color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
+  font-size: var(--as-font-size-sm, 0.875rem);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.as-control-box--sm {
+  --as-control-height: var(--as-control-height-sm, 28px);
+  --as-control-icon: 16px;
+  padding: 0 var(--as-space-2, 8px);
+  font-size: var(--as-font-size-xs, 0.75rem);
+}
+
+.as-control-box--lg {
+  --as-control-height: var(--as-control-height-lg, 44px);
+  --as-control-icon: 20px;
+  padding: 0 var(--as-space-4, 16px);
+  font-size: var(--as-font-size-md, 1rem);
+}
+
+.as-control-box:focus-within {
+  border-color: var(--as-color-primary, light-dark(#2563eb, #60a5fa));
+  box-shadow: var(--as-focus-ring, 0 0 0 2px light-dark(#2563eb, #60a5fa));
+}
+
+.as-control-box--invalid,
+.as-control-box--invalid:focus-within {
+  border-color: var(--as-color-danger, light-dark(#dc2626, #f87171));
+}
+
+.as-control-box--invalid:focus-within {
+  box-shadow: 0 0 0 2px var(--as-color-danger, light-dark(#dc2626, #f87171));
+}
+
+.as-control-box--readonly {
+  background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
+}
+
+.as-control-box--disabled {
+  background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.as-control-box__affix {
+  display: flex;
+  flex: none;
+  align-items: center;
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+}
+
+.as-control-box__icon {
+  width: var(--as-control-icon);
+  height: var(--as-control-icon);
+}
+
+/* Botón pequeño dentro del marco (borrar, quitar un chip). */
+.as-control-box__button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--as-radius-full, 9999px);
+  background: transparent;
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+  cursor: pointer;
+}
+
+.as-control-box__button:hover {
+  background-color: var(--as-color-surface-muted, light-dark(#f1f5f9, #334155));
+  color: var(--as-color-text, light-dark(#0f172a, #f1f5f9));
+}
+
+.as-control-box__button:focus-visible {
+  outline: none;
+  box-shadow: var(--as-focus-ring, 0 0 0 2px light-dark(#2563eb, #60a5fa));
+}
+
+.as-control-box__placeholder {
+  color: var(--as-color-text-muted, light-dark(#64748b, #94a3b8));
+}
+
+.as-control-box__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
